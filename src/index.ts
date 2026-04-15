@@ -1,18 +1,14 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { matchArticleRoutes } from "./apps/modules/articles/articles.route";
+import { matchAuthorRoutes } from "./routes/authors.routes";
+import { matchTagRoutes } from "./routes/tags.routes";
+import { json } from "./shared/helpers/json";
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
-		return new Response("Hello World!");
+		const response =
+			(await matchArticleRoutes(request, env)) ??
+			(await matchAuthorRoutes(request, env)) ??
+			(await matchTagRoutes(request, env));
+		return response ?? json({ error: "Not Found" }, 404);
 	},
 } satisfies ExportedHandler<Env>;
