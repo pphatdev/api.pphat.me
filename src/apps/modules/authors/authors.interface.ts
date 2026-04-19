@@ -1,3 +1,5 @@
+import { PaginatedResult, PaginationParams } from "../../../shared/interfaces";
+
 export interface Author {
 	id: number;
 	name: string;
@@ -48,7 +50,7 @@ export interface UpdateAuthorDto {
 }
 
 export interface IAuthorRepository {
-	findAll(): Promise<Author[]>;
+	findAll(params: PaginationParams): Promise<PaginatedResult<Author>>;
 	findById(id: number): Promise<Author | null>;
 	create(dto: CreateAuthorDto): Promise<Author>;
 	update(id: number, dto: UpdateAuthorDto): Promise<Author | null>;

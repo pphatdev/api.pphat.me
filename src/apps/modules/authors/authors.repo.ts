@@ -6,16 +6,56 @@ import type {
 	IAuthorRepository,
 	UpdateAuthorDto,
 } from "./authors.interface";
+import { PaginatedResult, PaginationParams } from "../../../shared/interfaces";
 
 export class AuthorRepository implements IAuthorRepository {
 	constructor(private readonly db: D1Database) {}
 
-	async findAll(): Promise<Author[]> {
-		const { results } = await this.db
-			.prepare("SELECT * FROM authors ORDER BY id ASC")
-			.all<AuthorRow>();
+	async findAll({ page, limit, search, sort, order }: PaginationParams): Promise<PaginatedResult<Author>> {
+		const ALLOWED_SORT = ['id', 'name', 'profile', 'url'];
+		const safeSort = ALLOWED_SORT.includes(sort ?? '') ? sort! : 'id';
+		const safeOrder = order === 'desc' ? 'DESC' : 'ASC';
+		const offset = (page - 1) * limit;
 
-		return Promise.all(results.map((row) => this.hydrate(row)));
+		let dataResult: Awaited<ReturnType<D1PreparedStatement['all']>>;
+		let countRow: { count: number } | null;
+
+		if (search) {
+			const like = `%${search}%`;
+			[dataResult, countRow] = await Promise.all([
+				this.db
+					.prepare(`SELECT * FROM authors WHERE name LIKE ?1 ORDER BY ${safeSort} ${safeOrder} LIMIT ?2 OFFSET ?3`)
+					.bind(like, limit, offset)
+					.all<AuthorRow>(),
+				this.db
+					.prepare("SELECT COUNT(*) as count FROM authors WHERE name LIKE ?1")
+					.bind(like)
+					.first<{ count: number }>(),
+			]);
+		} else {
+			[dataResult, countRow] = await Promise.all([
+				this.db
+					.prepare(`SELECT * FROM authors ORDER BY ${safeSort} ${safeOrder} LIMIT ?1 OFFSET ?2`)
+					.bind(limit, offset)
+					.all<AuthorRow>(),
+				this.db
+					.prepare("SELECT COUNT(*) as count FROM authors")
+					.first<{ count: number }>(),
+			]);
+		}
+
+		const total = countRow?.count ?? 0;
+		const data = await Promise.all((dataResult.results as AuthorRow[]).map((row) => this.hydrate(row)));
+
+		return {
+			data,
+			pagination: {
+				page,
+				limit,
+				total,
+				totalPages: Math.ceil(total / limit),
+			},
+		};
 	}
 
 	async findById(id: number): Promise<Author | null> {

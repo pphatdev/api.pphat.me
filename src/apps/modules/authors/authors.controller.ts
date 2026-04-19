@@ -16,8 +16,15 @@ export class AuthorsController {
 		// Collection: /v1/api/authors
 		if (!id) {
 			if (method === "GET") {
-				const authors = await new ListAuthors(repository).execute();
-				return json(authors);
+				const url = new URL(request.url);
+				const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+				const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "10", 10) || 10));
+				const search = url.searchParams.get("search") ?? undefined;
+				const sort = url.searchParams.get("sort") ?? undefined;
+				const orderParam = url.searchParams.get("order")?.toLowerCase();
+				const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
+				const result = await new ListAuthors(repository).execute({ page, limit, search, sort, order });
+				return json(result);
 			}
 
 			if (method === "POST") {

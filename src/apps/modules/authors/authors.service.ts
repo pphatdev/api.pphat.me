@@ -1,9 +1,10 @@
 import type { IAuthorRepository, CreateAuthorDto, UpdateAuthorDto, Author } from "./authors.interface";
+import { PaginatedResult, PaginationParams } from "../../../shared/interfaces";
 
 export class ListAuthors {
 	constructor(private readonly repo: IAuthorRepository) {}
-	execute(): Promise<Author[]> {
-		return this.repo.findAll();
+	execute(params: PaginationParams): Promise<PaginatedResult<Author>> {
+		return this.repo.findAll(params);
 	}
 }
 
