@@ -1,16 +1,55 @@
-import { Author, Author as AuthorRow, TagRow } from "../../../shared/interfaces";
+import { Author, Author as AuthorRow, TagRow, PaginatedResult, PaginationParams } from "../../../shared/interfaces";
 import type { Article, IArticleRepository, ArticleRow, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
 
 
 export class ArticleRepository implements IArticleRepository {
 	constructor(private readonly db: D1Database) {}
 
-	async findAll(): Promise<Article[]> {
-		const { results } = await this.db
-			.prepare("SELECT * FROM articles ORDER BY created_at DESC")
-			.all<ArticleRow>();
+	async findAll({ page, limit, search, sort, order }: PaginationParams): Promise<PaginatedResult<Article>> {
+		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
+		const safeSort = ALLOWED_SORT.includes(sort ?? '') ? sort! : 'created_at';
+		const safeOrder = order === 'asc' ? 'ASC' : 'DESC';
+		const offset = (page - 1) * limit;
 
-		return Promise.all(results.map((row) => this.hydrate(row)));
+		let dataResult: Awaited<ReturnType<D1PreparedStatement['all']>>;
+		let countRow: { count: number } | null;
+
+		if (search) {
+			const like = `%${search}%`;
+			[dataResult, countRow] = await Promise.all([
+				this.db
+					.prepare(`SELECT * FROM articles WHERE (title LIKE ?1 OR slug LIKE ?2 OR description LIKE ?3) ORDER BY ${safeSort} ${safeOrder} LIMIT ?4 OFFSET ?5`)
+					.bind(like, like, like, limit, offset)
+					.all<ArticleRow>(),
+				this.db
+					.prepare("SELECT COUNT(*) as count FROM articles WHERE (title LIKE ?1 OR slug LIKE ?2 OR description LIKE ?3)")
+					.bind(like, like, like)
+					.first<{ count: number }>(),
+			]);
+		} else {
+			[dataResult, countRow] = await Promise.all([
+				this.db
+					.prepare(`SELECT * FROM articles ORDER BY ${safeSort} ${safeOrder} LIMIT ?1 OFFSET ?2`)
+					.bind(limit, offset)
+					.all<ArticleRow>(),
+				this.db
+					.prepare("SELECT COUNT(*) as count FROM articles")
+					.first<{ count: number }>(),
+			]);
+		}
+
+		const total = countRow?.count ?? 0;
+		const data = await Promise.all((dataResult.results as ArticleRow[]).map((row) => this.hydrate(row)));
+
+		return {
+			data,
+			pagination: {
+				page,
+				limit,
+				total,
+				totalPages: Math.ceil(total / limit),
+			},
+		};
 	}
 
 	async findBySlug(slug: string): Promise<Article | null> {
@@ -43,13 +82,22 @@ export class ArticleRepository implements IArticleRepository {
 		}
 
 		if (dto.tag_ids?.length) {
+			const placeholders = dto.tag_ids.map((_, i) => `?${i + 1}`).join(", ");
+			const { results: foundTags } = await this.db
+				.prepare(`SELECT id FROM tags WHERE id IN (${placeholders})`)
+				.bind(...dto.tag_ids)
+				.all<{ id: number }>();
+			if (foundTags.length !== dto.tag_ids.length) {
+				const foundSet = new Set(foundTags.map((t) => t.id));
+				const missing = dto.tag_ids.filter((id) => !foundSet.has(id));
+				throw new Error(`Tags not found: ${missing.join(", ")}`);
+			}
 			await this.db.batch(
 				dto.tag_ids.map((tid) =>
 					this.db.prepare("INSERT OR IGNORE INTO article_tags (article_id, tag_id) VALUES (?1, ?2)").bind(id, tid)
 				)
 			);
 		}
-
 		const row = await this.db.prepare("SELECT * FROM articles WHERE id = ?1").bind(id).first<ArticleRow>();
 		return this.hydrate(row!);
 	}
@@ -97,6 +145,16 @@ export class ArticleRepository implements IArticleRepository {
 		if (dto.tag_ids !== undefined) {
 			await this.db.prepare("DELETE FROM article_tags WHERE article_id = ?1").bind(existing.id).run();
 			if (dto.tag_ids.length) {
+				const placeholders = dto.tag_ids.map((_, i) => `?${i + 1}`).join(", ");
+				const { results: foundTags } = await this.db
+					.prepare(`SELECT id FROM tags WHERE id IN (${placeholders})`)
+					.bind(...dto.tag_ids)
+					.all<{ id: number }>();
+				if (foundTags.length !== dto.tag_ids.length) {
+					const foundSet = new Set(foundTags.map((t) => t.id));
+					const missing = dto.tag_ids.filter((id) => !foundSet.has(id));
+					throw new Error(`Tags not found: ${missing.join(", ")}`);
+				}
 				await this.db.batch(
 					dto.tag_ids.map((tid) =>
 						this.db.prepare("INSERT OR IGNORE INTO article_tags (article_id, tag_id) VALUES (?1, ?2)").bind(existing.id, tid)

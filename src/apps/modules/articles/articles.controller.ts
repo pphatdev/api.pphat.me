@@ -16,8 +16,15 @@ export class ArticlesController {
 		// Collection: /v1/api/articles
 		if (!slug) {
 			if (method === "GET") {
-				const articles = await new ListArticles(repository).execute();
-				return json(articles);
+				const url = new URL(request.url);
+				const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+				const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "10", 10) || 10));
+				const search = url.searchParams.get("search") ?? undefined;
+				const sort = url.searchParams.get("sort") ?? undefined;
+				const orderParam = url.searchParams.get("order")?.toLowerCase();
+				const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
+				const result = await new ListArticles(repository).execute({ page, limit, search, sort, order });
+				return json(result);
 			}
 
 			if (method === "POST") {
@@ -35,6 +42,9 @@ export class ArticlesController {
 				} catch (err) {
 					if (err instanceof Error && err.message.includes("UNIQUE constraint failed: articles.slug")) {
 						return json({ error: "An article with this slug already exists" }, 409);
+					}
+					if (err instanceof Error && err.message.startsWith("Tags not found:")) {
+						return json({ error: err.message }, 422);
 					}
 					throw err;
 				}
@@ -61,6 +71,9 @@ export class ArticlesController {
 			} catch (err) {
 				if (err instanceof Error && err.message.includes("UNIQUE constraint failed: articles.slug")) {
 					return json({ error: "An article with this slug already exists" }, 409);
+				}
+				if (err instanceof Error && err.message.startsWith("Tags not found:")) {
+					return json({ error: err.message }, 422);
 				}
 				throw err;
 			}

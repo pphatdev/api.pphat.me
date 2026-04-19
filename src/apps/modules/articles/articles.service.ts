@@ -1,10 +1,11 @@
 import { Article, IArticleRepository, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
+import { PaginatedResult, PaginationParams } from "../../../shared/interfaces";
 
 export class ListArticles {
 	constructor(private readonly articleRepository: IArticleRepository) {}
 
-	execute(): Promise<Article[]> {
-		return this.articleRepository.findAll();
+	execute(params: PaginationParams): Promise<PaginatedResult<Article>> {
+		return this.articleRepository.findAll(params);
 	}
 }
 

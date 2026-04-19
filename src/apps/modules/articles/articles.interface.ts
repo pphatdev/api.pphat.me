@@ -1,4 +1,4 @@
-import { Author } from "../../../shared/interfaces";
+import { Author, PaginatedResult, PaginationParams } from "../../../shared/interfaces";
 
 export interface Article {
 	id: string;
@@ -54,7 +54,7 @@ export interface UpdateArticleDto {
 }
 
 export interface IArticleRepository {
-	findAll(): Promise<Article[]>;
+	findAll(params: PaginationParams): Promise<PaginatedResult<Article>>;
 	findBySlug(slug: string): Promise<Article | null>;
 	create(dto: CreateArticleDto): Promise<Article>;
 	update(slug: string, dto: UpdateArticleDto): Promise<Article | null>;
