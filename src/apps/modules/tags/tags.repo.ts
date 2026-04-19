@@ -1,14 +1,53 @@
 import type { Tag, TagRow, CreateTagDto, ITagRepository, UpdateTagDto } from "./tags.interface";
+import { PaginatedResult, PaginationParams } from "../../../shared/interfaces";
 
 export class TagRepository implements ITagRepository {
 	constructor(private readonly db: D1Database) {}
 
-	async findAll(): Promise<Tag[]> {
-		const { results } = await this.db
-			.prepare("SELECT * FROM tags ORDER BY id ASC")
-			.all<TagRow>();
+	async findAll({ page, limit, search, sort, order }: PaginationParams): Promise<PaginatedResult<Tag>> {
+		const ALLOWED_SORT = ['id', 'tag', 'description'];
+		const safeSort = ALLOWED_SORT.includes(sort ?? '') ? sort! : 'id';
+		const safeOrder = order === 'desc' ? 'DESC' : 'ASC';
+		const offset = (page - 1) * limit;
 
-		return results.map(this.mapRow);
+		let dataResult: Awaited<ReturnType<D1PreparedStatement['all']>>;
+		let countRow: { count: number } | null;
+
+		if (search) {
+			const like = `%${search}%`;
+			[dataResult, countRow] = await Promise.all([
+				this.db
+					.prepare(`SELECT * FROM tags WHERE (tag LIKE ?1 OR description LIKE ?2) ORDER BY ${safeSort} ${safeOrder} LIMIT ?3 OFFSET ?4`)
+					.bind(like, like, limit, offset)
+					.all<TagRow>(),
+				this.db
+					.prepare("SELECT COUNT(*) as count FROM tags WHERE (tag LIKE ?1 OR description LIKE ?2)")
+					.bind(like, like)
+					.first<{ count: number }>(),
+			]);
+		} else {
+			[dataResult, countRow] = await Promise.all([
+				this.db
+					.prepare(`SELECT * FROM tags ORDER BY ${safeSort} ${safeOrder} LIMIT ?1 OFFSET ?2`)
+					.bind(limit, offset)
+					.all<TagRow>(),
+				this.db
+					.prepare("SELECT COUNT(*) as count FROM tags")
+					.first<{ count: number }>(),
+			]);
+		}
+
+		const total = countRow?.count ?? 0;
+
+		return {
+			data: (dataResult.results as TagRow[]).map(this.mapRow),
+			pagination: {
+				page,
+				limit,
+				total,
+				totalPages: Math.ceil(total / limit),
+			},
+		};
 	}
 
 	async findById(id: number): Promise<Tag | null> {

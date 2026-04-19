@@ -1,3 +1,5 @@
+import { PaginatedResult, PaginationParams } from "../../../shared/interfaces";
+
 export interface Tag {
 	id: number;
 	tag: string;
@@ -21,7 +23,7 @@ export interface UpdateTagDto {
 }
 
 export interface ITagRepository {
-	findAll(): Promise<Tag[]>;
+	findAll(params: PaginationParams): Promise<PaginatedResult<Tag>>;
 	findById(id: number): Promise<Tag | null>;
 	create(dto: CreateTagDto): Promise<Tag>;
 	update(id: number, dto: UpdateTagDto): Promise<Tag | null>;

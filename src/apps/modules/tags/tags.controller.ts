@@ -16,8 +16,13 @@ export class TagsController {
 		// Collection: /v1/api/tags
 		if (!id) {
 			if (method === "GET") {
-				const tags = await new ListTags(repository).execute();
-				return json(tags);
+				const url = new URL(request.url);
+				const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+				const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "10", 10) || 10));				const search = url.searchParams.get("search") ?? undefined;
+				const sort = url.searchParams.get("sort") ?? undefined;
+				const orderParam = url.searchParams.get("order")?.toLowerCase();
+				const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;				const result = await new ListTags(repository).execute({ page, limit });
+				return json(result);
 			}
 
 			if (method === "POST") {

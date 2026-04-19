@@ -1,9 +1,10 @@
 import type { ITagRepository, CreateTagDto, UpdateTagDto, Tag } from "./tags.interface";
+import { PaginatedResult, PaginationParams } from "../../../shared/interfaces";
 
 export class ListTags {
 	constructor(private readonly repo: ITagRepository) {}
-	execute(): Promise<Tag[]> {
-		return this.repo.findAll();
+	execute(params: PaginationParams): Promise<PaginatedResult<Tag>> {
+		return this.repo.findAll(params);
 	}
 }
 
