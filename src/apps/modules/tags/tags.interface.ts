@@ -33,6 +33,8 @@ export interface UpdateTagDto {
 export interface ITagRepository {
 	findAll(params: PaginationParams): Promise<PaginatedResult<Tag>>;
 	findById(id: number): Promise<Tag | null>;
+	findByArticleId(articleId: string): Promise<Tag[]>;
+	findByProjectId(projectId: string): Promise<Tag[]>;
 	create(dto: CreateTagDto): Promise<Tag>;
 	update(id: number, dto: UpdateTagDto): Promise<Tag | null>;
 	delete(id: number): Promise<boolean>;

@@ -60,6 +60,22 @@ export class TagRepository implements ITagRepository {
 		return this.mapRow(row);
 	}
 
+	async findByArticleId(articleId: string): Promise<Tag[]> {
+		const result = await this.db
+			.prepare("SELECT * FROM tags WHERE article_id = ?1 ORDER BY id ASC")
+			.bind(articleId)
+			.all<TagRow>();
+		return (result.results as TagRow[]).map(this.mapRow);
+	}
+
+	async findByProjectId(projectId: string): Promise<Tag[]> {
+		const result = await this.db
+			.prepare("SELECT * FROM tags WHERE project_id = ?1 ORDER BY id ASC")
+			.bind(projectId)
+			.all<TagRow>();
+		return (result.results as TagRow[]).map(this.mapRow);
+	}
+
 	async create(dto: CreateTagDto): Promise<Tag> {
 		const result = await this.db
 			.prepare("INSERT INTO tags (tag, description, article_id, project_id) VALUES (?1, ?2, ?3, ?4)")

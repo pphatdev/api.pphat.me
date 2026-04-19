@@ -5,6 +5,8 @@ import {
 	DeleteTag,
 	GetTagById,
 	ListTags,
+	ListTagsByArticle,
+	ListTagsByProject,
 	UpdateTag,
 } from "./tags.service";
 
@@ -69,5 +71,19 @@ export class TagsController {
 		}
 
 		return json({ error: "Method Not Allowed" }, 405);
+	}
+
+	static async handleByArticle(request: Request, env: Env, articleId: string): Promise<Response> {
+		if (request.method !== "GET") return json({ error: "Method Not Allowed" }, 405);
+		const repository = new TagRepository(env.DB);
+		const tags = await new ListTagsByArticle(repository).execute(articleId);
+		return json(tags);
+	}
+
+	static async handleByProject(request: Request, env: Env, projectId: string): Promise<Response> {
+		if (request.method !== "GET") return json({ error: "Method Not Allowed" }, 405);
+		const repository = new TagRepository(env.DB);
+		const tags = await new ListTagsByProject(repository).execute(projectId);
+		return json(tags);
 	}
 }

@@ -20,8 +20,15 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/auth/github",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "auth", "github"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"auth",
+										"github"
+									]
 								},
 								"description": "Redirects to GitHub OAuth authorization page. Open this URL in a browser; after approving, GitHub will redirect to the callback URL with a code."
 							},
@@ -34,11 +41,27 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/auth/github/callback?code=GITHUB_CODE&state=OAUTH_STATE",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "auth", "github", "callback"],
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"auth",
+										"github",
+										"callback"
+									],
 									"query": [
-										{ "key": "code", "value": "GITHUB_CODE", "description": "Authorization code returned by GitHub" },
-										{ "key": "state", "value": "OAUTH_STATE", "description": "State value returned by GitHub (CSRF token)" }
+										{
+											"key": "code",
+											"value": "GITHUB_CODE",
+											"description": "Authorization code returned by GitHub"
+										},
+										{
+											"key": "state",
+											"value": "OAUTH_STATE",
+											"description": "State value returned by GitHub (CSRF token)"
+										}
 									]
 								},
 								"description": "Exchanges the GitHub authorization code for a JWT. Returns { token }."
@@ -57,8 +80,15 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/auth/google",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "auth", "google"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"auth",
+										"google"
+									]
 								},
 								"description": "Redirects to Google OAuth authorization page. Open this URL in a browser; after approving, Google will redirect to the callback URL with a code."
 							},
@@ -71,11 +101,27 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/auth/google/callback?code=GOOGLE_CODE&state=OAUTH_STATE",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "auth", "google", "callback"],
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"auth",
+										"google",
+										"callback"
+									],
 									"query": [
-										{ "key": "code", "value": "GOOGLE_CODE", "description": "Authorization code returned by Google" },
-										{ "key": "state", "value": "OAUTH_STATE", "description": "State value returned by Google (CSRF token)" }
+										{
+											"key": "code",
+											"value": "GOOGLE_CODE",
+											"description": "Authorization code returned by Google"
+										},
+										{
+											"key": "state",
+											"value": "OAUTH_STATE",
+											"description": "State value returned by Google (CSRF token)"
+										}
 									]
 								},
 								"description": "Exchanges the Google authorization code for a JWT. Returns { token }."
@@ -91,16 +137,33 @@
 							"name": "Register with Email",
 							"request": {
 								"method": "POST",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"name\": \"John Doe\",\n  \"password\": \"mypassword123\"\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/auth/email/register",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "auth", "email", "register"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"auth",
+										"email",
+										"register"
+									]
 								},
 								"description": "Creates a new email account and sends a 6-digit OTP to verify the email. Password must be at least 8 characters. Returns 201 on success."
 							},
@@ -110,16 +173,33 @@
 							"name": "Login with Email",
 							"request": {
 								"method": "POST",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"password\": \"mypassword123\"\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/auth/email/login",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "auth", "email", "login"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"auth",
+										"email",
+										"login"
+									]
 								},
 								"description": "Authenticates a verified email account with password. Returns { token } directly."
 							},
@@ -129,16 +209,33 @@
 							"name": "Verify OTP",
 							"request": {
 								"method": "POST",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"otp\": \"123456\"\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/auth/email/verify",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "auth", "email", "verify"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"auth",
+										"email",
+										"verify"
+									]
 								},
 								"description": "Verifies the 6-digit OTP. Returns { token } on success. The OTP is valid for 10 minutes and can only be used once."
 							},
@@ -159,8 +256,15 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/v1/api/auth/me",
-							"host": ["{{baseUrl}}"],
-							"path": ["v1", "api", "auth", "me"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"auth",
+								"me"
+							]
 						},
 						"description": "Returns the currently authenticated user. Requires a valid Bearer JWT in the Authorization header."
 					},
@@ -181,14 +285,43 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles?page=1&limit=10",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles"],
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles"
+									],
 									"query": [
-										{ "key": "page", "value": "1", "description": "Page number (default: 1)" },
-										{ "key": "limit", "value": "10", "description": "Items per page (default: 10, max: 100)" },
-										{ "key": "search", "value": "", "description": "Search in title, slug, description", "disabled": true },
-										{ "key": "sort", "value": "created_at", "description": "Sort column: id, title, slug, description, published, created_at, updated_at", "disabled": true },
-										{ "key": "order", "value": "desc", "description": "Sort order: asc, desc", "disabled": true }
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number (default: 1)"
+										},
+										{
+											"key": "limit",
+											"value": "10",
+											"description": "Items per page (default: 10, max: 100)"
+										},
+										{
+											"key": "search",
+											"value": "",
+											"description": "Search in title, slug, description",
+											"disabled": true
+										},
+										{
+											"key": "sort",
+											"value": "created_at",
+											"description": "Sort column: id, title, slug, description, published, created_at, updated_at",
+											"disabled": true
+										},
+										{
+											"key": "order",
+											"value": "desc",
+											"description": "Sort order: asc, desc",
+											"disabled": true
+										}
 									]
 								}
 							},
@@ -201,8 +334,15 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}"
+									]
 								}
 							},
 							"response": []
@@ -211,16 +351,31 @@
 							"name": "Create Article",
 							"request": {
 								"method": "POST",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"title\": \"My Article Title\",\n  \"slug\": \"my-article-slug\",\n  \"description\": \"A short description of the article.\",\n  \"thumbnail\": \"https://example.com/thumbnail.png\",\n  \"content\": \"Full article content goes here.\",\n  \"file_path\": \"\",\n  \"published\": false,\n  \"author_ids\": [1],\n  \"tag_ids\": []\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles"
+									]
 								}
 							},
 							"response": []
@@ -229,16 +384,32 @@
 							"name": "Update Article",
 							"request": {
 								"method": "PATCH",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"title\": \"Updated Title\",\n  \"description\": \"Updated description.\",\n  \"thumbnail\": \"https://example.com/new-thumbnail.png\",\n  \"content\": \"Updated content.\",\n  \"published\": true,\n  \"author_ids\": [1],\n  \"tag_ids\": [2]\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}"
+									]
 								}
 							},
 							"response": []
@@ -250,8 +421,15 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}"
+									]
 								}
 							},
 							"response": []
@@ -268,8 +446,16 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/stats",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}", "stats"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}",
+										"stats"
+									]
 								}
 							},
 							"response": []
@@ -281,8 +467,17 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/stats/view",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}", "stats", "view"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}",
+										"stats",
+										"view"
+									]
 								}
 							},
 							"response": []
@@ -299,8 +494,16 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/reactions",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}", "reactions"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}",
+										"reactions"
+									]
 								}
 							},
 							"response": []
@@ -309,16 +512,33 @@
 							"name": "Add Reaction",
 							"request": {
 								"method": "POST",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"type\": \"like\"\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/reactions",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}", "reactions"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}",
+										"reactions"
+									]
 								}
 							},
 							"response": []
@@ -330,8 +550,17 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/reactions/like",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}", "reactions", "like"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}",
+										"reactions",
+										"like"
+									]
 								}
 							},
 							"response": []
@@ -348,11 +577,27 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/comments?page=1&limit=10",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}", "comments"],
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}",
+										"comments"
+									],
 									"query": [
-										{ "key": "page", "value": "1", "description": "Page number (default: 1)" },
-										{ "key": "limit", "value": "10", "description": "Items per page (default: 10, max: 100)" }
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number (default: 1)"
+										},
+										{
+											"key": "limit",
+											"value": "10",
+											"description": "Items per page (default: 10, max: 100)"
+										}
 									]
 								}
 							},
@@ -362,16 +607,33 @@
 							"name": "Create Comment",
 							"request": {
 								"method": "POST",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"authorName\": \"John Doe\",\n  \"content\": \"Great article!\"\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/comments",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}", "comments"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}",
+										"comments"
+									]
 								}
 							},
 							"response": []
@@ -380,16 +642,34 @@
 							"name": "Update Comment",
 							"request": {
 								"method": "PATCH",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"content\": \"Updated comment text.\"\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/comments/{{commentId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}", "comments", "{{commentId}}"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}",
+										"comments",
+										"{{commentId}}"
+									]
 								}
 							},
 							"response": []
@@ -401,9 +681,45 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/comments/{{commentId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "articles", "{{slug}}", "comments", "{{commentId}}"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}",
+										"comments",
+										"{{commentId}}"
+									]
 								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Tags",
+					"item": [
+						{
+							"name": "Get Tags by Article",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/tags",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}",
+										"tags"
+									]
+								},
+								"description": "Returns all tags associated with the given article slug."
 							},
 							"response": []
 						}
@@ -430,11 +746,34 @@
 								"authors"
 							],
 							"query": [
-								{ "key": "page", "value": "1", "description": "Page number (default: 1)" },
-								{ "key": "limit", "value": "10", "description": "Items per page (default: 10, max: 100)" },
-								{ "key": "search", "value": "", "description": "Search in name", "disabled": true },
-								{ "key": "sort", "value": "id", "description": "Sort column: id, name, profile, url", "disabled": true },
-								{ "key": "order", "value": "asc", "description": "Sort order: asc, desc", "disabled": true }
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number (default: 1)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page (default: 10, max: 100)"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search in name",
+									"disabled": true
+								},
+								{
+									"key": "sort",
+									"value": "id",
+									"description": "Sort column: id, name, profile, url",
+									"disabled": true
+								},
+								{
+									"key": "order",
+									"value": "asc",
+									"description": "Sort order: asc, desc",
+									"disabled": true
+								}
 							]
 						}
 					},
@@ -568,11 +907,34 @@
 								"tags"
 							],
 							"query": [
-								{ "key": "page", "value": "1", "description": "Page number (default: 1)" },
-								{ "key": "limit", "value": "10", "description": "Items per page (default: 10, max: 100)" },
-								{ "key": "search", "value": "", "description": "Search in tag, description", "disabled": true },
-								{ "key": "sort", "value": "id", "description": "Sort column: id, tag, description", "disabled": true },
-								{ "key": "order", "value": "asc", "description": "Sort order: asc, desc", "disabled": true }
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number (default: 1)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page (default: 10, max: 100)"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search in tag, description",
+									"disabled": true
+								},
+								{
+									"key": "sort",
+									"value": "id",
+									"description": "Sort column: id, tag, description",
+									"disabled": true
+								},
+								{
+									"key": "order",
+									"value": "asc",
+									"description": "Sort order: asc, desc",
+									"disabled": true
+								}
 							]
 						}
 					},
@@ -700,14 +1062,43 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/projects?page=1&limit=10",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "projects"],
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"projects"
+									],
 									"query": [
-										{ "key": "page", "value": "1", "description": "Page number (default: 1)" },
-										{ "key": "limit", "value": "10", "description": "Items per page (default: 10, max: 100)" },
-										{ "key": "search", "value": "", "description": "Search in title, slug, description", "disabled": true },
-										{ "key": "sort", "value": "created_at", "description": "Sort column: id, title, slug, description, published, created_at, updated_at", "disabled": true },
-										{ "key": "order", "value": "desc", "description": "Sort order: asc, desc", "disabled": true }
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number (default: 1)"
+										},
+										{
+											"key": "limit",
+											"value": "10",
+											"description": "Items per page (default: 10, max: 100)"
+										},
+										{
+											"key": "search",
+											"value": "",
+											"description": "Search in title, slug, description",
+											"disabled": true
+										},
+										{
+											"key": "sort",
+											"value": "created_at",
+											"description": "Sort column: id, title, slug, description, published, created_at, updated_at",
+											"disabled": true
+										},
+										{
+											"key": "order",
+											"value": "desc",
+											"description": "Sort order: asc, desc",
+											"disabled": true
+										}
 									]
 								}
 							},
@@ -720,8 +1111,15 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/projects/{{projectSlug}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "projects", "{{projectSlug}}"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"projects",
+										"{{projectSlug}}"
+									]
 								}
 							},
 							"response": []
@@ -730,16 +1128,31 @@
 							"name": "Create Project",
 							"request": {
 								"method": "POST",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"title\": \"My Project\",\n  \"slug\": \"my-project\",\n  \"description\": \"A short description of the project.\",\n  \"thumbnail\": \"https://example.com/thumbnail.png\",\n  \"published\": false,\n  \"tag_ids\": [],\n  \"contributor_ids\": [],\n  \"languages\": [\"TypeScript\"]\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/projects",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "projects"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"projects"
+									]
 								}
 							},
 							"response": []
@@ -748,16 +1161,32 @@
 							"name": "Update Project",
 							"request": {
 								"method": "PATCH",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"title\": \"Updated Project Title\",\n  \"description\": \"Updated description.\",\n  \"published\": true,\n  \"tag_ids\": [1],\n  \"contributor_ids\": [1],\n  \"languages\": [\"TypeScript\", \"SQL\"]\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/projects/{{projectSlug}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "projects", "{{projectSlug}}"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"projects",
+										"{{projectSlug}}"
+									]
 								}
 							},
 							"response": []
@@ -769,8 +1198,15 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/projects/{{projectSlug}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "projects", "{{projectSlug}}"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"projects",
+										"{{projectSlug}}"
+									]
 								}
 							},
 							"response": []
@@ -787,8 +1223,16 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/projects/{{projectSlug}}/details",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "projects", "{{projectSlug}}", "details"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"projects",
+										"{{projectSlug}}",
+										"details"
+									]
 								}
 							},
 							"response": []
@@ -797,16 +1241,33 @@
 							"name": "Create Project Details",
 							"request": {
 								"method": "POST",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"content\": \"Full project description in markdown.\",\n  \"demoUrl\": \"https://demo.example.com\",\n  \"repoUrl\": \"https://github.com/example/project\",\n  \"techStack\": [\"TypeScript\", \"Cloudflare Workers\", \"D1\"],\n  \"status\": \"in-progress\"\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/projects/{{projectSlug}}/details",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "projects", "{{projectSlug}}", "details"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"projects",
+										"{{projectSlug}}",
+										"details"
+									]
 								}
 							},
 							"response": []
@@ -815,16 +1276,33 @@
 							"name": "Update Project Details",
 							"request": {
 								"method": "PATCH",
-								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n  \"status\": \"completed\",\n  \"demoUrl\": \"https://updated-demo.example.com\"\n}",
-									"options": { "raw": { "language": "json" } }
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
 								},
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/projects/{{projectSlug}}/details",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "projects", "{{projectSlug}}", "details"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"projects",
+										"{{projectSlug}}",
+										"details"
+									]
 								}
 							},
 							"response": []
@@ -836,9 +1314,44 @@
 								"header": [],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/projects/{{projectSlug}}/details",
-									"host": ["{{baseUrl}}"],
-									"path": ["v1", "api", "projects", "{{projectSlug}}", "details"]
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"projects",
+										"{{projectSlug}}",
+										"details"
+									]
 								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Tags",
+					"item": [
+						{
+							"name": "Get Tags by Project",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/projects/{{projectSlug}}/tags",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"projects",
+										"{{projectSlug}}",
+										"tags"
+									]
+								},
+								"description": "Returns all tags associated with the given project slug."
 							},
 							"response": []
 						}

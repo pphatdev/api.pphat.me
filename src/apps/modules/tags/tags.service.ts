@@ -35,3 +35,17 @@ export class DeleteTag {
 		return this.repo.delete(id);
 	}
 }
+
+export class ListTagsByArticle {
+	constructor(private readonly repo: ITagRepository) {}
+	execute(articleId: string): Promise<Tag[]> {
+		return this.repo.findByArticleId(articleId);
+	}
+}
+
+export class ListTagsByProject {
+	constructor(private readonly repo: ITagRepository) {}
+	execute(projectId: string): Promise<Tag[]> {
+		return this.repo.findByProjectId(projectId);
+	}
+}
