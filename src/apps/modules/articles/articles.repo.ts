@@ -1,4 +1,4 @@
-import { Author, Author as AuthorRow, TagRow, PaginatedResult, PaginationParams } from "../../../shared/interfaces";
+import { Author, Author as AuthorRow, Tag, PaginatedResult, PaginationParams } from "../../../shared/interfaces";
 import type { Article, IArticleRepository, ArticleRow, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
 
 function computeReadingMins(content: string): number {
@@ -107,20 +107,10 @@ export class ArticleRepository implements IArticleRepository {
 			);
 		}
 
-		if (dto.tag_ids?.length) {
-			const placeholders = dto.tag_ids.map((_, i) => `?${i + 1}`).join(", ");
-			const { results: foundTags } = await this.db
-				.prepare(`SELECT id FROM tags WHERE id IN (${placeholders})`)
-				.bind(...dto.tag_ids)
-				.all<{ id: number }>();
-			if (foundTags.length !== dto.tag_ids.length) {
-				const foundSet = new Set(foundTags.map((t) => t.id));
-				const missing = dto.tag_ids.filter((id) => !foundSet.has(id));
-				throw new Error(`Tags not found: ${missing.join(", ")}`);
-			}
+		if (dto.tags?.length) {
 			await this.db.batch(
-				dto.tag_ids.map((tid) =>
-					this.db.prepare("INSERT OR IGNORE INTO article_tags (article_id, tag_id) VALUES (?1, ?2)").bind(id, tid)
+				dto.tags.map((t) =>
+					this.db.prepare("INSERT INTO tags (tag, description, article_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", id)
 				)
 			);
 		}
@@ -177,22 +167,12 @@ export class ArticleRepository implements IArticleRepository {
 			}
 		}
 
-		if (dto.tag_ids !== undefined) {
-			await this.db.prepare("DELETE FROM article_tags WHERE article_id = ?1").bind(existing.id).run();
-			if (dto.tag_ids.length) {
-				const placeholders = dto.tag_ids.map((_, i) => `?${i + 1}`).join(", ");
-				const { results: foundTags } = await this.db
-					.prepare(`SELECT id FROM tags WHERE id IN (${placeholders})`)
-					.bind(...dto.tag_ids)
-					.all<{ id: number }>();
-				if (foundTags.length !== dto.tag_ids.length) {
-					const foundSet = new Set(foundTags.map((t) => t.id));
-					const missing = dto.tag_ids.filter((id) => !foundSet.has(id));
-					throw new Error(`Tags not found: ${missing.join(", ")}`);
-				}
+		if (dto.tags !== undefined) {
+			await this.db.prepare("DELETE FROM tags WHERE article_id = ?1").bind(existing.id).run();
+			if (dto.tags.length) {
 				await this.db.batch(
-					dto.tag_ids.map((tid) =>
-						this.db.prepare("INSERT OR IGNORE INTO article_tags (article_id, tag_id) VALUES (?1, ?2)").bind(existing.id, tid)
+					dto.tags.map((t) =>
+						this.db.prepare("INSERT INTO tags (tag, description, article_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", existing.id)
 					)
 				);
 			}
@@ -229,11 +209,9 @@ export class ArticleRepository implements IArticleRepository {
 				.bind(row.id)
 				.all<AuthorRow>(),
 			this.db
-				.prepare(
-					"SELECT t.tag FROM article_tags at JOIN tags t ON at.tag_id = t.id WHERE at.article_id = ?1"
-				)
+				.prepare("SELECT id, tag, description FROM tags WHERE article_id = ?1")
 				.bind(row.id)
-				.all<TagRow>(),
+				.all<Tag>(),
 		]);
 
 		const authors: Author[] = authorsResult.results.map((a) => ({
@@ -242,7 +220,7 @@ export class ArticleRepository implements IArticleRepository {
 			url: a.url,
 		}));
 
-		const tags: string[] = tagsResult.results.map((t) => t.tag);
+		const tags: Tag[] = tagsResult.results;
 
 		return {
 			id: row.id,

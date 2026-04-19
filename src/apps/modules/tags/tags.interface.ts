@@ -4,22 +4,30 @@ export interface Tag {
 	id: number;
 	tag: string;
 	description: string;
+	article_id?: string | null;
+	project_id?: string | null;
 }
 
 export interface TagRow {
 	id: number;
 	tag: string;
 	description: string;
+	article_id: string | null;
+	project_id: string | null;
 }
 
 export interface CreateTagDto {
 	tag: string;
 	description?: string;
+	article_id?: string | null;
+	project_id?: string | null;
 }
 
 export interface UpdateTagDto {
 	tag?: string;
 	description?: string;
+	article_id?: string | null;
+	project_id?: string | null;
 }
 
 export interface ITagRepository {

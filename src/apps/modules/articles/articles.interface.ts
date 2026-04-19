@@ -1,11 +1,11 @@
-import { Author, PaginatedResult, PaginationParams } from "../../../shared/interfaces";
+import { Tag, Author, PaginatedResult, PaginationParams } from "../../../shared/interfaces";
 
 export interface Article {
 	id: string;
 	title: string;
 	slug: string;
 	description: string;
-	tags: string[];
+	tags: Tag[];
 	authors: Author[];
 	thumbnail: string;
 	published: boolean;
@@ -40,7 +40,7 @@ export interface CreateArticleDto {
 	file_path?: string;
 	published?: boolean;
 	author_ids?: number[];
-	tag_ids?: number[];
+	tags?: { tag: string; description?: string }[];
 }
 
 export interface UpdateArticleDto {
@@ -52,7 +52,7 @@ export interface UpdateArticleDto {
 	file_path?: string;
 	published?: boolean;
 	author_ids?: number[];
-	tag_ids?: number[];
+	tags?: { tag: string; description?: string }[];
 }
 
 export interface IArticleRepository {

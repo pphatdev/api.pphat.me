@@ -11,10 +11,3 @@ CREATE TABLE IF NOT EXISTS projects (
     updated_at  TEXT NOT NULL,
     languages   TEXT NOT NULL DEFAULT '[]'  -- JSON array of languages
 );
-
--- Project tags (many-to-many with existing tags table)
-CREATE TABLE IF NOT EXISTS project_tags (
-    project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    tag_id      INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
-    PRIMARY KEY (project_id, tag_id)
-);

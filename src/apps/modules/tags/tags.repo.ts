@@ -62,8 +62,8 @@ export class TagRepository implements ITagRepository {
 
 	async create(dto: CreateTagDto): Promise<Tag> {
 		const result = await this.db
-			.prepare("INSERT INTO tags (tag, description) VALUES (?1, ?2)")
-			.bind(dto.tag, dto.description ?? "")
+			.prepare("INSERT INTO tags (tag, description, article_id, project_id) VALUES (?1, ?2, ?3, ?4)")
+			.bind(dto.tag, dto.description ?? "", dto.article_id ?? null, dto.project_id ?? null)
 			.run();
 
 		const id = result.meta.last_row_id as number;
@@ -89,6 +89,8 @@ export class TagRepository implements ITagRepository {
 
 		if (dto.tag !== undefined) { fields.push(`tag = ?${idx++}`); values.push(dto.tag); }
 		if (dto.description !== undefined) { fields.push(`description = ?${idx++}`); values.push(dto.description); }
+		if (dto.article_id !== undefined) { fields.push(`article_id = ?${idx++}`); values.push(dto.article_id); }
+		if (dto.project_id !== undefined) { fields.push(`project_id = ?${idx++}`); values.push(dto.project_id); }
 
 		if (!fields.length) return this.mapRow(existing);
 
@@ -119,6 +121,8 @@ export class TagRepository implements ITagRepository {
 			id: row.id,
 			tag: row.tag,
 			description: row.description,
+			article_id: row.article_id,
+			project_id: row.project_id,
 		};
 	}
 }

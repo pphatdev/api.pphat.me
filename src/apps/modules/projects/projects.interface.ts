@@ -41,7 +41,7 @@ export interface CreateProjectDto {
 	description: string;
 	thumbnail?: string;
 	published?: boolean;
-	tag_ids?: number[];
+	tags?: { tag: string; description?: string }[];
 	contributor_ids?: number[];
 	languages?: string[];
 }
@@ -52,7 +52,7 @@ export interface UpdateProjectDto {
 	description?: string;
 	thumbnail?: string;
 	published?: boolean;
-	tag_ids?: number[];
+	tags?: { tag: string; description?: string }[];
 	contributor_ids?: number[];
 	languages?: string[];
 }

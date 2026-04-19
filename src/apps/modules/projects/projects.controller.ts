@@ -43,9 +43,6 @@ export class ProjectsController {
 					if (err instanceof Error && err.message.includes("UNIQUE constraint failed: projects.slug")) {
 						return json({ error: "A project with this slug already exists" }, 409);
 					}
-					if (err instanceof Error && err.message.startsWith("Tags not found:")) {
-						return json({ error: err.message }, 422);
-					}
 					throw err;
 				}
 			}
@@ -71,9 +68,6 @@ export class ProjectsController {
 			} catch (err) {
 				if (err instanceof Error && err.message.includes("UNIQUE constraint failed: projects.slug")) {
 					return json({ error: "A project with this slug already exists" }, 409);
-				}
-				if (err instanceof Error && err.message.startsWith("Tags not found:")) {
-					return json({ error: err.message }, 422);
 				}
 				throw err;
 			}

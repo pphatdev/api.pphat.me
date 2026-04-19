@@ -43,9 +43,6 @@ export class ArticlesController {
 					if (err instanceof Error && err.message.includes("UNIQUE constraint failed: articles.slug")) {
 						return json({ error: "An article with this slug already exists" }, 409);
 					}
-					if (err instanceof Error && err.message.startsWith("Tags not found:")) {
-						return json({ error: err.message }, 422);
-					}
 					throw err;
 				}
 			}
@@ -71,9 +68,6 @@ export class ArticlesController {
 			} catch (err) {
 				if (err instanceof Error && err.message.includes("UNIQUE constraint failed: articles.slug")) {
 					return json({ error: "An article with this slug already exists" }, 409);
-				}
-				if (err instanceof Error && err.message.startsWith("Tags not found:")) {
-					return json({ error: err.message }, 422);
 				}
 				throw err;
 			}

@@ -30,8 +30,27 @@
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 *
+	 * Secrets (set via `wrangler secret put <NAME>`):
+	 *   GITHUB_CLIENT_SECRET
+	 *   GOOGLE_CLIENT_SECRET
+	 *   JWT_SECRET
 	 */
-	// "vars": {  "MY_VARIABLE": "production_value" }
+	"vars": {
+		"GITHUB_CLIENT_ID": "Ov23li3Ck51xqMVZd7Ob",
+		"GOOGLE_CLIENT_ID": "",
+		"APP_URL": "https://api.pphat.me",
+		// SMTP settings for email 2FA (use wrangler secret put for SMTP_PASS)
+		"SMTP_HOST": "smtp.gmail.com",
+		"SMTP_PORT": "587",
+		"SMTP_USER": "Sophat L. <info.sophat@gmail.com>",
+		"SMTP_FROM": "info.sophat@gmail.com"
+	},
+	/**
+	 * Secrets (set via `wrangler secret put <NAME>`):
+	 *   SMTP_PASS
+	 */
+
 	/**
 	 * Static Assets
 	 * https://developers.cloudflare.com/workers/static-assets/binding/

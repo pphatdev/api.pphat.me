@@ -86,20 +86,10 @@ export class ProjectRepository implements IProjectRepository {
 			.bind(id, dto.title, dto.slug, dto.description, dto.thumbnail ?? "", dto.published ? 1 : 0, JSON.stringify(dto.languages ?? []), now, now)
 			.run();
 
-		if (dto.tag_ids?.length) {
-			const placeholders = dto.tag_ids.map((_, i) => `?${i + 1}`).join(", ");
-			const { results: foundTags } = await this.db
-				.prepare(`SELECT id FROM tags WHERE id IN (${placeholders})`)
-				.bind(...dto.tag_ids)
-				.all<{ id: number }>();
-			if (foundTags.length !== dto.tag_ids.length) {
-				const foundSet = new Set(foundTags.map((t) => t.id));
-				const missing = dto.tag_ids.filter((id) => !foundSet.has(id));
-				throw new Error(`Tags not found: ${missing.join(", ")}`);
-			}
+		if (dto.tags?.length) {
 			await this.db.batch(
-				dto.tag_ids.map((tid) =>
-					this.db.prepare("INSERT OR IGNORE INTO project_tags (project_id, tag_id) VALUES (?1, ?2)").bind(id, tid)
+				dto.tags.map((t) =>
+					this.db.prepare("INSERT INTO tags (tag, description, project_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", id)
 				)
 			);
 		}
@@ -144,22 +134,12 @@ export class ProjectRepository implements IProjectRepository {
 			.bind(...values)
 			.run();
 
-		if (dto.tag_ids !== undefined) {
-			await this.db.prepare("DELETE FROM project_tags WHERE project_id = ?1").bind(existing.id).run();
-			if (dto.tag_ids.length) {
-				const placeholders = dto.tag_ids.map((_, i) => `?${i + 1}`).join(", ");
-				const { results: foundTags } = await this.db
-					.prepare(`SELECT id FROM tags WHERE id IN (${placeholders})`)
-					.bind(...dto.tag_ids)
-					.all<{ id: number }>();
-				if (foundTags.length !== dto.tag_ids.length) {
-					const foundSet = new Set(foundTags.map((t) => t.id));
-					const missing = dto.tag_ids.filter((id) => !foundSet.has(id));
-					throw new Error(`Tags not found: ${missing.join(", ")}`);
-				}
+		if (dto.tags !== undefined) {
+			await this.db.prepare("DELETE FROM tags WHERE project_id = ?1").bind(existing.id).run();
+			if (dto.tags.length) {
 				await this.db.batch(
-					dto.tag_ids.map((tid) =>
-						this.db.prepare("INSERT OR IGNORE INTO project_tags (project_id, tag_id) VALUES (?1, ?2)").bind(existing.id, tid)
+					dto.tags.map((t) =>
+						this.db.prepare("INSERT INTO tags (tag, description, project_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", existing.id)
 					)
 				);
 			}
@@ -192,9 +172,7 @@ export class ProjectRepository implements IProjectRepository {
 	private async hydrate(row: ProjectRow): Promise<Project> {
 		const [tagsResult, contributorsResult] = await Promise.all([
 			this.db
-				.prepare(
-					"SELECT t.id, t.tag, t.description FROM project_tags pt JOIN tags t ON pt.tag_id = t.id WHERE pt.project_id = ?1"
-				)
+				.prepare("SELECT id, tag, description FROM tags WHERE project_id = ?1")
 				.bind(row.id)
 				.all<Tag>(),
 			this.db

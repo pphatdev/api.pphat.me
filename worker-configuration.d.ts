@@ -7,6 +7,20 @@ declare namespace Cloudflare {
 	}
 	interface Env {
 		DB: D1Database;
+		// OAuth client IDs (vars in wrangler.jsonc)
+		GITHUB_CLIENT_ID: string;
+		GOOGLE_CLIENT_ID: string;
+		APP_URL: string;
+		// SMTP settings for email 2FA
+		SMTP_HOST: string;
+		SMTP_PORT: string;
+		SMTP_USER: string;
+		SMTP_FROM: string;
+		// Secrets – set via `wrangler secret put <NAME>` or .dev.vars for local dev
+		GITHUB_CLIENT_SECRET: string;
+		GOOGLE_CLIENT_SECRET: string;
+		JWT_SECRET: string;
+		SMTP_PASS: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

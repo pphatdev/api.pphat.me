@@ -8,6 +8,167 @@
 	},
 	"item": [
 		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "GitHub",
+					"item": [
+						{
+							"name": "Login with GitHub",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/auth/github",
+									"host": ["{{baseUrl}}"],
+									"path": ["v1", "api", "auth", "github"]
+								},
+								"description": "Redirects to GitHub OAuth authorization page. Open this URL in a browser; after approving, GitHub will redirect to the callback URL with a code."
+							},
+							"response": []
+						},
+						{
+							"name": "GitHub Callback",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/auth/github/callback?code=GITHUB_CODE&state=OAUTH_STATE",
+									"host": ["{{baseUrl}}"],
+									"path": ["v1", "api", "auth", "github", "callback"],
+									"query": [
+										{ "key": "code", "value": "GITHUB_CODE", "description": "Authorization code returned by GitHub" },
+										{ "key": "state", "value": "OAUTH_STATE", "description": "State value returned by GitHub (CSRF token)" }
+									]
+								},
+								"description": "Exchanges the GitHub authorization code for a JWT. Returns { token }."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Google",
+					"item": [
+						{
+							"name": "Login with Google",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/auth/google",
+									"host": ["{{baseUrl}}"],
+									"path": ["v1", "api", "auth", "google"]
+								},
+								"description": "Redirects to Google OAuth authorization page. Open this URL in a browser; after approving, Google will redirect to the callback URL with a code."
+							},
+							"response": []
+						},
+						{
+							"name": "Google Callback",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/auth/google/callback?code=GOOGLE_CODE&state=OAUTH_STATE",
+									"host": ["{{baseUrl}}"],
+									"path": ["v1", "api", "auth", "google", "callback"],
+									"query": [
+										{ "key": "code", "value": "GOOGLE_CODE", "description": "Authorization code returned by Google" },
+										{ "key": "state", "value": "OAUTH_STATE", "description": "State value returned by Google (CSRF token)" }
+									]
+								},
+								"description": "Exchanges the Google authorization code for a JWT. Returns { token }."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Email",
+					"item": [
+						{
+							"name": "Register with Email",
+							"request": {
+								"method": "POST",
+								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"name\": \"John Doe\",\n  \"password\": \"mypassword123\"\n}",
+									"options": { "raw": { "language": "json" } }
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/auth/email/register",
+									"host": ["{{baseUrl}}"],
+									"path": ["v1", "api", "auth", "email", "register"]
+								},
+								"description": "Creates a new email account and sends a 6-digit OTP to verify the email. Password must be at least 8 characters. Returns 201 on success."
+							},
+							"response": []
+						},
+						{
+							"name": "Login with Email",
+							"request": {
+								"method": "POST",
+								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"password\": \"mypassword123\"\n}",
+									"options": { "raw": { "language": "json" } }
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/auth/email/login",
+									"host": ["{{baseUrl}}"],
+									"path": ["v1", "api", "auth", "email", "login"]
+								},
+								"description": "Authenticates a verified email account with password. Returns { token } directly."
+							},
+							"response": []
+						},
+						{
+							"name": "Verify OTP",
+							"request": {
+								"method": "POST",
+								"header": [{ "key": "Content-Type", "value": "application/json" }],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"otp\": \"123456\"\n}",
+									"options": { "raw": { "language": "json" } }
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/auth/email/verify",
+									"host": ["{{baseUrl}}"],
+									"path": ["v1", "api", "auth", "email", "verify"]
+								},
+								"description": "Verifies the 6-digit OTP. Returns { token } on success. The OTP is valid for 10 minutes and can only be used once."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "JWT token obtained from the login callback"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/v1/api/auth/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["v1", "api", "auth", "me"]
+						},
+						"description": "Returns the currently authenticated user. Requires a valid Bearer JWT in the Authorization header."
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Articles",
 			"item": [
 				{
@@ -691,6 +852,12 @@
 			"key": "baseUrl",
 			"value": "http://localhost:8787",
 			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string",
+			"description": "JWT token returned by /auth/github/callback or /auth/google/callback"
 		},
 		{
 			"key": "slug",
