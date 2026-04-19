@@ -13,6 +13,8 @@ export interface Article {
 	updatedAt: string;
 	content: string;
 	filePath: string;
+	stats?: { views: number; readingMins: number };
+	reactions?: { type: string; count: number }[];
 }
 
 export interface ArticleRow {

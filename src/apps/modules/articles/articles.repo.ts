@@ -1,6 +1,11 @@
 import { Author, Author as AuthorRow, TagRow, PaginatedResult, PaginationParams } from "../../../shared/interfaces";
 import type { Article, IArticleRepository, ArticleRow, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
 
+function computeReadingMins(content: string): number {
+	const words = content.trim().split(/\s+/).filter(Boolean).length;
+	return Math.max(1, Math.ceil(words / 200));
+}
+
 
 export class ArticleRepository implements IArticleRepository {
 	constructor(private readonly db: D1Database) {}
@@ -59,7 +64,28 @@ export class ArticleRepository implements IArticleRepository {
 			.first<ArticleRow>();
 
 		if (!row) return null;
-		return this.hydrate(row);
+
+		const [article, statsRow, reactionsResult] = await Promise.all([
+			this.hydrate(row),
+			this.db
+				.prepare("SELECT views, reading_mins FROM article_stats WHERE article_id = ?1")
+				.bind(row.id)
+				.first<{ views: number; reading_mins: number }>(),
+			this.db
+				.prepare("SELECT type, count FROM article_reactions WHERE article_id = ?1 ORDER BY count DESC")
+				.bind(row.id)
+				.all<{ type: string; count: number }>(),
+		]);
+
+		if (statsRow) {
+			article.stats = { views: statsRow.views, readingMins: statsRow.reading_mins };
+		}
+
+		if (reactionsResult.results.length > 0) {
+			article.reactions = reactionsResult.results;
+		}
+
+		return article;
 	}
 
 	async create(dto: CreateArticleDto): Promise<Article> {
@@ -98,6 +124,12 @@ export class ArticleRepository implements IArticleRepository {
 				)
 			);
 		}
+		// Initialize article_stats
+		const readingMins = computeReadingMins(dto.content ?? "");
+		await this.db
+			.prepare("INSERT OR IGNORE INTO article_stats (article_id, views, reading_mins) VALUES (?1, 0, ?2)")
+			.bind(id, readingMins)
+			.run();
 		const row = await this.db.prepare("SELECT * FROM articles WHERE id = ?1").bind(id).first<ArticleRow>();
 		return this.hydrate(row!);
 	}
@@ -118,7 +150,10 @@ export class ArticleRepository implements IArticleRepository {
 		if (dto.slug !== undefined) { fields.push(`slug = ?${idx++}`); values.push(dto.slug); }
 		if (dto.description !== undefined) { fields.push(`description = ?${idx++}`); values.push(dto.description); }
 		if (dto.thumbnail !== undefined) { fields.push(`thumbnail = ?${idx++}`); values.push(dto.thumbnail); }
-		if (dto.content !== undefined) { fields.push(`content = ?${idx++}`); values.push(dto.content); }
+		if (dto.content !== undefined) {
+			fields.push(`content = ?${idx++}`);
+			values.push(dto.content);
+		}
 		if (dto.file_path !== undefined) { fields.push(`file_path = ?${idx++}`); values.push(dto.file_path); }
 		if (dto.published !== undefined) { fields.push(`published = ?${idx++}`); values.push(dto.published ? 1 : 0); }
 
@@ -161,6 +196,15 @@ export class ArticleRepository implements IArticleRepository {
 					)
 				);
 			}
+		}
+
+		// Update reading_mins if content changed
+		if (dto.content !== undefined) {
+			const readingMins = computeReadingMins(dto.content);
+			await this.db
+				.prepare("UPDATE article_stats SET reading_mins = ?1 WHERE article_id = ?2")
+				.bind(readingMins, existing.id)
+				.run();
 		}
 
 		const newSlug = dto.slug ?? slug;
