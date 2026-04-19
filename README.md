@@ -1,8 +1,8 @@
 # api-pphat-me
 
-> Version 0.3.0
+> Version 0.7.2
 
-A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, authors, and tags.
+A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
 ---
 
@@ -22,15 +22,21 @@ A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing
 
 ```
 src/
-├── index.ts                        # Worker entry point
+├── index.ts                         # Worker entry point
 ├── apps/
-│   └── modules/                    # Modules Feature
-├── routes/                         # Route matchers
+│   └── modules/
+│       ├── articles/                # Article CRUD
+│       ├── article-stats/           # View counter & reading time
+│       ├── article-reactions/       # Emoji reactions per article
+│       ├── article-comments/        # Comments per article
+│       ├── projects/                # Project CRUD
+│       └── project-details/         # Extended project details
+├── routes/                          # Authors & Tags route matchers
 └── shared/
-    ├── helpers/                    # json(), response helpers
-    └── interfaces/                 # Shared types (PaginationParams, PaginatedResult, …)
-migrations/                         # D1 SQL migrations
-doc/collections/                    # Postman collection
+    ├── helpers/                     # json(), response helpers
+    └── interfaces/                  # Shared types (PaginationParams, PaginatedResult, Tag, Author, …)
+migrations/                          # D1 SQL migrations
+doc/collections/                     # Postman collection
 ```
 
 ---
@@ -67,24 +73,18 @@ npm test
 ### Generate TypeScript Types (after changing bindings)
 
 ```bash
-npm run cf-typegen
-# or
 npx wrangler types
 ```
 
 ### Deploy
 
 ```bash
-npm run deploy
-# or
 npx wrangler deploy
 ```
 
 ---
 
 ## Database Migrations
-
-Apply migrations to your D1 database:
 
 ```bash
 # Local (dev)
@@ -93,6 +93,19 @@ npx wrangler d1 migrations apply api-pphat-me-db --local
 # Remote (production)
 npx wrangler d1 migrations apply api-pphat-me-db --remote
 ```
+
+| File | Description |
+|------|-------------|
+| `0001_create_articles.sql` | `articles` table |
+| `0002_create_authors.sql` | `authors`, `author_details`, `article_authors` |
+| `0003_create_tags.sql` | `tags`, `article_tags` |
+| `0004_create_article_stats.sql` | `article_stats` (views, reading_mins) |
+| `0005_create_article_reactions.sql` | `article_reactions` |
+| `0006_create_article_comments.sql` | `article_comments` |
+| `0007_create_projects.sql` | `projects`, `project_tags` |
+| `0008_create_project_details.sql` | `project_details` |
+| `0009_add_project_languages.sql` | `languages` column on `projects` |
+| `0010_create_project_contributors.sql` | `project_contributors` |
 
 ---
 
@@ -117,12 +130,12 @@ All list endpoints support the following query parameters:
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/v1/api/articles` | List articles (paginated) |
-| `GET` | `/v1/api/articles/:slug` | Get article by slug |
+| `GET` | `/v1/api/articles/:slug` | Get article by slug (includes `stats` and `reactions`) |
 | `POST` | `/v1/api/articles` | Create article |
 | `PATCH` | `/v1/api/articles/:slug` | Update article |
 | `DELETE` | `/v1/api/articles/:slug` | Delete article |
 
-**Sortable columns:** `id`, `title`, `slug`, `description`, `published`, `created_at`, `updated_at`  
+**Sortable columns:** `id`, `title`, `slug`, `description`, `published`, `created_at`, `updated_at`
 **Search fields:** `title`, `slug`, `description`
 
 **Create / Update body:**
@@ -145,6 +158,121 @@ All list endpoints support the following query parameters:
 
 ---
 
+### Article Stats — `/v1/api/articles/:slug/stats`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/api/articles/:slug/stats` | Get stats (views, reading_mins) |
+| `POST` | `/v1/api/articles/:slug/stats/view` | Increment view counter |
+
+> Stats are auto-initialized when an article is created. `reading_mins` is recalculated whenever `content` is updated (~200 words/min).
+
+---
+
+### Article Reactions — `/v1/api/articles/:slug/reactions`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/api/articles/:slug/reactions` | List all reactions |
+| `POST` | `/v1/api/articles/:slug/reactions` | Add / increment a reaction |
+| `DELETE` | `/v1/api/articles/:slug/reactions/:type` | Decrement a reaction (deletes when count reaches 0) |
+
+**Allowed reaction types:** `like`, `heart`, `fire`, `clap`, `wow`
+
+**Add Reaction body:**
+
+```json
+{ "type": "like" }
+```
+
+---
+
+### Article Comments — `/v1/api/articles/:slug/comments`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/api/articles/:slug/comments` | List comments (paginated) |
+| `POST` | `/v1/api/articles/:slug/comments` | Create comment |
+| `PATCH` | `/v1/api/articles/:slug/comments/:id` | Update comment |
+| `DELETE` | `/v1/api/articles/:slug/comments/:id` | Delete comment |
+
+**Create body:**
+
+```json
+{
+  "authorName": "John Doe",
+  "content": "Great article!"
+}
+```
+
+**Update body:**
+
+```json
+{ "content": "Updated comment text." }
+```
+
+---
+
+### Projects — `/v1/api/projects`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/api/projects` | List projects (paginated) |
+| `GET` | `/v1/api/projects/:slug` | Get project by slug (includes `details` if set) |
+| `POST` | `/v1/api/projects` | Create project |
+| `PATCH` | `/v1/api/projects/:slug` | Update project |
+| `DELETE` | `/v1/api/projects/:slug` | Delete project |
+
+**Sortable columns:** `id`, `title`, `slug`, `description`, `published`, `created_at`, `updated_at`
+**Search fields:** `title`, `slug`, `description`
+
+**Create / Update body:**
+
+```json
+{
+  "title": "My Project",
+  "slug": "my-project",
+  "description": "A short description.",
+  "thumbnail": "https://example.com/thumbnail.png",
+  "published": false,
+  "tag_ids": [1],
+  "contributor_ids": [1],
+  "languages": ["TypeScript", "SQL"]
+}
+```
+
+> `tags` in the response are full objects `{ id, tag, description }` from the `tags` table.
+> `contributor_ids` references existing author IDs.
+
+---
+
+### Project Details — `/v1/api/projects/:slug/details`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/api/projects/:slug/details` | Get project details |
+| `POST` | `/v1/api/projects/:slug/details` | Create project details |
+| `PATCH` | `/v1/api/projects/:slug/details` | Update project details (partial) |
+| `DELETE` | `/v1/api/projects/:slug/details` | Delete project details |
+
+**Create / Update body:**
+
+```json
+{
+  "content": "Full project description in markdown.",
+  "demoUrl": "https://demo.example.com",
+  "repoUrl": "https://github.com/example/project",
+  "techStack": ["TypeScript", "Cloudflare Workers", "D1"],
+  "status": "in-progress"
+}
+```
+
+**Allowed status values:** `in-progress`, `completed`, `archived`
+
+> `POST` and `PATCH` both upsert — creating the record if it does not exist yet.
+
+---
+
 ### Authors — `/v1/api/authors`
 
 | Method | Path | Description |
@@ -155,7 +283,7 @@ All list endpoints support the following query parameters:
 | `PATCH` | `/v1/api/authors/:id` | Update author |
 | `DELETE` | `/v1/api/authors/:id` | Delete author |
 
-**Sortable columns:** `id`, `name`, `profile`, `url`  
+**Sortable columns:** `id`, `name`, `profile`, `url`
 **Search fields:** `name`
 
 **Create / Update body:**
@@ -184,7 +312,7 @@ All list endpoints support the following query parameters:
 | `PATCH` | `/v1/api/tags/:id` | Update tag |
 | `DELETE` | `/v1/api/tags/:id` | Delete tag |
 
-**Sortable columns:** `id`, `tag`, `description`  
+**Sortable columns:** `id`, `tag`, `description`
 **Search fields:** `tag`, `description`
 
 **Create / Update body:**
@@ -204,14 +332,25 @@ Import the collection from [`doc/collections/api-pphat-me.postman_collection.jso
 
 Set the `baseUrl` variable to your local or production URL.
 
+**Collection variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `baseUrl` | `http://localhost:8787` | API base URL |
+| `slug` | `my-article-slug` | Article slug |
+| `projectSlug` | `my-project` | Project slug |
+| `authorId` | `1` | Author ID |
+| `tagId` | `1` | Tag ID |
+| `commentId` | `1` | Comment ID |
+
 ---
 
 ## Error Responses
 
 | Status | Description |
 |--------|-------------|
-| `400` | Bad request / invalid ID |
+| `400` | Bad request / invalid body |
 | `404` | Resource not found |
 | `405` | Method not allowed |
-| `409` | Slug already exists (articles) |
+| `409` | Slug already exists |
 | `422` | Validation error (missing required fields / invalid tag IDs) |
