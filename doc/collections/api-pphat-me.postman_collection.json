@@ -1,10 +1,10 @@
 {
 	"info": {
-		"_postman_id": "46a07b2d-0749-4fcf-bbe3-d14cc675828c",
+		"_postman_id": "f34a494e-b463-430f-ae10-b56fe3e4c737",
 		"name": "api-pphat-me",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "16827919",
-		"_collection_link": "https://go.postman.co/collection/16827919-46a07b2d-0749-4fcf-bbe3-d14cc675828c?source=collection_link"
+		"_collection_link": "https://go.postman.co/collection/16827919-f34a494e-b463-430f-ae10-b56fe3e4c737?source=collection_link"
 	},
 	"item": [
 		{
@@ -16,7 +16,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/v1/api/articles",
+							"raw": "{{baseUrl}}/v1/api/articles?page=1&limit=10",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -24,6 +24,13 @@
 								"v1",
 								"api",
 								"articles"
+							],
+							"query": [
+								{ "key": "page", "value": "1", "description": "Page number (default: 1)" },
+								{ "key": "limit", "value": "10", "description": "Items per page (default: 10, max: 100)" },
+								{ "key": "search", "value": "", "description": "Search in title, slug, description", "disabled": true },
+								{ "key": "sort", "value": "created_at", "description": "Sort column: id, title, slug, description, published, created_at, updated_at", "disabled": true },
+								{ "key": "order", "value": "desc", "description": "Sort order: asc, desc", "disabled": true }
 							]
 						}
 					},
@@ -61,7 +68,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"title\": \"My Article Title\",\n  \"slug\": \"my-article-slug\",\n  \"description\": \"A short description of the article.\",\n  \"thumbnail\": \"https://example.com/thumbnail.png\",\n  \"content\": \"Full article content goes here.\",\n  \"file_path\": \"\",\n  \"published\": false,\n  \"author_ids\": [1],\n  \"tag_ids\": [1, 2]\n}",
+							"raw": "{\n  \"title\": \"My Article Title\",\n  \"slug\": \"my-article-slug\",\n  \"description\": \"A short description of the article.\",\n  \"thumbnail\": \"https://example.com/thumbnail.png\",\n  \"content\": \"Full article content goes here.\",\n  \"file_path\": \"\",\n  \"published\": false,\n  \"author_ids\": [1],\n  \"tag_ids\": []\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -147,7 +154,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/v1/api/authors",
+							"raw": "{{baseUrl}}/v1/api/authors?page=1&limit=10",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -155,6 +162,13 @@
 								"v1",
 								"api",
 								"authors"
+							],
+							"query": [
+								{ "key": "page", "value": "1", "description": "Page number (default: 1)" },
+								{ "key": "limit", "value": "10", "description": "Items per page (default: 10, max: 100)" },
+								{ "key": "search", "value": "", "description": "Search in name", "disabled": true },
+								{ "key": "sort", "value": "id", "description": "Sort column: id, name, profile, url", "disabled": true },
+								{ "key": "order", "value": "asc", "description": "Sort order: asc, desc", "disabled": true }
 							]
 						}
 					},
@@ -278,9 +292,22 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/v1/api/tags",
-							"host": ["{{baseUrl}}"],
-							"path": ["v1", "api", "tags"]
+							"raw": "{{baseUrl}}/v1/api/tags?page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"tags"
+							],
+							"query": [
+								{ "key": "page", "value": "1", "description": "Page number (default: 1)" },
+								{ "key": "limit", "value": "10", "description": "Items per page (default: 10, max: 100)" },
+								{ "key": "search", "value": "", "description": "Search in tag, description", "disabled": true },
+								{ "key": "sort", "value": "id", "description": "Sort column: id, tag, description", "disabled": true },
+								{ "key": "order", "value": "asc", "description": "Sort order: asc, desc", "disabled": true }
+							]
 						}
 					},
 					"response": []
@@ -292,8 +319,15 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/v1/api/tags/{{tagId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["v1", "api", "tags", "{{tagId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"tags",
+								"{{tagId}}"
+							]
 						}
 					},
 					"response": []
@@ -303,17 +337,30 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"tag\": \"javascript\",\n  \"description\": \"Articles about JavaScript.\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/v1/api/tags",
-							"host": ["{{baseUrl}}"],
-							"path": ["v1", "api", "tags"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"tags"
+							]
 						}
 					},
 					"response": []
@@ -323,17 +370,31 @@
 					"request": {
 						"method": "PATCH",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"tag\": \"typescript\",\n  \"description\": \"Articles about TypeScript.\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/v1/api/tags/{{tagId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["v1", "api", "tags", "{{tagId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"tags",
+								"{{tagId}}"
+							]
 						}
 					},
 					"response": []
@@ -345,8 +406,15 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/v1/api/tags/{{tagId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["v1", "api", "tags", "{{tagId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"tags",
+								"{{tagId}}"
+							]
 						}
 					},
 					"response": []
