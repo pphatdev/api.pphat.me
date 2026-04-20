@@ -26,7 +26,7 @@ app.get ('/v1/api/projects', (c) => ProjectsController.handle(c.req.raw, c.env))
 app.post('/v1/api/projects', authGuard, (c) => ProjectsController.handle(c.req.raw, c.env));
 
 // Project details — auth required for all methods
-app.get   ('/v1/api/projects/:slug/details', authGuard, resolveProject, (c) => ProjectDetailsController.handle(c.req.raw, c.env, c.get('projectId')));
+app.get   ('/v1/api/projects/:slug/details', resolveProject, (c) => ProjectDetailsController.handle(c.req.raw, c.env, c.get('projectId')));
 app.post  ('/v1/api/projects/:slug/details', authGuard, resolveProject, (c) => ProjectDetailsController.handle(c.req.raw, c.env, c.get('projectId')));
 app.patch ('/v1/api/projects/:slug/details', authGuard, resolveProject, (c) => ProjectDetailsController.handle(c.req.raw, c.env, c.get('projectId')));
 app.delete('/v1/api/projects/:slug/details', authGuard, resolveProject, (c) => ProjectDetailsController.handle(c.req.raw, c.env, c.get('projectId')));
