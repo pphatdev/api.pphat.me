@@ -1,59 +1,46 @@
-import { ProjectsController } from "./projects.controller";
-import { ProjectDetailsController } from "../project-details/project-details.controller";
-import { TagRepository } from "../tags/tags.repo";
-import { ListTagsByProject } from "../tags/tags.service";
-import { json } from "../../shared/helpers/json";
-import { requireAuth } from "../../middlewares/auth.middleware";
+import { Hono } from 'hono';
+import type { Context, Next } from 'hono';
+import { ProjectsController }       from './projects.controller';
+import { ProjectDetailsController } from '../project-details/project-details.controller';
+import { TagRepository }            from '../tags/tags.repo';
+import { ListTagsByProject }        from '../tags/tags.service';
+import { authGuard }                from '../../middlewares/auth.middleware';
 
-const listPattern       = new URLPattern({ pathname: "/v1/api/projects" });
-const detailPattern     = new URLPattern({ pathname: "/v1/api/projects/:slug" });
-const detailsPattern    = new URLPattern({ pathname: "/v1/api/projects/:slug/details" });
-const tagsPattern       = new URLPattern({ pathname: "/v1/api/projects/:slug/tags" });
+type AppEnv = { Bindings: Env; Variables: { projectId: string } };
 
-export async function matchProjectRoutes(
-	request: Request,
-	env: Env,
-): Promise<Response | null> {
-	const method = request.method;
+const app = new Hono<AppEnv>();
 
-	// Sub-routes (must be matched before the detail pattern)
-	const detailsMatch = detailsPattern.exec(request.url);
-	if (detailsMatch) {
-		const authError = await requireAuth(request, env);
-		if (authError) return authError;
-		const slug = detailsMatch.pathname.groups["slug"]!;
-		const project = await env.DB.prepare("SELECT id FROM projects WHERE slug = ?1").bind(slug).first<{ id: string }>();
-		if (!project) return null;
-		return ProjectDetailsController.handle(request, env, project.id);
-	}
+/** Resolve project by slug, store id in context, or 404. */
+const resolveProject = async (c: Context<AppEnv>, next: Next): Promise<Response | void> => {
+	const project = await c.env.DB
+		.prepare('SELECT id FROM projects WHERE slug = ?1')
+		.bind(c.req.param('slug'))
+		.first<{ id: string }>();
+	if (!project) return c.json({ error: 'Not Found' }, 404);
+	c.set('projectId', project.id);
+	return next();
+};
 
-	// Tags by project
-	const tagsMatch = tagsPattern.exec(request.url);
-	if (tagsMatch) {
-		if (request.method !== "GET") return json({ error: "Method Not Allowed" }, 405);
-		const slug = tagsMatch.pathname.groups["slug"]!;
-		const project = await env.DB.prepare("SELECT id FROM projects WHERE slug = ?1").bind(slug).first<{ id: string }>();
-		if (!project) return json({ error: "Not Found" }, 404);
-		const tags = await new ListTagsByProject(new TagRepository(env.DB)).execute(project.id);
-		return json(tags);
-	}
+// Collection
+app.get ('/v1/api/projects', (c) => ProjectsController.handle(c.req.raw, c.env));
+app.post('/v1/api/projects', authGuard, (c) => ProjectsController.handle(c.req.raw, c.env));
 
-	const slugMatch = detailPattern.exec(request.url);
-	if (slugMatch) {
-		if (method !== "GET") {
-			const authError = await requireAuth(request, env);
-			if (authError) return authError;
-		}
-		return ProjectsController.handle(request, env, slugMatch.pathname.groups["slug"]);
-	}
+// Project details — auth required for all methods
+app.get   ('/v1/api/projects/:slug/details', authGuard, resolveProject, (c) => ProjectDetailsController.handle(c.req.raw, c.env, c.get('projectId')));
+app.post  ('/v1/api/projects/:slug/details', authGuard, resolveProject, (c) => ProjectDetailsController.handle(c.req.raw, c.env, c.get('projectId')));
+app.patch ('/v1/api/projects/:slug/details', authGuard, resolveProject, (c) => ProjectDetailsController.handle(c.req.raw, c.env, c.get('projectId')));
+app.delete('/v1/api/projects/:slug/details', authGuard, resolveProject, (c) => ProjectDetailsController.handle(c.req.raw, c.env, c.get('projectId')));
 
-	if (listPattern.test(request.url)) {
-		if (method !== "GET") {
-			const authError = await requireAuth(request, env);
-			if (authError) return authError;
-		}
-		return ProjectsController.handle(request, env);
-	}
+// Tags by project (GET only)
+app.get('/v1/api/projects/:slug/tags', resolveProject, async (c) => {
+	const tags = await new ListTagsByProject(new TagRepository(c.env.DB)).execute(c.get('projectId'));
+	return c.json(tags);
+});
 
-	return null;
-}
+// Project detail (after sub-routes)
+app.get   ('/v1/api/projects/:slug', (c) => ProjectsController.handle(c.req.raw, c.env, c.req.param('slug')));
+app.put   ('/v1/api/projects/:slug', authGuard, (c) => ProjectsController.handle(c.req.raw, c.env, c.req.param('slug')));
+app.patch ('/v1/api/projects/:slug', authGuard, (c) => ProjectsController.handle(c.req.raw, c.env, c.req.param('slug')));
+app.delete('/v1/api/projects/:slug', authGuard, (c) => ProjectsController.handle(c.req.raw, c.env, c.req.param('slug')));
+
+export { app as projectRoutes };

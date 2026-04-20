@@ -1,6 +1,6 @@
 # api-pphat-me
 
-> Version 0.8.2
+> Version 0.8.3
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
@@ -11,6 +11,7 @@ A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing
 | Layer | Technology |
 |-------|-----------|
 | Runtime | Cloudflare Workers |
+| Router | Hono v4 |
 | Database | Cloudflare D1 (SQLite) |
 | Language | TypeScript |
 | Testing | Vitest + `@cloudflare/vitest-pool-workers` |
@@ -22,9 +23,10 @@ A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing
 
 ```
 apps/
-├── app.ts                           # Worker entry point
+├── app.ts                           # Worker entry point (Hono app)
 ├── middlewares/
-│   └── auth.middleware.ts           # Authentication middleware
+│   ├── auth.middleware.ts           # JWT auth guard (requireAuth + authGuard)
+│   └── rate-limit.middleware.ts     # Per-API-type rate limiting
 └── modules/
     ├── articles/                    # Article CRUD
     ├── article-stats/               # View counter & reading time

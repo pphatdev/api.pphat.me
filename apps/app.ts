@@ -1,23 +1,19 @@
-import { matchArticleRoutes } from "./modules/articles/articles.route";
-import { matchProjectRoutes } from "./modules/projects/projects.route";
-import { matchAuthRoutes } from "./modules/auth/auth.route";
-import { matchAuthorRoutes } from "./modules/authors/authors.routes";
-import { matchTagRoutes } from "./modules/tags/tags.routes";
-import { json } from "./shared/helpers/json";
-import { applyApiTypeRateLimit, attachRateLimitHeaders } from "./middlewares/rate-limit.middleware";
+import { Hono } from 'hono';
+import { authRoutes }    from './modules/auth/auth.route';
+import { articleRoutes } from './modules/articles/articles.route';
+import { projectRoutes } from './modules/projects/projects.route';
+import { authorRoutes }  from './modules/authors/authors.routes';
+import { tagRoutes }     from './modules/tags/tags.routes';
+import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 
-export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		const rateLimit = applyApiTypeRateLimit(request);
-		if (rateLimit.response) return rateLimit.response;
+const app = new Hono<{ Bindings: Env }>();
 
-		const response =
-			(await matchAuthRoutes(request, env)) ??
-			(await matchArticleRoutes(request, env)) ??
-			(await matchProjectRoutes(request, env)) ??
-			(await matchAuthorRoutes(request, env)) ??
-			(await matchTagRoutes(request, env));
-		const finalResponse = response ?? json({ error: "Not Found" }, 404);
-		return attachRateLimitHeaders(finalResponse, rateLimit.headers);
-	},
-} satisfies ExportedHandler<Env>;
+app.use('/v1/api/*', rateLimitMiddleware);
+
+app.route('/', authRoutes);
+app.route('/', articleRoutes);
+app.route('/', projectRoutes);
+app.route('/', authorRoutes);
+app.route('/', tagRoutes);
+
+export default app;

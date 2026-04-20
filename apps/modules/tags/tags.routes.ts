@@ -1,26 +1,15 @@
-import { TagsController } from "./tags.controller";
-import { requireAuth } from "../../middlewares/auth.middleware";
+import { Hono } from 'hono';
+import { TagsController } from './tags.controller';
+import { authGuard }      from '../../middlewares/auth.middleware';
 
-const listPattern = new URLPattern({ pathname: "/v1/api/tags" });
-const detailPattern = new URLPattern({ pathname: "/v1/api/tags/:id" });
+const app = new Hono<{ Bindings: Env }>();
 
-export async function matchTagRoutes(request: Request, env: Env): Promise<Response | null> {
-	const method = request.method;
+app.get   ('/v1/api/tags',     (c) => TagsController.handle(c.req.raw, c.env));
+app.post  ('/v1/api/tags',     authGuard, (c) => TagsController.handle(c.req.raw, c.env));
 
-	const detailMatch = detailPattern.exec(request.url);
-	if (detailMatch) {
-		if (method !== "GET") {
-			const authError = await requireAuth(request, env);
-			if (authError) return authError;
-		}
-		return TagsController.handle(request, env, detailMatch.pathname.groups["id"]);
-	}
-	if (listPattern.test(request.url)) {
-		if (method !== "GET") {
-			const authError = await requireAuth(request, env);
-			if (authError) return authError;
-		}
-		return TagsController.handle(request, env);
-	}
-	return null;
-}
+app.get   ('/v1/api/tags/:id', (c) => TagsController.handle(c.req.raw, c.env, c.req.param('id')));
+app.put   ('/v1/api/tags/:id', authGuard, (c) => TagsController.handle(c.req.raw, c.env, c.req.param('id')));
+app.patch ('/v1/api/tags/:id', authGuard, (c) => TagsController.handle(c.req.raw, c.env, c.req.param('id')));
+app.delete('/v1/api/tags/:id', authGuard, (c) => TagsController.handle(c.req.raw, c.env, c.req.param('id')));
+
+export { app as tagRoutes };

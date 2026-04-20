@@ -1,6 +1,6 @@
 # Architecture Flow — api.pphat.me
 
-> Version 0.8.2 · Cloudflare Workers + D1
+> Version 0.8.3 · Cloudflare Workers + D1
 
 ---
 
@@ -9,12 +9,13 @@
 ```mermaid
 flowchart TD
     Client([Client]) --> Edge[Cloudflare Edge\nWorkers Runtime]
-    Edge --> App[app.ts\nRoute Dispatcher]
-    App --> R1[matchAuthRoutes]
-    App --> R2[matchArticleRoutes]
-    App --> R3[matchProjectRoutes]
-    App --> R4[matchAuthorRoutes]
-    App --> R5[matchTagRoutes]
+    Edge --> App[app.ts\nHono Application]
+    App --> RL[rateLimitMiddleware\nper-API-type · KV counters]
+    RL --> R1[authRoutes]
+    RL --> R2[articleRoutes]
+    RL --> R3[projectRoutes]
+    RL --> R4[authorRoutes]
+    RL --> R5[tagRoutes]
     R1 & R2 & R3 & R4 & R5 --> Controller
     Controller --> Service
     Service --> Repository
@@ -27,16 +28,18 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Req([Incoming HTTP Request]) --> Fetch["app.ts fetch()\nChain: Auth → Articles → Projects → Authors → Tags\nFirst non-null Response wins · Fallback: 404"]
-    Fetch --> Route[Route Matcher\nURLPattern matching]
-    Route --> Controller[Controller\nmethod validation · body parsing]
-    Controller --> Auth[requireAuth middleware\nBearer JWT]
+    Req([Incoming HTTP Request]) --> Fetch["app.ts\nHono app · export default app"]
+    Fetch --> RL{rateLimitMiddleware\nper-API-type bucket}
+    RL -->|429 exceeded| ErrRL([429 Too Many Requests\n+ X-RateLimit-* headers])
+    RL -->|pass| Route[Hono Router\nmethod + path matching]
+    Route -->|no match| R404([404 Not Found])
+    Route --> Guard{authGuard\nrequired route?}
+    Guard -->|missing / invalid JWT| R401([401 Unauthorized])
+    Guard -->|pass / public| Controller[Controller\nbody parsing · dispatch]
     Controller --> Svc[Service\nBusiness Logic]
-    Auth -->|401| ErrResp([401 Response])
-    Auth -->|pass| Svc
     Svc --> Repo[Repository\nparameterised SQL]
     Repo --> D1[(D1 Database\nSQLite)]
-    D1 --> Resp([HTTP Response])
+    D1 --> Resp([HTTP Response\n+ X-RateLimit-* headers])
 ```
 
 ---
@@ -45,10 +48,11 @@ flowchart TD
 
 | Layer | Files | Responsibility |
 |-------|-------|----------------|
-| **Entry Point** | `apps/app.ts` | Receives `fetch` event, chains route matchers, returns 404 fallback |
-| **Route** | `*.route.ts` / `*.routes.ts` | `URLPattern` matching, dispatch to controller |
-| **Middleware** | `middlewares/auth.middleware.ts` | Validates `Authorization: Bearer <JWT>`, returns `401` or `null` |
-| **Controller** | `*.controller.ts` | HTTP method checks, request body parsing, calls service/use-case |
+| **Entry Point** | `apps/app.ts` | Mounts global `rateLimitMiddleware`, registers five Hono sub-routers, exports `default app` |
+| **Route** | `*.route.ts` / `*.routes.ts` | Typed Hono sub-app — method-specific handlers, `resolveArticle`/`resolveProject` middleware, `authGuard` on write routes |
+| **Middleware** | `middlewares/auth.middleware.ts` | `requireAuth` (raw Request) + `authGuard` (Hono) — validates `Authorization: Bearer <JWT>`, returns `401` on failure |
+| **Middleware** | `middlewares/rate-limit.middleware.ts` | `rateLimitMiddleware` (Hono) — per-API-type sliding-window limit; attaches `X-RateLimit-*` headers; returns `429` when exceeded |
+| **Controller** | `*.controller.ts` | HTTP method dispatch, request body parsing, calls service/use-case |
 | **Service** | `*.service.ts` | Business logic, use-case classes, crypto helpers |
 | **Repository** | `*.repo.ts` | SQL queries against D1, data mapping |
 | **Shared** | `shared/helpers/`, `shared/interfaces/` | `json()` helper, `response()` helper, shared TypeScript types |
@@ -157,14 +161,14 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     actor C as Client
-    participant R as matchArticleRoutes
+    participant R as articleRoutes (Hono)
     participant Ctrl as ArticlesController
     participant Svc as ArticlesService
     participant Repo as ArticlesRepo
     participant DB as D1
 
     C->>R: GET /v1/api/articles?page=1&limit=10&search=cloudflare
-    R->>Ctrl: list(request, env)
+    R->>Ctrl: handle(c.req.raw, c.env)
     Ctrl->>Ctrl: parse query params\npage · limit · search · sort · order
     Ctrl->>Svc: list(params)
     Svc->>Repo: list(params)
@@ -182,17 +186,16 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor C as Client
-    participant R as matchArticleRoutes
-    participant Auth as requireAuth
+    participant R as articleRoutes (Hono)
+    participant Auth as authGuard
     participant Ctrl as ArticlesController
     participant Svc as ArticlesService
     participant Repo as ArticlesRepo
     participant DB as D1
 
     C->>R: POST /v1/api/articles\nAuthorization: Bearer <jwt>
-    R->>Ctrl: create(request, env)
-    Ctrl->>Auth: requireAuth()
-    Auth-->>Ctrl: null (valid) or 401
+    R->>Auth: authGuard middleware
+    Auth-->>R: 401 or next()
     Ctrl->>Ctrl: request.json()\nvalidate required fields
     Ctrl->>Svc: create(body)
     Svc->>Repo: create(data)
@@ -265,4 +268,5 @@ erDiagram
 | `405` | HTTP method not allowed |
 | `409` | Slug or email already exists |
 | `422` | Validation error (missing fields / invalid tag IDs) |
+| `429` | Rate limit exceeded — includes `Retry-After` + `X-RateLimit-*` headers |
 | `502` | Upstream OAuth provider failure |

@@ -9,12 +9,15 @@ declare namespace Cloudflare {
 		DB: D1Database;
 		JWT_SECRET: string;
 		GITHUB_CLIENT_ID: "Ov23li3Ck51xqMVZd7Ob";
+        GITHUB_CLIENT_SECRET: string;
 		GOOGLE_CLIENT_ID: "";
+        GOOGLE_CLIENT_SECRET: string;
 		APP_URL: "https://api.pphat.me";
 		SMTP_HOST: "smtp.gmail.com";
 		SMTP_PORT: "587";
 		SMTP_USER: "Sophat L. <info.sophat@gmail.com>";
 		SMTP_FROM: "info.sophat@gmail.com";
+        SMTP_PASS: string;
 	}
 }
 interface Env extends Cloudflare.Env {}
