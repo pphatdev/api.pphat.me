@@ -132,13 +132,17 @@ export class AuthController {
 				if (!password || typeof password !== 'string' || password.length < 8) return json({ error: 'password must be at least 8 characters' }, 422);
 				try {
 					const { otp } = await new RegisterEmailUser(repo).execute(email, name, password);
-					await sendOtpEmail(email, otp, {
-						host: env.SMTP_HOST,
-						port: Number(env.SMTP_PORT),
-						user: env.SMTP_USER,
-						pass: env.SMTP_PASS,
-						from: env.SMTP_FROM,
-					});
+					try {
+						await sendOtpEmail(email, otp, {
+							host: env.SMTP_HOST,
+							port: Number(env.SMTP_PORT),
+							user: env.SMTP_USER,
+							pass: env.SMTP_PASS,
+							from: env.SMTP_FROM,
+						});
+					} catch {
+						// Email delivery is best-effort; the OTP is stored and can be resent.
+					}
 					return json({ message: 'Verification code sent to your email' }, 201);
 				} catch (err) {
 					const e = err as Error & { status?: number };

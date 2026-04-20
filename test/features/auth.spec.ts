@@ -1,6 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { getAuthHeaders, seedDatabase } from "./helpers/setup";
+import { getAuthHeaders, seedDatabase } from "../../apps/shared/helpers/test-cases";
 
 const SELF = exports.default;
 let authHeaders: Record<string, string>;

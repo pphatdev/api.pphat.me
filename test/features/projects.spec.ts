@@ -1,6 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { seedDatabase, PROJECT_SLUG, getAuthHeaders } from "./helpers/setup";
+import { seedDatabase, PROJECT_SLUG, getAuthHeaders } from "../../apps/shared/helpers/test-cases";
 
 const SELF = exports.default;
 let authHeaders: Record<string, string>;
@@ -139,6 +139,7 @@ describe("Projects API", () => {
 			// First delete existing seed to allow re-creation
 			await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}/details`, {
 				method: "DELETE",
+				headers: authHeaders,
 			});
 			const res = await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}/details`, {
 				method: "POST",

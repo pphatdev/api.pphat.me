@@ -7,7 +7,7 @@ export const PROJECT_SLUG = "test-project-slug";
  * Generate a valid Bearer token header for auth-guarded routes.
  */
 export async function getAuthHeaders(jwtSecret: string): Promise<Record<string, string>> {
-	const { createJwt } = await import("../../apps/modules/auth/auth.service");
+	const { createJwt } = await import("../../modules/auth/auth.service");
 	const token = await createJwt(
 		{ sub: "test-user-id", provider: "email", email: "test@example.com", name: "Test User" },
 		jwtSecret,
@@ -21,7 +21,9 @@ export async function getAuthHeaders(jwtSecret: string): Promise<Record<string, 
  */
 export async function seedDatabase(db: D1Database): Promise<void> {
 	await db.batch([
-		// ── Schema ──────────────────────────────────────────────────────────
+		/**
+		 * Schema
+		*/
 		db.prepare(`CREATE TABLE IF NOT EXISTS articles (
 			id TEXT PRIMARY KEY, title TEXT NOT NULL, slug TEXT NOT NULL UNIQUE,
 			description TEXT NOT NULL, thumbnail TEXT NOT NULL DEFAULT '',
@@ -92,7 +94,9 @@ export async function seedDatabase(db: D1Database): Promise<void> {
 			created_at TEXT NOT NULL DEFAULT (datetime('now'))
 		)`),
 
-		// ── Seed data ────────────────────────────────────────────────────────
+		/**
+		 * Seed data
+		*/
 		db.prepare(`INSERT OR IGNORE INTO articles
 			(id, title, slug, description, thumbnail, published, content, file_path, created_at, updated_at)
 			VALUES (?1, 'Test Article', ?2, 'A test article description.',
