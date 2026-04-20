@@ -44,6 +44,11 @@ export interface CreateProjectDto {
 	tags?: { tag: string; description?: string }[];
 	contributor_ids?: number[];
 	languages?: string[];
+	content?: string;
+	demoUrl?: string;
+	repoUrl?: string;
+	techStack?: string[];
+	status?: 'in-progress' | 'completed' | 'archived';
 }
 
 export interface UpdateProjectDto {
@@ -55,6 +60,16 @@ export interface UpdateProjectDto {
 	tags?: { tag: string; description?: string }[];
 	contributor_ids?: number[];
 	languages?: string[];
+	content?: string;
+	demoUrl?: string;
+	repoUrl?: string;
+	techStack?: string[];
+	status?: 'in-progress' | 'completed' | 'archived';
+}
+
+export interface AppEnv {
+	Bindings: Env;
+	Variables: { projectId: string };
 }
 
 export interface IProjectRepository {

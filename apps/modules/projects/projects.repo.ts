@@ -102,8 +102,10 @@ export class ProjectRepository implements IProjectRepository {
 			);
 		}
 
+		await this.upsertDetails(id, dto, now);
+
 		const row = await this.db.prepare("SELECT * FROM projects WHERE id = ?1").bind(id).first<ProjectRow>();
-		return this.hydrate(row!);
+		return this.hydrateWithDetails(row!);
 	}
 
 	async update(slug: string, dto: UpdateProjectDto): Promise<Project | null> {
@@ -156,9 +158,11 @@ export class ProjectRepository implements IProjectRepository {
 			}
 		}
 
+		await this.upsertDetails(existing.id, dto, new Date().toISOString());
+
 		const newSlug = dto.slug ?? slug;
 		const updated = await this.db.prepare("SELECT * FROM projects WHERE slug = ?1").bind(newSlug).first<ProjectRow>();
-		return this.hydrate(updated!);
+		return this.hydrateWithDetails(updated!);
 	}
 
 	async delete(slug: string): Promise<boolean> {
@@ -167,6 +171,73 @@ export class ProjectRepository implements IProjectRepository {
 			.bind(slug)
 			.run();
 		return result.meta.changes > 0;
+	}
+
+	private async upsertDetails(projectId: string, dto: { content?: string; demoUrl?: string; repoUrl?: string; techStack?: string[]; status?: string }, now: string): Promise<void> {
+		const ALLOWED_STATUS = ['in-progress', 'completed', 'archived'];
+		const existing = await this.db
+			.prepare("SELECT id FROM project_details WHERE project_id = ?1")
+			.bind(projectId)
+			.first<{ id: string }>();
+
+		if (!existing) {
+			const detailId = crypto.randomUUID();
+			const safeStatus = ALLOWED_STATUS.includes(dto.status ?? '') ? dto.status! : 'in-progress';
+			await this.db
+				.prepare(
+					"INSERT INTO project_details (id, project_id, content, demo_url, repo_url, tech_stack, status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+				)
+				.bind(
+					detailId, projectId,
+					dto.content ?? '', dto.demoUrl ?? '', dto.repoUrl ?? '',
+					JSON.stringify(dto.techStack ?? []), safeStatus, now, now
+				)
+				.run();
+		} else {
+			const fields: string[] = [];
+			const values: unknown[] = [];
+			let idx = 1;
+
+			if (dto.content !== undefined)   { fields.push(`content = ?${idx++}`);    values.push(dto.content); }
+			if (dto.demoUrl !== undefined)    { fields.push(`demo_url = ?${idx++}`);   values.push(dto.demoUrl); }
+			if (dto.repoUrl !== undefined)    { fields.push(`repo_url = ?${idx++}`);   values.push(dto.repoUrl); }
+			if (dto.techStack !== undefined)  { fields.push(`tech_stack = ?${idx++}`); values.push(JSON.stringify(dto.techStack)); }
+			if (dto.status !== undefined && ALLOWED_STATUS.includes(dto.status)) {
+				fields.push(`status = ?${idx++}`);
+				values.push(dto.status);
+			}
+
+			if (fields.length > 0) {
+				fields.push(`updated_at = ?${idx++}`);
+				values.push(now);
+				values.push(projectId);
+
+				await this.db
+					.prepare(`UPDATE project_details SET ${fields.join(", ")} WHERE project_id = ?${idx}`)
+					.bind(...values)
+					.run();
+			}
+		}
+	}
+
+	private async hydrateWithDetails(row: ProjectRow): Promise<Project> {
+		const project = await this.hydrate(row);
+		const detailsRow = await this.db
+			.prepare("SELECT content, demo_url, repo_url, tech_stack, status FROM project_details WHERE project_id = ?1")
+			.bind(row.id)
+			.first<{ content: string; demo_url: string; repo_url: string; tech_stack: string; status: string }>();
+
+		if (detailsRow) {
+			project.details = {
+				content: detailsRow.content,
+				demoUrl: detailsRow.demo_url,
+				repoUrl: detailsRow.repo_url,
+				techStack: JSON.parse(detailsRow.tech_stack || '[]'),
+				status: detailsRow.status as ProjectDetailEmbed['status'],
+			};
+		}
+
+		return project;
 	}
 
 	private async hydrate(row: ProjectRow): Promise<Project> {
