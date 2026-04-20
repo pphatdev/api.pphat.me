@@ -1,11 +1,6 @@
 import { json } from "../../shared/helpers/json";
 import { ArticleCommentRepository } from "./article-comments.repo";
-import {
-	CreateArticleComment,
-	DeleteArticleComment,
-	ListArticleComments,
-	UpdateArticleComment,
-} from "./article-comments.service";
+import { ArticleCommentService } from "./article-comments.service";
 
 export class ArticleCommentsController {
 
@@ -20,7 +15,7 @@ export class ArticleCommentsController {
 		const url = new URL(request.url);
 		const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
 		const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "10", 10) || 10));
-		const result = await new ListArticleComments(repo).execute(articleId, { page, limit });
+		const result = await new ArticleCommentService(repo).list(articleId, { page, limit });
 		return json(result);
 	}
 
@@ -31,7 +26,7 @@ export class ArticleCommentsController {
 		const { authorName, content } = body as Record<string, unknown>;
 		if (!authorName || typeof authorName !== "string") return json({ error: "authorName is required" }, 422);
 		if (!content || typeof content !== "string") return json({ error: "content is required" }, 422);
-		const comment = await new CreateArticleComment(repo).execute(articleId, { authorName, content });
+		const comment = await new ArticleCommentService(repo).create(articleId, { authorName, content });
 		return json(comment, 201);
 	}
 
@@ -44,7 +39,7 @@ export class ArticleCommentsController {
 		if (!body || typeof body !== "object") return json({ error: "Invalid JSON body" }, 400);
 		const { content } = body as Record<string, unknown>;
 		if (!content || typeof content !== "string") return json({ error: "content is required" }, 422);
-		const comment = await new UpdateArticleComment(repo).execute(numericId, { content });
+		const comment = await new ArticleCommentService(repo).update(numericId, { content });
 		if (!comment) return json({ error: "Not Found" }, 404);
 		return json(comment);
 	}
@@ -54,7 +49,7 @@ export class ArticleCommentsController {
 		if (numericId === null) return json({ error: "Invalid comment id" }, 400);
 
 		const repo = new ArticleCommentRepository(env.DB);
-		const deleted = await new DeleteArticleComment(repo).execute(numericId);
+		const deleted = await new ArticleCommentService(repo).delete(numericId);
 		if (!deleted) return json({ error: "Not Found" }, 404);
 		return new Response(null, { status: 204 });
 	}

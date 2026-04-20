@@ -1,11 +1,6 @@
 import { json } from "../../shared/helpers/json";
 import { ArticleReactionRepository } from "./article-reactions.repo";
-import {
-	DeleteArticleReaction,
-	DecrementArticleReaction,
-	IncrementArticleReaction,
-	ListArticleReactions,
-} from "./article-reactions.service";
+import { ArticleReactionService } from "./article-reactions.service";
 
 const ALLOWED_TYPES = new Set(["like", "heart", "fire", "clap", "wow"]);
 
@@ -20,7 +15,7 @@ export class ArticleReactionsController {
 
 	static async list(request: Request, env: Env, articleId: string): Promise<Response> {
 		const repo = new ArticleReactionRepository(env.DB);
-		const reactions = await new ListArticleReactions(repo).execute(articleId);
+		const reactions = await new ArticleReactionService(repo).list(articleId);
 		return json(reactions);
 	}
 
@@ -32,7 +27,7 @@ export class ArticleReactionsController {
 		if (!type || typeof type !== "string") return json({ error: "type is required" }, 422);
 		const invalid = ArticleReactionsController.validateType(type);
 		if (invalid) return invalid;
-		const reaction = await new IncrementArticleReaction(repo).execute(articleId, type);
+		const reaction = await new ArticleReactionService(repo).increment(articleId, type);
 		return json(reaction);
 	}
 
@@ -40,7 +35,7 @@ export class ArticleReactionsController {
 		const invalid = ArticleReactionsController.validateType(type);
 		if (invalid) return invalid;
 		const repo = new ArticleReactionRepository(env.DB);
-		const reaction = await new IncrementArticleReaction(repo).execute(articleId, type);
+		const reaction = await new ArticleReactionService(repo).increment(articleId, type);
 		return json(reaction);
 	}
 
@@ -48,7 +43,7 @@ export class ArticleReactionsController {
 		const invalid = ArticleReactionsController.validateType(type);
 		if (invalid) return invalid;
 		const repo = new ArticleReactionRepository(env.DB);
-		const reaction = await new DecrementArticleReaction(repo).execute(articleId, type);
+		const reaction = await new ArticleReactionService(repo).decrement(articleId, type);
 		return json({ type, removed: reaction === null, reaction });
 	}
 }

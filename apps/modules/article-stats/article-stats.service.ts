@@ -1,15 +1,13 @@
 import type { ArticleStats, IArticleStatsRepository } from "./article-stats.interface";
 
-export class GetArticleStats {
+export class ArticleStatsService {
 	constructor(private readonly repo: IArticleStatsRepository) {}
-	execute(articleId: string): Promise<ArticleStats | null> {
+
+	get(articleId: string): Promise<ArticleStats | null> {
 		return this.repo.findByArticleId(articleId);
 	}
-}
 
-export class IncrementArticleViews {
-	constructor(private readonly repo: IArticleStatsRepository) {}
-	execute(articleId: string): Promise<ArticleStats> {
+	incrementViews(articleId: string): Promise<ArticleStats> {
 		return this.repo.incrementViews(articleId);
 	}
 }

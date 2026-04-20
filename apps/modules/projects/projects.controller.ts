@@ -2,9 +2,9 @@ import type { Context, Next } from 'hono';
 import { json } from "../../shared/helpers/json";
 import { AppEnv } from "./projects.interface";
 import { ProjectRepository } from "./projects.repo";
-import { ListTagsByProject } from "../tags/tags.service";
+import { TagService } from "../tags/tags.service";
 import { TagRepository } from "../tags/tags.repo";
-import { CreateProject, DeleteProject, GetProjectBySlug, ListProjects, UpdateProject } from "./projects.service";
+import { ProjectService } from "./projects.service";
 
 export class ProjectsController {
 
@@ -27,7 +27,7 @@ export class ProjectsController {
 		const sort = url.searchParams.get("sort") ?? undefined;
 		const orderParam = url.searchParams.get("order")?.toLowerCase();
 		const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
-		const result = await new ListProjects(repository).execute({ page, limit, search, sort, order });
+		const result = await new ProjectService(repository).list({ page, limit, search, sort, order });
 		return json(result);
 	}
 
@@ -42,7 +42,7 @@ export class ProjectsController {
 		}
 
 		try {
-			const project = await new CreateProject(repository).execute(body as never);
+			const project = await new ProjectService(repository).create(body as never);
 			return json(project, 201);
 		} catch (err) {
 			if (err instanceof Error && err.message.includes("UNIQUE constraint failed: projects.slug")) {
@@ -54,7 +54,7 @@ export class ProjectsController {
 
 	static async getBySlug(request: Request, env: Env, slug: string): Promise<Response> {
 		const repository = new ProjectRepository(env.DB);
-		const project = await new GetProjectBySlug(repository).execute(slug);
+		const project = await new ProjectService(repository).getBySlug(slug);
 		if (!project) return json({ error: "Not Found" }, 404);
 		return json(project);
 	}
@@ -65,7 +65,7 @@ export class ProjectsController {
 		if (!body || typeof body !== "object") return json({ error: "Invalid JSON body" }, 400);
 
 		try {
-			const project = await new UpdateProject(repository).execute(slug, body as never);
+			const project = await new ProjectService(repository).update(slug, body as never);
 			if (!project) return json({ error: "Not Found" }, 404);
 			return json(project);
 		} catch (err) {
@@ -78,13 +78,13 @@ export class ProjectsController {
 
 	static async delete(request: Request, env: Env, slug: string): Promise<Response> {
 		const repository = new ProjectRepository(env.DB);
-		const deleted = await new DeleteProject(repository).execute(slug);
+		const deleted = await new ProjectService(repository).delete(slug);
 		if (!deleted) return json({ error: "Not Found" }, 404);
 		return json({ message: "Deleted successfully" });
 	}
 
 	static getTagProject = async (c: Context<AppEnv>) => {
-		const tags = await new ListTagsByProject(new TagRepository(c.env.DB)).execute(c.get('projectId'));
+		const tags = await new TagService(new TagRepository(c.env.DB)).listByProject(c.get('projectId'));
 		return c.json(tags);
 	}
 }

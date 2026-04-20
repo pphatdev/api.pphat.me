@@ -161,46 +161,17 @@ export async function fetchGoogleUser(
 }
 
 /**
- * Use cases
- */
-
-export class HandleOAuthCallback {
-	constructor(private readonly repo: IAuthRepository) {}
-
-	async execute(
-		provider: 'github' | 'google',
-		userInfo: { providerId: string; email: string | null; name: string | null; avatar: string | null },
-		jwtSecret: string,
-	): Promise<string> {
-		const user = await this.repo.findOrCreateUser(provider, userInfo.providerId, {
-			email: userInfo.email,
-			name: userInfo.name,
-			avatar: userInfo.avatar,
-		});
-		return createJwt({ sub: user.id, provider, email: user.email, name: user.name }, jwtSecret);
-	}
-}
-
-export class GetCurrentUser {
-	constructor(private readonly repo: IAuthRepository) {}
-
-	execute(id: string): Promise<User | null> {
-		return this.repo.findUserById(id);
-	}
-}
-
-/**
  * Email OTP helpers
  */
 
-export function generateOtp(): string {
+function generateOtp(): string {
 	const bytes = new Uint8Array(3);
 	crypto.getRandomValues(bytes);
 	const num = ((bytes[0] << 16) | (bytes[1] << 8) | bytes[2]) % 1_000_000;
 	return String(num).padStart(6, '0');
 }
 
-export function otpExpiresAt(ttlMinutes = 10): string {
+function otpExpiresAt(ttlMinutes = 10): string {
 	return new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
 }
 
@@ -208,7 +179,7 @@ export function otpExpiresAt(ttlMinutes = 10): string {
  * Password helpers (PBKDF2 via Web Crypto)
  */
 
-export async function hashPassword(password: string): Promise<string> {
+async function hashPassword(password: string): Promise<string> {
 	const salt = crypto.getRandomValues(new Uint8Array(16));
 	const keyMaterial = await crypto.subtle.importKey(
 		'raw',
@@ -227,7 +198,7 @@ export async function hashPassword(password: string): Promise<string> {
 	return `${saltHex}:${hashHex}`;
 }
 
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+async function verifyPassword(password: string, stored: string): Promise<boolean> {
 	const [saltHex, hashHex] = stored.split(':');
 	if (!saltHex || !hashHex) return false;
 	const salt = Uint8Array.from(saltHex.match(/.{2}/g)!.map((h) => parseInt(h, 16)));
@@ -248,13 +219,30 @@ export async function verifyPassword(password: string, stored: string): Promise<
 }
 
 /**
- * Email auth use cases
+ * Use cases
  */
 
-export class RegisterEmailUser {
+export class AuthService {
 	constructor(private readonly repo: IAuthRepository) {}
 
-	async execute(email: string, name: string, password: string): Promise<{ otp: string }> {
+	async handleOAuthCallback(
+		provider: 'github' | 'google',
+		userInfo: { providerId: string; email: string | null; name: string | null; avatar: string | null },
+		jwtSecret: string,
+	): Promise<string> {
+		const user = await this.repo.findOrCreateUser(provider, userInfo.providerId, {
+			email: userInfo.email,
+			name: userInfo.name,
+			avatar: userInfo.avatar,
+		});
+		return createJwt({ sub: user.id, provider, email: user.email, name: user.name }, jwtSecret);
+	}
+
+	getCurrentUser(id: string): Promise<User | null> {
+		return this.repo.findUserById(id);
+	}
+
+	async registerEmailUser(email: string, name: string, password: string): Promise<{ otp: string }> {
 		const existing = await this.repo.findEmailUser(email);
 		if (existing) {
 			if (existing.email_verified) throw Object.assign(new Error('Email already registered'), { status: 409 });
@@ -269,12 +257,8 @@ export class RegisterEmailUser {
 		await this.repo.createOtp(email, otp, otpExpiresAt());
 		return { otp };
 	}
-}
 
-export class LoginWithPassword {
-	constructor(private readonly repo: IAuthRepository) {}
-
-	async execute(email: string, password: string, jwtSecret: string): Promise<string> {
+	async loginWithPassword(email: string, password: string, jwtSecret: string): Promise<string> {
 		const user = await this.repo.findEmailUser(email);
 		if (!user) throw Object.assign(new Error('Invalid email or password'), { status: 401 });
 		if (!user.email_verified) throw Object.assign(new Error('Email not verified. Complete registration first.'), { status: 403 });
@@ -283,12 +267,8 @@ export class LoginWithPassword {
 		}
 		return createJwt({ sub: user.id, provider: 'email', email: user.email, name: user.name }, jwtSecret);
 	}
-}
 
-export class VerifyEmailOtp {
-	constructor(private readonly repo: IAuthRepository) {}
-
-	async execute(email: string, code: string, jwtSecret: string): Promise<string> {
+	async verifyEmailOtp(email: string, code: string, jwtSecret: string): Promise<string> {
 		const valid = await this.repo.verifyAndConsumeOtp(email, code);
 		if (!valid) throw Object.assign(new Error('Invalid or expired verification code'), { status: 400 });
 		await this.repo.markEmailVerified(email);

@@ -1,12 +1,6 @@
 import { json } from "../../shared/helpers/json";
 import { AuthorRepository } from "./authors.repo";
-import {
-	CreateAuthor,
-	DeleteAuthor,
-	GetAuthorById,
-	ListAuthors,
-	UpdateAuthor,
-} from "./authors.service";
+import { AuthorService } from "./authors.service";
 
 export class AuthorsController {
 
@@ -25,7 +19,7 @@ export class AuthorsController {
 		const sort = url.searchParams.get("sort") ?? undefined;
 		const orderParam = url.searchParams.get("order")?.toLowerCase();
 		const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
-		const result = await new ListAuthors(repository).execute({ page, limit, search, sort, order });
+		const result = await new AuthorService(repository).list({ page, limit, search, sort, order });
 		return json(result);
 	}
 
@@ -39,7 +33,7 @@ export class AuthorsController {
 			return json({ error: "name is required" }, 422);
 		}
 
-		const author = await new CreateAuthor(repository).execute(body as never);
+		const author = await new AuthorService(repository).create(body as never);
 		return json(author, 201);
 	}
 
@@ -48,7 +42,7 @@ export class AuthorsController {
 		if (numericId === null) return json({ error: "Invalid author id" }, 400);
 
 		const repository = new AuthorRepository(env.DB);
-		const author = await new GetAuthorById(repository).execute(numericId);
+		const author = await new AuthorService(repository).getById(numericId);
 		if (!author) return json({ error: "Not Found" }, 404);
 		return json(author);
 	}
@@ -61,7 +55,7 @@ export class AuthorsController {
 		const body = await request.json().catch(() => null);
 		if (!body || typeof body !== "object") return json({ error: "Invalid JSON body" }, 400);
 
-		const author = await new UpdateAuthor(repository).execute(numericId, body as never);
+		const author = await new AuthorService(repository).update(numericId, body as never);
 		if (!author) return json({ error: "Not Found" }, 404);
 		return json(author);
 	}
@@ -71,7 +65,7 @@ export class AuthorsController {
 		if (numericId === null) return json({ error: "Invalid author id" }, 400);
 
 		const repository = new AuthorRepository(env.DB);
-		const deleted = await new DeleteAuthor(repository).execute(numericId);
+		const deleted = await new AuthorService(repository).delete(numericId);
 		if (!deleted) return json({ error: "Not Found" }, 404);
 		return new Response(null, { status: 204 });
 	}

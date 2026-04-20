@@ -1,11 +1,7 @@
 import { json } from '../../shared/helpers/json';
 import { AuthRepository } from './auth.repo';
 import {
-	HandleOAuthCallback,
-	GetCurrentUser,
-	RegisterEmailUser,
-	LoginWithPassword,
-	VerifyEmailOtp,
+	AuthService,
 	generateOAuthState,
 	verifyOAuthState,
 	exchangeGitHubCode,
@@ -46,7 +42,7 @@ export class AuthController {
 				`${env.APP_URL}/v1/api/auth/github/callback`,
 			);
 			const userInfo = await fetchGitHubUser(ghToken);
-			const token = await new HandleOAuthCallback(repo).execute('github', userInfo, env.JWT_SECRET);
+			const token = await new AuthService(repo).handleOAuthCallback('github', userInfo, env.JWT_SECRET);
 			return json({ token });
 		} catch (err) {
 			return json({ error: err instanceof Error ? err.message : 'GitHub authentication failed' }, 502);
@@ -82,7 +78,7 @@ export class AuthController {
 				`${env.APP_URL}/v1/api/auth/google/callback`,
 			);
 			const userInfo = await fetchGoogleUser(googleToken);
-			const token = await new HandleOAuthCallback(repo).execute('google', userInfo, env.JWT_SECRET);
+			const token = await new AuthService(repo).handleOAuthCallback('google', userInfo, env.JWT_SECRET);
 			return json({ token });
 		} catch (err) {
 			return json({ error: err instanceof Error ? err.message : 'Google authentication failed' }, 502);
@@ -96,7 +92,7 @@ export class AuthController {
 		const rawToken = authHeader.slice(7);
 		const payload = await verifyJwt(rawToken, env.JWT_SECRET);
 		if (!payload) return json({ error: 'Invalid or expired token' }, 401);
-		const user = await new GetCurrentUser(repo).execute(payload.sub);
+		const user = await new AuthService(repo).getCurrentUser(payload.sub);
 		if (!user) return json({ error: 'User not found' }, 404);
 		return json(user);
 	}
@@ -114,7 +110,7 @@ export class AuthController {
 		if (!name || typeof name !== 'string') return json({ error: 'name is required' }, 422);
 		if (!password || typeof password !== 'string' || password.length < 8) return json({ error: 'password must be at least 8 characters' }, 422);
 		try {
-			const { otp } = await new RegisterEmailUser(repo).execute(email, name, password);
+			const { otp } = await new AuthService(repo).registerEmailUser(email, name, password);
 			try {
 				await sendOtpEmail(email, otp, {
 					host: env.SMTP_HOST,
@@ -145,7 +141,7 @@ export class AuthController {
 		if (!email || typeof email !== 'string') return json({ error: 'email is required' }, 400);
 		if (!password || typeof password !== 'string') return json({ error: 'password is required' }, 400);
 		try {
-			const token = await new LoginWithPassword(repo).execute(email, password, env.JWT_SECRET);
+			const token = await new AuthService(repo).loginWithPassword(email, password, env.JWT_SECRET);
 			return json({ token });
 		} catch (err) {
 			const e = err as Error & { status?: number };
@@ -165,7 +161,7 @@ export class AuthController {
 		if (!email || typeof email !== 'string') return json({ error: 'email is required' }, 400);
 		if (!otp || typeof otp !== 'string') return json({ error: 'otp is required' }, 400);
 		try {
-			const token = await new VerifyEmailOtp(repo).execute(email, otp, env.JWT_SECRET);
+			const token = await new AuthService(repo).verifyEmailOtp(email, otp, env.JWT_SECRET);
 			return json({ token });
 		} catch (err) {
 			const e = err as Error & { status?: number };

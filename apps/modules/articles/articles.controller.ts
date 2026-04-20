@@ -2,9 +2,9 @@ import type { Context, Next } from 'hono';
 import { json } from "../../shared/helpers/json";
 import { AppEnv } from "./articles.interface";
 import { ArticleRepository } from "./articles.repo";
-import { CreateArticle, DeleteArticle, GetArticleBySlug, ListArticles, UpdateArticle } from "./articles.service";
+import { ArticleService } from "./articles.service";
 import { TagRepository } from "../tags/tags.repo";
-import { ListTagsByArticle } from "../tags/tags.service";
+import { TagService } from "../tags/tags.service";
 
 export class ArticlesController {
 	static resolveArticle = async (c: Context<AppEnv>, next: Next): Promise<Response | void> => {
@@ -27,7 +27,7 @@ export class ArticlesController {
 		const sort = url.searchParams.get("sort") ?? undefined;
 		const orderParam = url.searchParams.get("order")?.toLowerCase();
 		const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
-		const result = await new ListArticles(repository).execute({ page, limit, search, sort, order });
+		const result = await new ArticleService(repository).list({ page, limit, search, sort, order });
 		return json(result);
 	}
 
@@ -42,7 +42,7 @@ export class ArticlesController {
 		}
 
 		try {
-			const article = await new CreateArticle(repository).execute(body as never);
+			const article = await new ArticleService(repository).create(body as never);
 			return json(article, 201);
 		} catch (err) {
 			if (err instanceof Error && err.message.includes("UNIQUE constraint failed: articles.slug")) {
@@ -54,7 +54,7 @@ export class ArticlesController {
 
 	static async getBySlug(request: Request, env: Env, slug: string): Promise<Response> {
 		const repository = new ArticleRepository(env.DB);
-		const article = await new GetArticleBySlug(repository).execute(slug);
+		const article = await new ArticleService(repository).getBySlug(slug);
 		if (!article) return json({ error: "Not Found" }, 404);
 		return json(article);
 	}
@@ -65,7 +65,7 @@ export class ArticlesController {
 		if (!body || typeof body !== "object") return json({ error: "Invalid JSON body" }, 400);
 
 		try {
-			const article = await new UpdateArticle(repository).execute(slug, body as never);
+			const article = await new ArticleService(repository).update(slug, body as never);
 			if (!article) return json({ error: "Not Found" }, 404);
 			return json(article);
 		} catch (err) {
@@ -78,13 +78,13 @@ export class ArticlesController {
 
 	static async delete(request: Request, env: Env, slug: string): Promise<Response> {
 		const repository = new ArticleRepository(env.DB);
-		const deleted = await new DeleteArticle(repository).execute(slug);
+		const deleted = await new ArticleService(repository).delete(slug);
 		if (!deleted) return json({ error: "Not Found" }, 404);
 		return new Response(null, { status: 204 });
 	}
 
 	static async getTagsArticle(c: Context<AppEnv>): Promise<Response> {
-		const tags = await new ListTagsByArticle(new TagRepository(c.env.DB)).execute(c.get('articleId'));
+		const tags = await new TagService(new TagRepository(c.env.DB)).listByArticle(c.get('articleId'));
 		return c.json(tags);
 	}
 }

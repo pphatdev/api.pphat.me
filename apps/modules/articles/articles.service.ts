@@ -1,42 +1,26 @@
 import { Article, IArticleRepository, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
 import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 
-export class ListArticles {
-	constructor(private readonly articleRepository: IArticleRepository) {}
+export class ArticleService {
+	constructor(private readonly repo: IArticleRepository) {}
 
-	execute(params: PaginationParams): Promise<PaginatedResult<Article>> {
-		return this.articleRepository.findAll(params);
+	list(params: PaginationParams): Promise<PaginatedResult<Article>> {
+		return this.repo.findAll(params);
 	}
-}
 
-export class GetArticleBySlug {
-	constructor(private readonly articleRepository: IArticleRepository) {}
-
-	execute(slug: string): Promise<Article | null> {
-		return this.articleRepository.findBySlug(slug);
+	getBySlug(slug: string): Promise<Article | null> {
+		return this.repo.findBySlug(slug);
 	}
-}
 
-export class CreateArticle {
-	constructor(private readonly articleRepository: IArticleRepository) {}
-
-	execute(dto: CreateArticleDto): Promise<Article> {
-		return this.articleRepository.create(dto);
+	create(dto: CreateArticleDto): Promise<Article> {
+		return this.repo.create(dto);
 	}
-}
 
-export class UpdateArticle {
-	constructor(private readonly articleRepository: IArticleRepository) {}
-
-	execute(slug: string, dto: UpdateArticleDto): Promise<Article | null> {
-		return this.articleRepository.update(slug, dto);
+	update(slug: string, dto: UpdateArticleDto): Promise<Article | null> {
+		return this.repo.update(slug, dto);
 	}
-}
 
-export class DeleteArticle {
-	constructor(private readonly articleRepository: IArticleRepository) {}
-
-	execute(slug: string): Promise<boolean> {
-		return this.articleRepository.delete(slug);
+	delete(slug: string): Promise<boolean> {
+		return this.repo.delete(slug);
 	}
 }
