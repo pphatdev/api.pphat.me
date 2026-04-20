@@ -1,6 +1,6 @@
 # api-pphat-me
 
-> Version 0.7.2
+> Version 0.8.1
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
@@ -21,22 +21,26 @@ A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing
 ## Project Structure
 
 ```
-src/
-├── index.ts                         # Worker entry point
-├── apps/
-│   └── modules/
-│       ├── articles/                # Article CRUD
-│       ├── article-stats/           # View counter & reading time
-│       ├── article-reactions/       # Emoji reactions per article
-│       ├── article-comments/        # Comments per article
-│       ├── projects/                # Project CRUD
-│       └── project-details/         # Extended project details
-├── routes/                          # Authors & Tags route matchers
-└── shared/
-    ├── helpers/                     # json(), response helpers
-    └── interfaces/                  # Shared types (PaginationParams, PaginatedResult, Tag, Author, …)
+apps/
+├── app.ts                           # Worker entry point
+├── middlewares/
+│   └── auth.middleware.ts           # Authentication middleware
+└── modules/
+    ├── articles/                    # Article CRUD
+    ├── article-stats/               # View counter & reading time
+    ├── article-reactions/           # Emoji reactions per article
+    ├── article-comments/            # Comments per article
+    ├── projects/                    # Project CRUD
+    ├── project-details/             # Extended project details
+    ├── authors/                     # Author management
+    ├── tags/                        # Tag management
+    └── auth/                        # Authentication (email-based)
+shared/
+├── helpers/                         # json(), response helpers
+└── interfaces/                      # Shared types (PaginationParams, PaginatedResult, …)
 migrations/                          # D1 SQL migrations
 doc/collections/                     # Postman collection
+test/                                # Vitest integration tests
 ```
 
 ---
@@ -98,14 +102,15 @@ npx wrangler d1 migrations apply api-pphat-me-db --remote
 |------|-------------|
 | `0001_create_articles.sql` | `articles` table |
 | `0002_create_authors.sql` | `authors`, `author_details`, `article_authors` |
-| `0003_create_tags.sql` | `tags`, `article_tags` |
 | `0004_create_article_stats.sql` | `article_stats` (views, reading_mins) |
 | `0005_create_article_reactions.sql` | `article_reactions` |
 | `0006_create_article_comments.sql` | `article_comments` |
 | `0007_create_projects.sql` | `projects`, `project_tags` |
 | `0008_create_project_details.sql` | `project_details` |
-| `0009_add_project_languages.sql` | `languages` column on `projects` |
-| `0010_create_project_contributors.sql` | `project_contributors` |
+| `0009_create_project_contributors.sql` | `project_contributors` |
+| `0010_create_users.sql` | `users` table |
+| `0011_email_auth.sql` | Email authentication setup |
+| `9999_create_tags.sql` | `tags`, `article_tags` |
 
 ---
 
