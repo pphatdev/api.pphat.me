@@ -7,6 +7,7 @@ declare namespace Cloudflare {
 	}
 	interface Env {
 		DB: D1Database;
+		JWT_SECRET: string;
 		GITHUB_CLIENT_ID: "Ov23li3Ck51xqMVZd7Ob";
 		GOOGLE_CLIENT_ID: "";
 		APP_URL: "https://api.pphat.me";
