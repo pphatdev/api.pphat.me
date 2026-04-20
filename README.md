@@ -1,6 +1,6 @@
 # api-pphat-me
 
-> Version 0.8.1
+> Version 0.8.2
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
@@ -127,6 +127,31 @@ All list endpoints support the following query parameters:
 | `search` | string | — | Keyword search |
 | `sort` | string | varies | Column to sort by |
 | `order` | `asc` \| `desc` | varies | Sort direction |
+
+### API Type Rate Limits
+
+Requests are rate-limited by API type in a 60-second window. Limits are tracked per client IP.
+
+| API Type | Rule |
+|---------|------|
+| `auth` | 20 requests / 60s |
+| `read` | 300 requests / 60s |
+| `write` | 60 requests / 60s |
+| `engagement` | 120 requests / 60s |
+
+Classification summary:
+
+- `auth`: paths under `/v1/api/auth/*`
+- `read`: `GET`/`HEAD` requests (except auth)
+- `engagement`: non-GET reactions/comments/stats-view endpoints
+- `write`: all other non-GET API requests
+
+When a limit is exceeded, the API returns `429 Too Many Requests` and includes:
+
+- `Retry-After`
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+- `X-RateLimit-Reset`
 
 ---
 
