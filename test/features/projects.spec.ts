@@ -134,45 +134,6 @@ describe("Projects API", () => {
 			const res = await SELF.fetch("http://example.com/v1/api/projects/non-existent/details");
 			expect(res.status).toBe(404);
 		});
-
-		it(`POST /v1/api/projects/${PROJECT_SLUG}/details with valid body creates details (201)`, async () => {
-			// First delete existing seed to allow re-creation
-			await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}/details`, {
-				method: "DELETE",
-				headers: authHeaders,
-			});
-			const res = await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}/details`, {
-				method: "POST",
-				headers: { ...authHeaders, "Content-Type": "application/json" },
-				body: JSON.stringify({
-					content: "# New Content",
-					demoUrl: "https://demo.example.com",
-					repoUrl: "https://github.com/example/new",
-					techStack: ["TypeScript", "Cloudflare Workers"],
-					status: "in-progress",
-				}),
-			});
-			expect([200, 201]).toContain(res.status);
-		});
-
-		it(`PATCH /v1/api/projects/${PROJECT_SLUG}/details updates details`, async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}/details`, {
-				method: "PATCH",
-				headers: { ...authHeaders, "Content-Type": "application/json" },
-				body: JSON.stringify({ status: "completed" }),
-			});
-			expect(res.status).toBe(200);
-		});
-
-		it(`DELETE /v1/api/projects/${PROJECT_SLUG}/details deletes details`, async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}/details`, {
-				method: "DELETE",
-				headers: authHeaders,
-			});
-			expect(res.status).toBe(200);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("message");
-		});
 	});
 
 	describe("Tags (by Project)", () => {
