@@ -3,33 +3,34 @@ import { ProjectDetailRepository } from "./project-details.repo";
 import { DeleteProjectDetail, GetProjectDetail, UpsertProjectDetail } from "./project-details.service";
 
 export class ProjectDetailsController {
-	static async handle(request: Request, env: Env, projectId: string): Promise<Response> {
+
+	static async get(request: Request, env: Env, projectId: string): Promise<Response> {
 		const repo = new ProjectDetailRepository(env.DB);
-		const method = request.method;
+		const detail = await new GetProjectDetail(repo).execute(projectId);
+		if (!detail) return json({ error: "Not Found" }, 404);
+		return json(detail);
+	}
 
-		// GET /v1/api/projects/:slug/details
-		if (method === "GET") {
-			const detail = await new GetProjectDetail(repo).execute(projectId);
-			if (!detail) return json({ error: "Not Found" }, 404);
-			return json(detail);
-		}
+	static async create(request: Request, env: Env, projectId: string): Promise<Response> {
+		const repo = new ProjectDetailRepository(env.DB);
+		const body = await request.json().catch(() => null);
+		if (!body || typeof body !== "object") return json({ error: "Invalid JSON body" }, 400);
+		const detail = await new UpsertProjectDetail(repo).execute(projectId, body as never);
+		return json(detail, 201);
+	}
 
-		// POST /v1/api/projects/:slug/details  — create or replace
-		// PATCH /v1/api/projects/:slug/details — partial update
-		if (method === "POST" || method === "PATCH") {
-			const body = await request.json().catch(() => null);
-			if (!body || typeof body !== "object") return json({ error: "Invalid JSON body" }, 400);
-			const detail = await new UpsertProjectDetail(repo).execute(projectId, body as never);
-			return json(detail, method === "POST" ? 201 : 200);
-		}
+	static async update(request: Request, env: Env, projectId: string): Promise<Response> {
+		const repo = new ProjectDetailRepository(env.DB);
+		const body = await request.json().catch(() => null);
+		if (!body || typeof body !== "object") return json({ error: "Invalid JSON body" }, 400);
+		const detail = await new UpsertProjectDetail(repo).execute(projectId, body as never);
+		return json(detail);
+	}
 
-		// DELETE /v1/api/projects/:slug/details
-		if (method === "DELETE") {
-			const deleted = await new DeleteProjectDetail(repo).execute(projectId);
-			if (!deleted) return json({ error: "Not Found" }, 404);
-			return json({ message: "Deleted successfully" });
-		}
-
-		return json({ error: "Method Not Allowed" }, 405);
+	static async delete(request: Request, env: Env, projectId: string): Promise<Response> {
+		const repo = new ProjectDetailRepository(env.DB);
+		const deleted = await new DeleteProjectDetail(repo).execute(projectId);
+		if (!deleted) return json({ error: "Not Found" }, 404);
+		return json({ message: "Deleted successfully" });
 	}
 }
