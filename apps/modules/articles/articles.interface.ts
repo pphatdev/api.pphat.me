@@ -55,6 +55,8 @@ export interface UpdateArticleDto {
 	tags?: { tag: string; description?: string }[];
 }
 
+export type AppEnv = { Bindings: Env; Variables: { articleId: string } };
+
 export interface IArticleRepository {
 	findAll(params: PaginationParams): Promise<PaginatedResult<Article>>;
 	findBySlug(slug: string): Promise<Article | null>;
