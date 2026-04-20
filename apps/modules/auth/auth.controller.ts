@@ -127,9 +127,9 @@ export class AuthController {
 					return json({ error: 'Invalid JSON body' }, 400);
 				}
 				const { email, name, password } = body;
-				if (!email || typeof email !== 'string') return json({ error: 'email is required' }, 400);
-				if (!name || typeof name !== 'string') return json({ error: 'name is required' }, 400);
-				if (!password || typeof password !== 'string' || password.length < 8) return json({ error: 'password must be at least 8 characters' }, 400);
+				if (!email || typeof email !== 'string') return json({ error: 'email is required' }, 422);
+				if (!name || typeof name !== 'string') return json({ error: 'name is required' }, 422);
+				if (!password || typeof password !== 'string' || password.length < 8) return json({ error: 'password must be at least 8 characters' }, 422);
 				try {
 					const { otp } = await new RegisterEmailUser(repo).execute(email, name, password);
 					await sendOtpEmail(email, otp, {
