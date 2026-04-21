@@ -9,6 +9,7 @@ import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 const app = new Hono<{ Bindings: Env }>();
 
 app.use('/v1/api/*', rateLimitMiddleware);
+app.get('/', (c) => c.json({ message: 'Welcome to the API' }));
 
 app.route('/', authRoutes);
 app.route('/', articleRoutes);
