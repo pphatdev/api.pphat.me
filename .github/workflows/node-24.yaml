@@ -1,4 +1,4 @@
-name: "Build"
+name: "Build (Node 24)"
 
 on:
   push:
@@ -8,12 +8,8 @@ on:
 
 jobs:
   build:
-    name: "Build and Deploy (Node ${{ matrix.node-version }})"
+    name: "Testing - Node 24"
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [20, 22, 24]
 
     steps:
       - name: Checkout
@@ -22,7 +18,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 24
           cache: 'npm'
 
       - name: Install dependencies
@@ -37,19 +33,17 @@ jobs:
       - name: Job Summary
         if: always()
         run: |
-          echo "## Build Summary 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "## Build Summary (Node 24) 🚀" >> $GITHUB_STEP_SUMMARY
           echo "The build process for **${{ github.repository }}** has completed with status: **${{ job.status }}**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Node Version:** ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node Version:** 24" >> $GITHUB_STEP_SUMMARY
           echo "- **Workflow:** ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Event:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Test Results" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" == "success" ]; then
             echo "✅ All tests passed successfully!" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Tests failed. Please check the logs for more information." >> $GITHUB_STEP_SUMMARY
+            echo "❌ Tests failed. Please check the logs." >> $GITHUB_STEP_SUMMARY
           fi
