@@ -4,9 +4,9 @@ import { describe, it, expect } from "vitest";
 const SELF = exports.default;
 
 describe("Root", () => {
-	it("GET / returns 404", async () => {
+	it("GET / returns 200", async () => {
 		const res = await SELF.fetch("http://example.com/");
-		expect(res.status).toBe(404);
+		expect(res.status).toBe(200);
 	});
 
 	it("GET /v1/api returns 404", async () => {

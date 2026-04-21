@@ -3,8 +3,15 @@ CREATE TABLE IF NOT EXISTS authors (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT NOT NULL,
     profile     TEXT NOT NULL DEFAULT '',
-    url         TEXT NOT NULL DEFAULT ''
+    url         TEXT NOT NULL DEFAULT '',
+    user_id     TEXT REFERENCES users(id)
 );
+
+-- Enforce optional 1-to-1 by indexing non-NULL user_id values uniquely.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_authors_user_id_unique
+ON authors(user_id)
+WHERE user_id IS NOT NULL;
+
 
 -- Author Details Separate table for additional author information
 CREATE TABLE IF NOT EXISTS author_details (

@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
+    role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user', 'admin', 'contributor', 'author')),
     provider TEXT NOT NULL CHECK(provider IN ('github', 'google', 'email')),
     provider_id TEXT NOT NULL,
     password_hash TEXT,

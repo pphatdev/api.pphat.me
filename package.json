@@ -8,8 +8,8 @@
     "start": "wrangler dev",
     "test": "vitest",
     "cf-typegen": "wrangler types",
-    "migrate": "npx wrangler d1 migrations apply api-pphat-me-db --remote",
-    "migrate:local": "npx wrangler d1 migrations apply api-pphat-me-db --local"
+    "migrate": "npx wrangler d1 migrations apply api --remote",
+    "migrate:local": "npx wrangler d1 migrations apply api --local"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.14.7",
@@ -17,7 +17,7 @@
     "@types/nodemailer": "^8.0.0",
     "typescript": "^5.5.2",
     "vitest": "^4.1.0",
-    "wrangler": "^4.82.2"
+    "wrangler": "^4.84.0"
   },
   "dependencies": {
     "hono": "^4.7.0",

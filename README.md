@@ -94,10 +94,10 @@ npx wrangler deploy
 
 ```bash
 # Local (dev)
-npx wrangler d1 migrations apply api-pphat-me-db --local
+npx wrangler d1 migrations apply api --local
 
 # Remote (production)
-npx wrangler d1 migrations apply api-pphat-me-db --remote
+npx wrangler d1 migrations apply api --remote
 ```
 
 | File | Description |
