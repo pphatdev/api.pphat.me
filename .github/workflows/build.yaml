@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ master ]
 
-
 jobs:
   build:
     name: "Build and Deploy (Node ${{ matrix.node-version }})"
@@ -16,15 +15,12 @@ jobs:
       matrix:
         node-version: [20, 22, 24]
 
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -57,4 +53,3 @@ jobs:
           else
             echo "❌ Tests failed. Please check the logs for more information." >> $GITHUB_STEP_SUMMARY
           fi
-        
