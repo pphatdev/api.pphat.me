@@ -1,6 +1,6 @@
-# api-pphat-me
+# API.PPHAT.ME
 
-> Version 0.8.3
+> Version 0.8.5
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
@@ -27,19 +27,17 @@ apps/
 ├── middlewares/
 │   ├── auth.middleware.ts           # JWT auth guard (requireAuth + authGuard)
 │   └── rate-limit.middleware.ts     # Per-API-type rate limiting
-└── modules/
-    ├── articles/                    # Article CRUD
-    ├── article-stats/               # View counter & reading time
-    ├── article-reactions/           # Emoji reactions per article
-    ├── article-comments/            # Comments per article
-    ├── projects/                    # Project CRUD
-    ├── project-details/             # Extended project details
-    ├── authors/                     # Author management
-    ├── tags/                        # Tag management
-    └── auth/                        # Authentication (email-based)
-shared/
-├── helpers/                         # json(), response helpers
-└── interfaces/                      # Shared types (PaginationParams, PaginatedResult, …)
+├── modules/
+│   ├── articles/                    # Article CRUD
+│   ├── article-stats/               # View counter & reading time
+│   ├── article-reactions/           # Emoji reactions per article
+│   ├── article-comments/            # Comments per article
+│   ├── projects/                    # Project CRUD
+│   ├── project-details/             # Extended project details
+│   ├── authors/                     # Author management
+│   ├── tags/                        # Tag management
+│   └── auth/                        # Authentication (email-based)
+└── shared/                          # Utility helpers and common interfaces
 migrations/                          # D1 SQL migrations
 doc/collections/                     # Postman collection
 test/                                # Vitest integration tests
@@ -47,11 +45,21 @@ test/                                # Vitest integration tests
 
 ---
 
+## CI/CD Workflow
+
+This project uses **GitHub Actions** for continuous integration. Every push and pull request to `master` triggers:
+
+- **Multi-Node Testing**: Parallel tests on Node.js 20, 22, and 24.
+- **Type Generation**: Automated Wrangler type generation to ensure binding consistency.
+- **Job Summaries**: Detailed test status reports directly in the GitHub Actions run overview.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - A Cloudflare account with D1 enabled
 
 ### Install
@@ -70,16 +78,15 @@ npx wrangler dev
 
 The API will be available at `http://localhost:8787`.
 
-### Run Tests
-
+### Generate TypeScript Types
+If you change your `wrangler.jsonc` bindings, you should regenerate the TypeScript types:
 ```bash
-npm test
+npm run cf-typegen
 ```
 
-### Generate TypeScript Types (after changing bindings)
-
+### Run Tests
 ```bash
-npx wrangler types
+npm test
 ```
 
 ### Deploy
