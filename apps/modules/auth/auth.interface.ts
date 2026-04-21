@@ -7,6 +7,7 @@ export interface User {
 	avatar: string | null;
 	email_verified: number;
 	password_hash: string | null;
+	role: 'user' | 'admin';
 	created_at: string;
 	updated_at: string;
 }
@@ -25,6 +26,7 @@ export interface JwtPayload {
 	provider: string;
 	email: string | null;
 	name: string | null;
+	role: 'user' | 'admin';
 	iat: number;
 	exp: number;
 }

@@ -1,6 +1,8 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { seedDatabase, ARTICLE_SLUG, getAuthHeaders } from "../../apps/shared/helpers/test-cases";
+import { seedDatabase, ARTICLE_SLUG, ARTICLE_ID, getAuthHeaders } from "../../apps/shared/helpers/test-cases";
+
+const NONEXISTENT_UUID = "00000000-0000-4000-8000-000000000099";
 
 const SELF = exports.default;
 let authHeaders: Record<string, string>;
@@ -11,8 +13,12 @@ beforeAll(async () => {
 });
 
 describe("Articles API", () => {
-	describe("Core", () => {
-		it("GET /v1/api/articles returns paginated list", async () => {
+
+	/**
+	 * GET /v1/api/articles
+	 */
+	describe("GET /v1/api/articles", () => {
+		it("returns paginated list", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/articles?page=1&limit=10");
 			expect(res.status).toBe(200);
 			const body = await res.json() as Record<string, unknown>;
@@ -21,7 +27,24 @@ describe("Articles API", () => {
 			expect(body).toHaveProperty("pagination");
 		});
 
-        it("POST /v1/api/articles with valid body creates article (201)", async () => {
+		it("with search param filters results", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles?search=Test&page=1&limit=10");
+			expect(res.status).toBe(200);
+			const body = await res.json() as Record<string, unknown>;
+			expect(body).toHaveProperty("data");
+		});
+
+		it("with sort and order params succeeds", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles?sort=created_at&order=desc");
+			expect(res.status).toBe(200);
+		});
+	});
+
+	/**
+	 * POST /v1/api/articles
+	 */
+	describe("POST /v1/api/articles", () => {
+		it("with valid body creates article (201)", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/articles", {
 				method: "POST",
 				headers: authHeaders,
@@ -41,33 +64,7 @@ describe("Articles API", () => {
 			expect(body).toHaveProperty("slug", "new-test-article");
 		});
 
-		it("GET /v1/api/articles with search param filters results", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/articles?search=Test&page=1&limit=10");
-			expect(res.status).toBe(200);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("data");
-		});
-
-		it("GET /v1/api/articles with sort and order params succeeds", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/articles?sort=created_at&order=desc");
-			expect(res.status).toBe(200);
-		});
-
-		it(`GET /v1/api/articles/${ARTICLE_SLUG} returns article by slug`, async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}`);
-			expect(res.status).toBe(200);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("slug", ARTICLE_SLUG);
-			expect(body).toHaveProperty("title");
-		});
-
-		it("GET /v1/api/articles/non-existent-slug returns 404", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/articles/non-existent-slug");
-			expect(res.status).toBe(404);
-		});
-
-
-		it("POST /v1/api/articles with missing required fields returns 422", async () => {
+		it("with missing required fields returns 422", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/articles", {
 				method: "POST",
 				headers: authHeaders,
@@ -76,7 +73,7 @@ describe("Articles API", () => {
 			expect(res.status).toBe(422);
 		});
 
-		it("POST /v1/api/articles with duplicate slug returns 409", async () => {
+		it("with duplicate slug returns 409", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/articles", {
 				method: "POST",
 				headers: authHeaders,
@@ -89,7 +86,7 @@ describe("Articles API", () => {
 			expect(res.status).toBe(409);
 		});
 
-		it("POST /v1/api/articles with invalid JSON returns 400", async () => {
+		it("with invalid JSON returns 400", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/articles", {
 				method: "POST",
 				headers: authHeaders,
@@ -97,9 +94,32 @@ describe("Articles API", () => {
 			});
 			expect(res.status).toBe(400);
 		});
+	});
 
-		it(`PATCH /v1/api/articles/${ARTICLE_SLUG} updates the article`, async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}`, {
+	/**
+	 * GET /v1/api/articles/:slug
+	 */
+	describe("GET /v1/api/articles/:slug", () => {
+		it("returns article by slug", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}`);
+			expect(res.status).toBe(200);
+			const body = await res.json() as Record<string, unknown>;
+			expect(body).toHaveProperty("slug", ARTICLE_SLUG);
+			expect(body).toHaveProperty("title");
+		});
+
+		it("returns 404 for non-existent slug", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles/non-existent-slug");
+			expect(res.status).toBe(404);
+		});
+	});
+
+	/**
+	 * PUT|PATCH /v1/api/articles/:id
+	 */
+	describe("PATCH /v1/api/articles/:id", () => {
+		it("updates the article", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_ID}`, {
 				method: "PATCH",
 				headers: authHeaders,
 				body: JSON.stringify({ description: "Updated description." }),
@@ -109,34 +129,70 @@ describe("Articles API", () => {
 			expect(body).toHaveProperty("slug", ARTICLE_SLUG);
 		});
 
-		it("PATCH /v1/api/articles/non-existent returns 404", async () => {
+		it("returns 400 for invalid UUID", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/articles/non-existent", {
+				method: "PATCH",
+				headers: authHeaders,
+				body: JSON.stringify({ description: "Updated." }),
+			});
+			expect(res.status).toBe(400);
+		});
+
+		it("returns 404 for non-existent UUID", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${NONEXISTENT_UUID}`, {
 				method: "PATCH",
 				headers: authHeaders,
 				body: JSON.stringify({ description: "Updated." }),
 			});
 			expect(res.status).toBe(404);
 		});
+	});
 
-		it("DELETE /v1/api/articles/new-test-article deletes article (204)", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/articles/new-test-article", {
-				method: "DELETE",
-                headers: authHeaders,
+	/**
+	 * DELETE /v1/api/articles/:id
+	 */
+	describe("DELETE /v1/api/articles/:id", () => {
+		it("deletes article by UUID (204)", async () => {
+			const createRes = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "To Delete",
+					slug: "to-delete-article",
+					description: "Will be deleted.",
+				}),
 			});
-			expect(res.status).toBe(204);
+			expect(createRes.status).toBe(201);
+			const created = await createRes.json() as Record<string, unknown>;
+			const deleteRes = await SELF.fetch(`http://example.com/v1/api/articles/${created.id}`, {
+				method: "DELETE",
+				headers: authHeaders,
+			});
+			expect(deleteRes.status).toBe(204);
 		});
 
-		it("DELETE /v1/api/articles/non-existent returns 404", async () => {
+		it("returns 400 for invalid UUID", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/articles/non-existent", {
 				method: "DELETE",
-                headers: authHeaders
+				headers: authHeaders,
+			});
+			expect(res.status).toBe(400);
+		});
+
+		it("returns 404 for non-existent UUID", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${NONEXISTENT_UUID}`, {
+				method: "DELETE",
+				headers: authHeaders,
 			});
 			expect(res.status).toBe(404);
 		});
 	});
 
-	describe("Stats", () => {
-		it(`GET /v1/api/articles/${ARTICLE_SLUG}/stats returns stats`, async () => {
+	/**
+	 * GET /v1/api/articles/:slug/stats
+	 */
+	describe("GET /v1/api/articles/:slug/stats", () => {
+		it("returns stats", async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/stats`);
 			expect(res.status).toBe(200);
 			const body = await res.json() as Record<string, unknown>;
@@ -144,12 +200,17 @@ describe("Articles API", () => {
 			expect(body).toHaveProperty("readingMins");
 		});
 
-		it("GET /v1/api/articles/non-existent/stats returns 404", async () => {
+		it("returns 404 for non-existent article", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/articles/non-existent/stats");
 			expect(res.status).toBe(404);
 		});
+	});
 
-		it(`POST /v1/api/articles/${ARTICLE_SLUG}/stats/view increments view count`, async () => {
+	/**
+	 * POST /v1/api/articles/:slug/stats/view
+	 */
+	describe("POST /v1/api/articles/:slug/stats/view", () => {
+		it("increments view count", async () => {
 			const res = await SELF.fetch(
 				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/stats/view`,
 				{ method: "POST", headers: authHeaders }
@@ -161,15 +222,23 @@ describe("Articles API", () => {
 		});
 	});
 
-	describe("Reactions", () => {
-		it(`GET /v1/api/articles/${ARTICLE_SLUG}/reactions returns reaction list`, async () => {
+	/**
+	 * GET /v1/api/articles/:slug/reactions
+	 */
+	describe("GET /v1/api/articles/:slug/reactions", () => {
+		it("returns reaction list", async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions`);
 			expect(res.status).toBe(200);
 			const body = await res.json() as unknown[];
 			expect(Array.isArray(body)).toBe(true);
 		});
+	});
 
-		it(`POST /v1/api/articles/${ARTICLE_SLUG}/reactions adds a reaction`, async () => {
+	/**
+	 * POST /v1/api/articles/:slug/reactions
+	 */
+	describe("POST /v1/api/articles/:slug/reactions", () => {
+		it("adds a reaction", async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions`, {
 				method: "POST",
 				headers: authHeaders,
@@ -181,7 +250,7 @@ describe("Articles API", () => {
 			expect(body).toHaveProperty("count");
 		});
 
-		it(`POST /v1/api/articles/${ARTICLE_SLUG}/reactions with invalid type returns 422`, async () => {
+		it("with invalid type returns 422", async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions`, {
 				method: "POST",
 				headers: authHeaders,
@@ -190,7 +259,7 @@ describe("Articles API", () => {
 			expect(res.status).toBe(422);
 		});
 
-		it(`POST /v1/api/articles/${ARTICLE_SLUG}/reactions with missing type returns 422`, async () => {
+		it("with missing type returns 422", async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions`, {
 				method: "POST",
 				headers: authHeaders,
@@ -198,8 +267,13 @@ describe("Articles API", () => {
 			});
 			expect(res.status).toBe(422);
 		});
+	});
 
-		it(`DELETE /v1/api/articles/${ARTICLE_SLUG}/reactions/like decrements reaction`, async () => {
+	/**
+	 * DELETE /v1/api/articles/:slug/reactions/:type
+	 */
+	describe("DELETE /v1/api/articles/:slug/reactions/:type", () => {
+		it("decrements reaction", async () => {
 			const res = await SELF.fetch(
 				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions/like`,
 				{ method: "DELETE", headers: authHeaders }
@@ -209,7 +283,7 @@ describe("Articles API", () => {
 			expect(body).toHaveProperty("type", "like");
 		});
 
-		it(`DELETE /v1/api/articles/${ARTICLE_SLUG}/reactions/invalid-type returns 422`, async () => {
+		it("with invalid type returns 422", async () => {
 			const res = await SELF.fetch(
 				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions/invalid-type`,
 				{ method: "DELETE", headers: authHeaders }
@@ -218,8 +292,11 @@ describe("Articles API", () => {
 		});
 	});
 
-	describe("Comments", () => {
-		it(`GET /v1/api/articles/${ARTICLE_SLUG}/comments returns paginated comments`, async () => {
+	/**
+	 * GET /v1/api/articles/:slug/comments
+	 */
+	describe("GET /v1/api/articles/:slug/comments", () => {
+		it("returns paginated comments", async () => {
 			const res = await SELF.fetch(
 				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments?page=1&limit=10`
 			);
@@ -229,8 +306,13 @@ describe("Articles API", () => {
 			expect(Array.isArray(body.data)).toBe(true);
 			expect(body).toHaveProperty("pagination");
 		});
+	});
 
-		it(`POST /v1/api/articles/${ARTICLE_SLUG}/comments creates a comment (201)`, async () => {
+	/**
+	 * POST /v1/api/articles/:slug/comments
+	 */
+	describe("POST /v1/api/articles/:slug/comments", () => {
+		it("creates a comment (201)", async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments`, {
 				method: "POST",
 				headers: authHeaders,
@@ -242,7 +324,7 @@ describe("Articles API", () => {
 			expect(body).toHaveProperty("id");
 		});
 
-		it(`POST /v1/api/articles/${ARTICLE_SLUG}/comments missing authorName returns 422`, async () => {
+		it("missing authorName returns 422", async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments`, {
 				method: "POST",
 				headers: authHeaders,
@@ -251,7 +333,7 @@ describe("Articles API", () => {
 			expect(res.status).toBe(422);
 		});
 
-		it(`POST /v1/api/articles/${ARTICLE_SLUG}/comments missing content returns 422`, async () => {
+		it("missing content returns 422", async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments`, {
 				method: "POST",
 				headers: authHeaders,
@@ -259,8 +341,13 @@ describe("Articles API", () => {
 			});
 			expect(res.status).toBe(422);
 		});
+	});
 
-		it(`PATCH /v1/api/articles/${ARTICLE_SLUG}/comments/1 updates a comment`, async () => {
+	/**
+	 * PATCH /v1/api/articles/:slug/comments/:id
+	 */
+	describe("PATCH /v1/api/articles/:slug/comments/:id", () => {
+		it("updates a comment", async () => {
 			const res = await SELF.fetch(
 				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/1`,
 				{
@@ -274,7 +361,7 @@ describe("Articles API", () => {
 			expect(body).toHaveProperty("content", "Updated comment text.");
 		});
 
-		it(`PATCH /v1/api/articles/${ARTICLE_SLUG}/comments/999 returns 404`, async () => {
+		it("returns 404 for non-existent comment", async () => {
 			const res = await SELF.fetch(
 				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/999`,
 				{
@@ -285,8 +372,13 @@ describe("Articles API", () => {
 			);
 			expect(res.status).toBe(404);
 		});
+	});
 
-		it(`DELETE /v1/api/articles/${ARTICLE_SLUG}/comments/1 deletes a comment (204)`, async () => {
+	/**
+	 * DELETE /v1/api/articles/:slug/comments/:id
+	 */
+	describe("DELETE /v1/api/articles/:slug/comments/:id", () => {
+		it("deletes a comment (204)", async () => {
 			const res = await SELF.fetch(
 				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/1`,
 				{ method: "DELETE", headers: authHeaders }
@@ -294,7 +386,7 @@ describe("Articles API", () => {
 			expect(res.status).toBe(204);
 		});
 
-		it(`DELETE /v1/api/articles/${ARTICLE_SLUG}/comments/999 returns 404`, async () => {
+		it("returns 404 for non-existent comment", async () => {
 			const res = await SELF.fetch(
 				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/999`,
 				{ method: "DELETE", headers: authHeaders }
@@ -302,7 +394,7 @@ describe("Articles API", () => {
 			expect(res.status).toBe(404);
 		});
 
-		it(`DELETE /v1/api/articles/${ARTICLE_SLUG}/comments/invalid-id returns 400`, async () => {
+		it("returns 400 for invalid comment ID", async () => {
 			const res = await SELF.fetch(
 				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/abc`,
 				{ method: "DELETE", headers: authHeaders }
@@ -311,8 +403,11 @@ describe("Articles API", () => {
 		});
 	});
 
-	describe("Tags (by Article)", () => {
-		it(`GET /v1/api/articles/${ARTICLE_SLUG}/tags returns tags for article`, async () => {
+	/**
+	 * GET /v1/api/articles/:slug/tags
+	 */
+	describe("GET /v1/api/articles/:slug/tags", () => {
+		it("returns tags for article", async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/tags`);
 			expect(res.status).toBe(200);
 			const body = await res.json() as unknown[];

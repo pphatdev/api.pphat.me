@@ -9,6 +9,7 @@ export interface Article {
 	authors: Author[];
 	thumbnail: string;
 	published: boolean;
+	ownerId: string | null;
 	createdAt: string;
 	updatedAt: string;
 	content: string;
@@ -26,6 +27,7 @@ export interface ArticleRow {
 	published: number;
 	content: string;
 	file_path: string;
+	owner_id: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -39,6 +41,7 @@ export interface CreateArticleDto {
 	content?: string;
 	file_path?: string;
 	published?: boolean;
+	owner_id?: string;
 	author_ids?: number[];
 	tags?: { tag: string; description?: string }[];
 }
@@ -55,12 +58,25 @@ export interface UpdateArticleDto {
 	tags?: { tag: string; description?: string }[];
 }
 
-export type AppEnv = { Bindings: Env; Variables: { articleId: string } };
+export type AppEnv = {
+	Bindings: Env;
+	Variables: {
+		articleId: string;
+		user: import('../auth/auth.interface').JwtPayload;
+	};
+};
 
 export interface IArticleRepository {
-	findAll(params: PaginationParams): Promise<PaginatedResult<Article>>;
+	findAll(params: PaginationParams, onlyPublished?: boolean): Promise<PaginatedResult<Article>>;
+	findAllByAuthor(authorId: number, params: PaginationParams, onlyPublished: boolean): Promise<PaginatedResult<Article>>;
 	findBySlug(slug: string): Promise<Article | null>;
+	findById(id: string): Promise<Article | null>;
 	create(dto: CreateArticleDto): Promise<Article>;
-	update(slug: string, dto: UpdateArticleDto): Promise<Article | null>;
-	delete(slug: string): Promise<boolean>;
+	update(id: string, dto: UpdateArticleDto): Promise<Article | null>;
+	delete(id: string): Promise<boolean>;
+	isOwner(articleId: string, userId: string): Promise<boolean>;
+	isContributor(articleId: string, userId: string): Promise<boolean>;
+	addContributor(articleId: string, userId: string): Promise<void>;
+	removeContributor(articleId: string, userId: string): Promise<boolean>;
 }
+

@@ -235,7 +235,7 @@ export class AuthService {
 			name: userInfo.name,
 			avatar: userInfo.avatar,
 		});
-		return createJwt({ sub: user.id, provider, email: user.email, name: user.name }, jwtSecret);
+		return createJwt({ sub: user.id, provider, email: user.email, name: user.name, role: user.role ?? 'user' }, jwtSecret);
 	}
 
 	getCurrentUser(id: string): Promise<User | null> {
@@ -265,7 +265,7 @@ export class AuthService {
 		if (!user.password_hash || !(await verifyPassword(password, user.password_hash))) {
 			throw Object.assign(new Error('Invalid email or password'), { status: 401 });
 		}
-		return createJwt({ sub: user.id, provider: 'email', email: user.email, name: user.name }, jwtSecret);
+		return createJwt({ sub: user.id, provider: 'email', email: user.email, name: user.name, role: user.role ?? 'user' }, jwtSecret);
 	}
 
 	async verifyEmailOtp(email: string, code: string, jwtSecret: string): Promise<string> {
@@ -274,7 +274,7 @@ export class AuthService {
 		await this.repo.markEmailVerified(email);
 		const user = await this.repo.findEmailUser(email);
 		if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
-		return createJwt({ sub: user.id, provider: 'email', email: user.email, name: user.name }, jwtSecret);
+		return createJwt({ sub: user.id, provider: 'email', email: user.email, name: user.name, role: user.role ?? 'user' }, jwtSecret);
 	}
 }
 

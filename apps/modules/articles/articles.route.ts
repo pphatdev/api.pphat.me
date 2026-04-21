@@ -4,170 +4,257 @@ import { ArticleStatsController }     from '../article-stats/article-stats.contr
 import { ArticleReactionsController } from '../article-reactions/article-reactions.controller';
 import { ArticleCommentsController }  from '../article-comments/article-comments.controller';
 import { authGuard }                  from '../../middlewares/auth.middleware';
-
-type AppEnv = { Bindings: Env; Variables: { articleId: string } };
+import type { AppEnv }                from './articles.interface';
 
 const app = new Hono<AppEnv>();
 
-
 /**
- * @description Get Article List
+ * @description Get Article List (public — published only)
  * @method GET
- * ---------------------------------------
- * @param { Number } page - The page number for pagination
- * @param { Number } limit - The number of items per page
- * @param { String } search - The search query
- * @param { String } sort - The field to sort by
- * @param { String } order - The sort order (asc or desc)
-*/
-app.get('/v1/api/articles', (c) => ArticlesController.list(c.req.raw, c.env));
+ * @param { Number } page               Current Page    page=1
+ * @param { Number } limit              Items per Page  limit=10
+ * @param { String } search             Search Query   search=
+ * @param { ('asc' | 'desc') } order    Sort Order     order=asc
+ * @param { String[] } [sort]           Sort Columns   sort=col1,col2
+ * @param { String[] } [tags]           Filter by Tags tags=tag1,tag2
+ * @param { String[] } [authors]        Filter by Authors authors=author1,author2
+ *
+ * @example `GET /v1/api/articles?page=1&limit=10&search=example&sort=title,name&order=asc&tags=tag1,tag2&authors=author1,author2`
+ */
+app.get(
+    '/v1/api/articles',
+    ArticlesController.list
+);
 
 /**
- * @description Create Article
+ * @description Create Article (authenticated users)
  * @method POST
- * ---------------------------------------
- * @param { String } title - The title of the article
- * @param { String } slug - The slug of the article
- * @param { String } description - The description of the article
- * @param { String } [thumbnail] - The thumbnail URL of the article
- * @param { String } [content] - The content of the article
- * @param { String } [file_path] - The file path of the article
- * @param { Boolean } [published] - The published status of the article
- * @param { Array<Number> } [author_ids] - The IDs of the authors associated with the article
- * @param { Array<{tag: String, description?: String}> } [tags] - The tags associated with the article
-*/
-app.post('/v1/api/articles', authGuard, (c) => ArticlesController.create(c.req.raw, c.env));
+ * @param { String } title          Title of Articles
+ * @param { String } slug           Slug of Articles
+ * @param { String } description    Description of Articles
+ * @param { String } content        Content of Articles
+ * @param { String } thumbnail      Thumbnail of Articles
+ * @param { String } file_path      File Path of Articles
+ * @param { Boolean } published     Published Status of Articles
+ * @param { String[] } [author_ids] Author IDs of Articles
+ * @param { String[] } [tags]       Tags of Articles
+ */
+app.post(
+    '/v1/api/articles',
+    authGuard,
+    ArticlesController.create
+);
+
+/**
+ * @description List articles by author (owner | admin — includes drafts)
+ * @method GET
+ * @param { Number } authorId Author ID
+ */
+app.get(
+    '/v1/api/articles/author/:authorId',
+    authGuard,
+    ArticlesController.listByAuthor
+);
 
 /**
  * @description Get Article Stats
  * @method GET
- * ---------------------------------------
- * @param { String } slug - The slug of the article
-*/
-app.get('/v1/api/articles/:slug/stats', ArticlesController.resolveArticle, (c) => ArticleStatsController.get(c.req.raw, c.env, c.get('articleId')));
+ * @param { String } slug   Slug of Article
+ */
+app.get(
+    '/v1/api/articles/:slug/stats',
+    ArticlesController.resolveArticle,
+    (c) => ArticleStatsController.get(c.req.raw, c.env, c.get('articleId'))
+);
 
 /**
- * @description Increment Article View Count
+ * @description Increment Article View Count (authenticated)
  * @method POST
- * ---------------------------------------
- * @param { String } slug - The slug of the article
-*/
-app.post('/v1/api/articles/:slug/stats/view', authGuard, ArticlesController.resolveArticle, (c) => ArticleStatsController.incrementViews(c.req.raw, c.env, c.get('articleId')));
+ * @param { String } slug   Slug of Article
+ */
+app.post(
+    '/v1/api/articles/:slug/stats/view',
+    authGuard,
+    ArticlesController.resolveArticle,
+    (c) => ArticleStatsController.incrementViews(c.req.raw, c.env, c.get('articleId'))
+);
 
 /**
  * @description List Article Reactions
  * @method GET
- * ---------------------------------------
- * @param { String } slug - The slug of the article
-*/
-app.get('/v1/api/articles/:slug/reactions', ArticlesController.resolveArticle, (c) => ArticleReactionsController.list(c.req.raw, c.env, c.get('articleId')));
+ * @param { String } slug Slug of Article
+ */
+app.get(
+    '/v1/api/articles/:slug/reactions',
+    ArticlesController.resolveArticle,
+    (c) => ArticleReactionsController.list(c.req.raw, c.env, c.get('articleId'))
+);
 
 /**
- * @description Create Article Reaction
+ * @description Create Article Reaction (authenticated)
  * @method POST
- * ---------------------------------------
- * @param { String } slug - The slug of the article
- * @param { String } type - The type of reaction (e.g., like, love)
-*/
-app.post('/v1/api/articles/:slug/reactions', authGuard, ArticlesController.resolveArticle, (c) => ArticleReactionsController.create(c.req.raw, c.env, c.get('articleId')));
+ * @param { String } slug Slug of Article
+ * @param { String } type Type of Reaction
+ */
+app.post(
+    '/v1/api/articles/:slug/reactions',
+    authGuard,
+    ArticlesController.resolveArticle,
+    (c) => ArticleReactionsController.create(c.req.raw, c.env, c.get('articleId'))
+);
 
 /**
- * @description Increment Article Reaction by Type
+ * @description Increment Article Reaction by Type (authenticated)
  * @method POST
- * ---------------------------------------
- * @param { String } slug - The slug of the article
- * @param { String } type - The reaction type to increment
-*/
-app.post('/v1/api/articles/:slug/reactions/:type', authGuard, ArticlesController.resolveArticle, (c) => ArticleReactionsController.incrementByType(c.req.raw, c.env, c.get('articleId'), c.req.param('type')!));
+ * @param { String } slug Slug of Article
+ * @param { String } type Type of Reaction
+ */
+app.post(
+    '/v1/api/articles/:slug/reactions/:type',
+    authGuard,
+    ArticlesController.resolveArticle,
+    (c) => ArticleReactionsController.incrementByType(c.req.raw, c.env, c.get('articleId'), c.req.param('type')!)
+);
 
 /**
- * @description Decrement Article Reaction by Type
+ * @description Decrement Article Reaction by Type (authenticated)
  * @method DELETE
- * ---------------------------------------
- * @param { String } slug - The slug of the article
- * @param { String } type - The reaction type to decrement
-*/
-app.delete('/v1/api/articles/:slug/reactions/:type', authGuard, ArticlesController.resolveArticle, (c) => ArticleReactionsController.decrementByType(c.req.raw, c.env, c.get('articleId'), c.req.param('type')!));
+ * @param { String } slug Slug of Article
+ * @param { String } type Type of Reaction
+ */
+app.delete(
+    '/v1/api/articles/:slug/reactions/:type',
+    authGuard,
+    ArticlesController.resolveArticle,
+    (c) => ArticleReactionsController.decrementByType(c.req.raw, c.env, c.get('articleId'), c.req.param('type')!)
+);
 
 /**
  * @description List Article Comments
  * @method GET
- * ---------------------------------------
- * @param { String } slug - The slug of the article
- * @param { Number } page - The page number for pagination
- * @param { Number } limit - The number of items per page
-*/
-app.get('/v1/api/articles/:slug/comments', ArticlesController.resolveArticle, (c) => ArticleCommentsController.list(c.req.raw, c.env, c.get('articleId')));
+ * @param { String } slug Slug of Article
+ * @param { Number } page Page number
+ * @param { Number } limit Number of comments per page
+ */
+app.get(
+    '/v1/api/articles/:slug/comments',
+    ArticlesController.resolveArticle,
+    (c) => ArticleCommentsController.list(c.req.raw, c.env, c.get('articleId'))
+);
 
 /**
- * @description Create Article Comment
+ * @description Create Article Comment (authenticated)
  * @method POST
- * ---------------------------------------
- * @param { String } slug - The slug of the article
- * @param { String } authorName - The name of the comment author
- * @param { String } content - The content of the comment
-*/
-app.post('/v1/api/articles/:slug/comments', authGuard, ArticlesController.resolveArticle, (c) => ArticleCommentsController.create(c.req.raw, c.env, c.get('articleId')));
+ * @param { String } slug Slug of Article
+ * @param { String } content Content of Comment
+ */
+app.post(
+    '/v1/api/articles/:slug/comments',
+    authGuard,
+    ArticlesController.resolveArticle,
+    (c) => ArticleCommentsController.create(c.req.raw, c.env, c.get('articleId'))
+);
 
 /**
- * @description Update Article Comment
+ * @description Update Article Comment (authenticated)
  * @method PATCH
- * ---------------------------------------
- * @param { String } slug - The slug of the article
- * @param { Number } id - The ID of the comment
- * @param { String } content - The updated content of the comment
-*/
-app.patch('/v1/api/articles/:slug/comments/:id', authGuard, ArticlesController.resolveArticle, (c) => ArticleCommentsController.update(c.req.raw, c.env, c.get('articleId'), c.req.param('id')!));
+ * @param { String } slug Slug of Article
+ * @param { Number } id ID of Comment
+ * @param { String } content Content of Comment
+ */
+app.patch(
+    '/v1/api/articles/:slug/comments/:id',
+    authGuard,
+    ArticlesController.resolveArticle,
+    (c) => ArticleCommentsController.update(c.req.raw, c.env, c.get('articleId'), c.req.param('id')!)
+);
 
 /**
- * @description Delete Article Comment
+ * @description Delete Article Comment (authenticated)
  * @method DELETE
- * ---------------------------------------
- * @param { String } slug - The slug of the article
- * @param { Number } id - The ID of the comment
-*/
-app.delete('/v1/api/articles/:slug/comments/:id', authGuard, ArticlesController.resolveArticle, (c) => ArticleCommentsController.delete(c.req.raw, c.env, c.get('articleId'), c.req.param('id')!));
+ * @param { String } slug Slug of Article
+ * @param { Number } id ID of Comment
+ */
+app.delete(
+    '/v1/api/articles/:slug/comments/:id',
+    authGuard,
+    ArticlesController.resolveArticle,
+    (c) => ArticleCommentsController.delete(c.req.raw, c.env, c.get('articleId'), c.req.param('id')!)
+);
 
 /**
  * @description Get Article Tags
  * @method GET
- * ---------------------------------------
- * @param { String } slug - The slug of the article
-*/
-app.get('/v1/api/articles/:slug/tags', ArticlesController.resolveArticle, ArticlesController.getTagsArticle);
+ * @param { String } slug Slug of Article
+ */
+app.get(
+    '/v1/api/articles/:slug/tags',
+    ArticlesController.resolveArticle,
+    ArticlesController.getTagsArticle
+);
 
 /**
- * @description Get Article By Slug
- * @method GET
- * ---------------------------------------
- * @param { String } slug - The slug of the article
-*/
-app.get('/v1/api/articles/:slug', (c) => ArticlesController.getBySlug(c.req.raw, c.env, c.req.param('slug')!));
+ * @description Add Contributor to Article (owner | admin)
+ * @method POST
+ * @param { String } id Article ID (UUID)
+ * @param { String } user_id User ID
+ */
+app.post(
+    '/v1/api/articles/:id/contributors',
+    authGuard,
+    ArticlesController.addContributor
+);
 
 /**
- * @description Update Article
- * @method PUT, PATCH
- * ---------------------------------------
- * @param { String } slug - The slug of the article
- * @param { String } [title] - The title of the article
- * @param { String } [slug] - The new slug of the article
- * @param { String } [description] - The description of the article
- * @param { String } [thumbnail] - The thumbnail URL of the article
- * @param { String } [content] - The content of the article
- * @param { String } [file_path] - The file path of the article
- * @param { Boolean } [published] - The published status of the article
- * @param { Array<Number> } [author_ids] - The IDs of the authors associated with the article
- * @param { Array<{tag: String, description?: String}> } [tags] - The tags associated with the article
-*/
-app.put('/v1/api/articles/:slug', authGuard, (c) => ArticlesController.update(c.req.raw, c.env, c.req.param('slug')!));
-app.patch('/v1/api/articles/:slug', authGuard, (c) => ArticlesController.update(c.req.raw, c.env, c.req.param('slug')!));
-
-/**
- * @description Delete Article
+ * @description Remove self from article contributors (authenticated contributor)
  * @method DELETE
- * ---------------------------------------
- * @param { String } slug - The slug of the article
-*/
-app.delete('/v1/api/articles/:slug', authGuard, (c) => ArticlesController.delete(c.req.raw, c.env, c.req.param('slug')!));
+ * @param { String } id Article ID (UUID)
+ */
+app.delete(
+    '/v1/api/articles/:id/contributors/me',
+    authGuard,
+    ArticlesController.removeSelfAsContributor
+);
+
+/**
+ * @description Get Article by slug or UUID id (public)
+ * @method GET
+ * @param { String } slug Slug string or UUID
+ */
+app.get(
+    '/v1/api/articles/:slug',
+    ArticlesController.getBySlugOrId
+);
+
+/**
+ * @description Update Article (owner | contributor | admin)
+ * @method PUT, PATCH
+ * @param { String } id Article ID (UUID)
+ */
+app.put(
+    '/v1/api/articles/:id',
+    authGuard,
+    ArticlesController.requireWriteAccess,
+    ArticlesController.update
+);
+app.patch(
+    '/v1/api/articles/:id',
+    authGuard,
+    ArticlesController.requireWriteAccess,
+    ArticlesController.update
+);
+
+/**
+ * @description Delete Article (owner | admin)
+ * @method DELETE
+ * @param { String } id Article ID (UUID)
+ */
+app.delete(
+    '/v1/api/articles/:id',
+    authGuard,
+    ArticlesController.requireDeleteAccess,
+    ArticlesController.delete
+);
 
 export { app as articleRoutes };
+

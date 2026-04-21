@@ -312,23 +312,94 @@
 										},
 										{
 											"key": "sort",
-											"value": "created_at",
-											"description": "Sort column: id, title, slug, description, published, created_at, updated_at",
+											"value": "title,created_at",
+											"description": "Comma-separated sort columns: id, title, slug, description, published, created_at, updated_at",
 											"disabled": true
 										},
 										{
 											"key": "order",
 											"value": "desc",
-											"description": "Sort order: asc, desc",
+											"description": "Sort direction applied to all sort columns: asc, desc",
+											"disabled": true
+										},
+										{
+											"key": "tags",
+											"value": "tag1,tag2",
+											"description": "Comma-separated tag names to filter by",
+											"disabled": true
+										},
+										{
+											"key": "authors",
+											"value": "author1,author2",
+											"description": "Comma-separated author names to filter by",
 											"disabled": true
 										}
 									]
-								}
+								},
+								"description": "Returns all published articles. Public — no auth required.\n\nSupports filtering by tags (`?tags=tag1,tag2`) and authors (`?authors=author1,author2`), multi-column sort (`?sort=title,created_at`), and a single order direction applied to all columns (`?order=asc`)."
 							},
 							"response": []
 						},
 						{
-							"name": "Get Article by Slug",
+							"name": "List Articles by Author",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — must be the author's linked user or an admin"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/articles/author/{{authorId}}?page=1&limit=10",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"author",
+										"{{authorId}}"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number (default: 1)"
+										},
+										{
+											"key": "limit",
+											"value": "10",
+											"description": "Items per page (default: 10, max: 100)"
+										},
+										{
+											"key": "search",
+											"value": "",
+											"description": "Search in title, slug, description",
+											"disabled": true
+										},
+										{
+											"key": "sort",
+											"value": "title,created_at",
+											"description": "Comma-separated sort columns: id, title, slug, description, published, created_at, updated_at",
+											"disabled": true
+										},
+										{
+											"key": "order",
+											"value": "desc",
+											"description": "Sort direction applied to all sort columns: asc, desc",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Returns all articles (including drafts) for the given author ID. The requesting user must own this author profile or be an admin."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Article by Slug or ID",
 							"request": {
 								"method": "GET",
 								"header": [],
@@ -343,7 +414,8 @@
 										"articles",
 										"{{slug}}"
 									]
-								}
+								},
+								"description": "Accepts either a URL slug or a UUID. Public — no auth required."
 							},
 							"response": []
 						},
@@ -353,13 +425,18 @@
 								"method": "POST",
 								"header": [
 									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — authenticated users only"
+									},
+									{
 										"key": "Content-Type",
 										"value": "application/json"
 									}
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"title\": \"My Article Title\",\n  \"slug\": \"my-article-slug\",\n  \"description\": \"A short description of the article.\",\n  \"thumbnail\": \"https://example.com/thumbnail.png\",\n  \"content\": \"Full article content goes here.\",\n  \"file_path\": \"\",\n  \"published\": false,\n  \"author_ids\": [1],\n  \"tag_ids\": []\n}",
+									"raw": "{\n  \"title\": \"My Article Title\",\n  \"slug\": \"my-article-slug\",\n  \"description\": \"A short description of the article.\",\n  \"thumbnail\": \"https://example.com/thumbnail.png\",\n  \"content\": \"Full article content goes here.\",\n  \"file_path\": \"\",\n  \"published\": false,\n  \"author_ids\": [1],\n  \"tags\": [\n    { \"tag\": \"typescript\", \"description\": \"TypeScript articles\" }\n  ]\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -376,7 +453,8 @@
 										"api",
 										"articles"
 									]
-								}
+								},
+								"description": "Creates a new article. The authenticated user becomes the owner (owner_id). Returns 201 with the created article."
 							},
 							"response": []
 						},
@@ -386,13 +464,18 @@
 								"method": "PATCH",
 								"header": [
 									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — owner, contributor, or admin"
+									},
+									{
 										"key": "Content-Type",
 										"value": "application/json"
 									}
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"title\": \"Updated Title\",\n  \"description\": \"Updated description.\",\n  \"thumbnail\": \"https://example.com/new-thumbnail.png\",\n  \"content\": \"Updated content.\",\n  \"published\": true,\n  \"author_ids\": [1],\n  \"tag_ids\": [2]\n}",
+									"raw": "{\n  \"title\": \"Updated Title\",\n  \"description\": \"Updated description.\",\n  \"thumbnail\": \"https://example.com/new-thumbnail.png\",\n  \"content\": \"Updated content.\",\n  \"published\": true,\n  \"author_ids\": [1],\n  \"tags\": [\n    { \"tag\": \"typescript\" }\n  ]\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -400,7 +483,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}",
+									"raw": "{{baseUrl}}/v1/api/articles/{{articleId}}",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -408,9 +491,10 @@
 										"v1",
 										"api",
 										"articles",
-										"{{slug}}"
+										"{{articleId}}"
 									]
-								}
+								},
+								"description": "Updates an article by UUID. Requires owner, contributor, or admin. The :id parameter must be a UUID (not a slug)."
 							},
 							"response": []
 						},
@@ -418,9 +502,15 @@
 							"name": "Delete Article",
 							"request": {
 								"method": "DELETE",
-								"header": [],
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — owner or admin only"
+									}
+								],
 								"url": {
-									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}",
+									"raw": "{{baseUrl}}/v1/api/articles/{{articleId}}",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -428,9 +518,10 @@
 										"v1",
 										"api",
 										"articles",
-										"{{slug}}"
+										"{{articleId}}"
 									]
-								}
+								},
+								"description": "Deletes an article by UUID. Requires owner or admin. Returns 204 on success. The :id parameter must be a UUID (not a slug)."
 							},
 							"response": []
 						}
@@ -464,7 +555,13 @@
 							"name": "Increment Article View",
 							"request": {
 								"method": "POST",
-								"header": [],
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — authenticated users only"
+									}
+								],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/stats/view",
 									"host": [
@@ -514,6 +611,11 @@
 								"method": "POST",
 								"header": [
 									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — authenticated users only"
+									},
+									{
 										"key": "Content-Type",
 										"value": "application/json"
 									}
@@ -544,10 +646,16 @@
 							"response": []
 						},
 						{
-							"name": "Decrement Reaction",
+							"name": "Increment Reaction by Type",
 							"request": {
-								"method": "DELETE",
-								"header": [],
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — authenticated users only"
+									}
+								],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/reactions/like",
 									"host": [
@@ -561,7 +669,37 @@
 										"reactions",
 										"like"
 									]
-								}
+								},
+								"description": "Increments the count for a specific reaction type (like, love, haha, sad, angry)."
+							},
+							"response": []
+						},
+						{
+							"name": "Decrement Reaction by Type",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — authenticated users only"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/reactions/like",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{slug}}",
+										"reactions",
+										"like"
+									]
+								},
+								"description": "Decrements the count for a specific reaction type."
 							},
 							"response": []
 						}
@@ -609,6 +747,11 @@
 								"method": "POST",
 								"header": [
 									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — authenticated users only"
+									},
+									{
 										"key": "Content-Type",
 										"value": "application/json"
 									}
@@ -644,6 +787,11 @@
 								"method": "PATCH",
 								"header": [
 									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — authenticated users only"
+									},
+									{
 										"key": "Content-Type",
 										"value": "application/json"
 									}
@@ -678,7 +826,13 @@
 							"name": "Delete Comment",
 							"request": {
 								"method": "DELETE",
-								"header": [],
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — authenticated users only"
+									}
+								],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/comments/{{commentId}}",
 									"host": [
@@ -720,6 +874,81 @@
 									]
 								},
 								"description": "Returns all tags associated with the given article slug."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Contributors",
+					"item": [
+						{
+							"name": "Add Contributor",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — owner or admin only"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"user_id\": \"USER_UUID_HERE\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/articles/{{articleId}}/contributors",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{articleId}}",
+										"contributors"
+									]
+								},
+								"description": "Grants a user contributor (write) access to this article. Only the article owner or an admin may call this. The :id must be the article UUID."
+							},
+							"response": []
+						},
+						{
+							"name": "Remove Self as Contributor",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — the contributor removing themselves"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/articles/{{articleId}}/contributors/me",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"articles",
+										"{{articleId}}",
+										"contributors",
+										"me"
+									]
+								},
+								"description": "Removes the authenticated user from the contributor list. Returns 204 on success."
 							},
 							"response": []
 						}
@@ -1305,6 +1534,12 @@
 			"key": "projectSlug",
 			"value": "my-project",
 			"type": "string"
+		},
+		{
+			"key": "articleId",
+			"value": "00000000-0000-4000-8000-000000000000",
+			"type": "string",
+			"description": "UUID of the article — used for update, delete, and contributor routes"
 		}
 	]
 }

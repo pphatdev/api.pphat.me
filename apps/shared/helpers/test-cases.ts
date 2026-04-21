@@ -2,6 +2,7 @@ export const ARTICLE_ID   = "00000000-0000-4000-8000-000000000001";
 export const ARTICLE_SLUG = "test-article-slug";
 export const PROJECT_ID   = "00000000-0000-4000-8000-000000000002";
 export const PROJECT_SLUG = "test-project-slug";
+export const TEST_USER_ID = "test-user-id";
 
 /**
  * Generate a valid Bearer token header for auth-guarded routes.
@@ -9,7 +10,7 @@ export const PROJECT_SLUG = "test-project-slug";
 export async function getAuthHeaders(jwtSecret: string): Promise<Record<string, string>> {
 	const { createJwt } = await import("../../modules/auth/auth.service");
 	const token = await createJwt(
-		{ sub: "test-user-id", provider: "email", email: "test@example.com", name: "Test User" },
+		{ sub: TEST_USER_ID, provider: "email", email: "test@example.com", name: "Test User", role: "user" },
 		jwtSecret,
 	);
 	return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
@@ -28,11 +29,13 @@ export async function seedDatabase(db: D1Database): Promise<void> {
 			id TEXT PRIMARY KEY, title TEXT NOT NULL, slug TEXT NOT NULL UNIQUE,
 			description TEXT NOT NULL, thumbnail TEXT NOT NULL DEFAULT '',
 			published INTEGER NOT NULL DEFAULT 0, content TEXT NOT NULL DEFAULT '',
-			file_path TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+			file_path TEXT NOT NULL DEFAULT '', owner_id TEXT NULL,
+			created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 		)`),
 		db.prepare(`CREATE TABLE IF NOT EXISTS authors (
 			id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
-			profile TEXT NOT NULL DEFAULT '', url TEXT NOT NULL DEFAULT ''
+			profile TEXT NOT NULL DEFAULT '', url TEXT NOT NULL DEFAULT '',
+			user_id TEXT NULL
 		)`),
 		db.prepare(`CREATE TABLE IF NOT EXISTS author_details (
 			id INTEGER PRIMARY KEY AUTOINCREMENT, author_id INTEGER NOT NULL UNIQUE,
@@ -84,6 +87,7 @@ export async function seedDatabase(db: D1Database): Promise<void> {
 			id TEXT PRIMARY KEY, provider TEXT NOT NULL, provider_id TEXT NOT NULL,
 			password_hash TEXT, email TEXT, name TEXT,
 			email_verified INTEGER NOT NULL DEFAULT 0, avatar TEXT,
+			role TEXT NOT NULL DEFAULT 'user',
 			created_at TEXT NOT NULL DEFAULT (datetime('now')),
 			updated_at TEXT NOT NULL DEFAULT (datetime('now')),
 			UNIQUE(provider, provider_id)
@@ -93,16 +97,20 @@ export async function seedDatabase(db: D1Database): Promise<void> {
 			expires_at TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0,
 			created_at TEXT NOT NULL DEFAULT (datetime('now'))
 		)`),
+		db.prepare(`CREATE TABLE IF NOT EXISTS article_contributors (
+			article_id TEXT NOT NULL, user_id TEXT NOT NULL,
+			PRIMARY KEY (article_id, user_id)
+		)`),
 
 		/**
 		 * Seed data
 		*/
 		db.prepare(`INSERT OR IGNORE INTO articles
-			(id, title, slug, description, thumbnail, published, content, file_path, created_at, updated_at)
+			(id, title, slug, description, thumbnail, published, content, file_path, owner_id, created_at, updated_at)
 			VALUES (?1, 'Test Article', ?2, 'A test article description.',
-				'https://example.com/thumb.png', 1, '# Hello World', '',
+				'https://example.com/thumb.png', 1, '# Hello World', '', ?3,
 				'2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`)
-			.bind(ARTICLE_ID, ARTICLE_SLUG),
+			.bind(ARTICLE_ID, ARTICLE_SLUG, TEST_USER_ID),
 
 		db.prepare(`INSERT OR IGNORE INTO authors (id, name, profile, url)
 			VALUES (1, 'Test Author', 'Developer', 'https://example.com')`),
