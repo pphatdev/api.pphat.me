@@ -1,5 +1,5 @@
 import type { Context, Next } from 'hono';
-import { json } from "../../shared/helpers/json";
+import { Res } from "../../shared/helpers/response";
 import { AppEnv } from "./projects.interface";
 import { ProjectRepository } from "./projects.repo";
 import { TagService } from "../tags/tags.service";
@@ -24,29 +24,30 @@ export class ProjectsController {
 		const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
 		const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "10", 10) || 10));
 		const search = url.searchParams.get("search") ?? undefined;
-		const sort = url.searchParams.get("sort") ?? undefined;
+		const sortParam = url.searchParams.get("sort");
+		const sort = sortParam ? sortParam.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
 		const orderParam = url.searchParams.get("order")?.toLowerCase();
 		const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
 		const result = await new ProjectService(repository).list({ page, limit, search, sort, order });
-		return json(result);
+		return Res.ok(result);
 	}
 
 	static async create(request: Request, env: Env): Promise<Response> {
 		const repository = new ProjectRepository(env.DB);
 		const body = await request.json().catch(() => null);
-		if (!body || typeof body !== "object") return json({ error: "Invalid JSON body" }, 400);
+		if (!body || typeof body !== "object") return Res.badRequest("Invalid JSON body");
 
 		const { title, slug, description } = body as Record<string, unknown>;
 		if (!title || !slug || !description) {
-			return json({ error: "title, slug and description are required" }, 422);
+			return Res.unprocessable("title, slug and description are required");
 		}
 
 		try {
 			const project = await new ProjectService(repository).create(body as never);
-			return json(project, 201);
+			return Res.created(project);
 		} catch (err) {
 			if (err instanceof Error && err.message.includes("UNIQUE constraint failed: projects.slug")) {
-				return json({ error: "A project with this slug already exists" }, 409);
+				return Res.conflict("A project with this slug already exists");
 			}
 			throw err;
 		}
@@ -55,22 +56,22 @@ export class ProjectsController {
 	static async getBySlug(request: Request, env: Env, slug: string): Promise<Response> {
 		const repository = new ProjectRepository(env.DB);
 		const project = await new ProjectService(repository).getBySlug(slug);
-		if (!project) return json({ error: "Not Found" }, 404);
-		return json(project);
+		if (!project) return Res.notFound();
+		return Res.ok(project);
 	}
 
 	static async update(request: Request, env: Env, slug: string): Promise<Response> {
 		const repository = new ProjectRepository(env.DB);
 		const body = await request.json().catch(() => null);
-		if (!body || typeof body !== "object") return json({ error: "Invalid JSON body" }, 400);
+		if (!body || typeof body !== "object") return Res.badRequest("Invalid JSON body");
 
 		try {
 			const project = await new ProjectService(repository).update(slug, body as never);
-			if (!project) return json({ error: "Not Found" }, 404);
-			return json(project);
+			if (!project) return Res.notFound();
+			return Res.ok(project);
 		} catch (err) {
 			if (err instanceof Error && err.message.includes("UNIQUE constraint failed: projects.slug")) {
-				return json({ error: "A project with this slug already exists" }, 409);
+				return Res.conflict("A project with this slug already exists");
 			}
 			throw err;
 		}
@@ -79,8 +80,8 @@ export class ProjectsController {
 	static async delete(request: Request, env: Env, slug: string): Promise<Response> {
 		const repository = new ProjectRepository(env.DB);
 		const deleted = await new ProjectService(repository).delete(slug);
-		if (!deleted) return json({ error: "Not Found" }, 404);
-		return json({ message: "Deleted successfully" });
+		if (!deleted) return Res.notFound();
+		return Res.ok({ message: "Deleted successfully" });
 	}
 
 	static getTagProject = async (c: Context<AppEnv>) => {

@@ -50,7 +50,6 @@
 	 * Secrets (set via `wrangler secret put <NAME>`):
 	 *   SMTP_PASS
 	 */
-
 	/**
 	 * Static Assets
 	 * https://developers.cloudflare.com/workers/static-assets/binding/

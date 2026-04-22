@@ -1,4 +1,5 @@
 import { json } from '../../shared/helpers/json';
+import { Res } from '../../shared/helpers/response';
 import { AuthRepository } from './auth.repo';
 import {
 	AuthService,
@@ -32,8 +33,8 @@ export class AuthController {
 		if (oauthError) return json({ error: oauthError, description: url.searchParams.get('error_description') }, 400);
 		const code = url.searchParams.get('code');
 		const state = url.searchParams.get('state');
-		if (!code || !state) return json({ error: 'Missing code or state' }, 400);
-		if (!(await verifyOAuthState(state, env.JWT_SECRET))) return json({ error: 'Invalid or expired state' }, 400);
+		if (!code || !state) return Res.badRequest('Missing code or state');
+		if (!(await verifyOAuthState(state, env.JWT_SECRET))) return Res.badRequest('Invalid or expired state');
 		try {
 			const ghToken = await exchangeGitHubCode(
 				code,
@@ -43,7 +44,7 @@ export class AuthController {
 			);
 			const userInfo = await fetchGitHubUser(ghToken);
 			const token = await new AuthService(repo).handleOAuthCallback('github', userInfo, env.JWT_SECRET);
-			return json({ token });
+			return Res.ok({ token });
 		} catch (err) {
 			return json({ error: err instanceof Error ? err.message : 'GitHub authentication failed' }, 502);
 		}
@@ -68,8 +69,8 @@ export class AuthController {
 		if (oauthError) return json({ error: oauthError, description: url.searchParams.get('error_description') }, 400);
 		const code = url.searchParams.get('code');
 		const state = url.searchParams.get('state');
-		if (!code || !state) return json({ error: 'Missing code or state' }, 400);
-		if (!(await verifyOAuthState(state, env.JWT_SECRET))) return json({ error: 'Invalid or expired state' }, 400);
+		if (!code || !state) return Res.badRequest('Missing code or state');
+		if (!(await verifyOAuthState(state, env.JWT_SECRET))) return Res.badRequest('Invalid or expired state');
 		try {
 			const googleToken = await exchangeGoogleCode(
 				code,
@@ -79,7 +80,7 @@ export class AuthController {
 			);
 			const userInfo = await fetchGoogleUser(googleToken);
 			const token = await new AuthService(repo).handleOAuthCallback('google', userInfo, env.JWT_SECRET);
-			return json({ token });
+			return Res.ok({ token });
 		} catch (err) {
 			return json({ error: err instanceof Error ? err.message : 'Google authentication failed' }, 502);
 		}
@@ -88,13 +89,13 @@ export class AuthController {
 	static async me(request: Request, env: Env): Promise<Response> {
 		const repo = new AuthRepository(env.DB);
 		const authHeader = request.headers.get('Authorization');
-		if (!authHeader?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401);
+		if (!authHeader?.startsWith('Bearer ')) return Res.unauthorized();
 		const rawToken = authHeader.slice(7);
 		const payload = await verifyJwt(rawToken, env.JWT_SECRET);
-		if (!payload) return json({ error: 'Invalid or expired token' }, 401);
+		if (!payload) return Res.unauthorized('Invalid or expired token');
 		const user = await new AuthService(repo).getCurrentUser(payload.sub);
-		if (!user) return json({ error: 'User not found' }, 404);
-		return json(user);
+		if (!user) return Res.notFound('User not found');
+		return Res.ok(user);
 	}
 
 	static async emailRegister(request: Request, env: Env): Promise<Response> {
@@ -103,12 +104,12 @@ export class AuthController {
 		try {
 			body = await request.json() as { email?: string; name?: string; password?: string };
 		} catch {
-			return json({ error: 'Invalid JSON body' }, 400);
+			return Res.badRequest('Invalid JSON body');
 		}
 		const { email, name, password } = body;
-		if (!email || typeof email !== 'string') return json({ error: 'email is required' }, 422);
-		if (!name || typeof name !== 'string') return json({ error: 'name is required' }, 422);
-		if (!password || typeof password !== 'string' || password.length < 8) return json({ error: 'password must be at least 8 characters' }, 422);
+		if (!email || typeof email !== 'string') return Res.unprocessable('email is required');
+		if (!name || typeof name !== 'string') return Res.unprocessable('name is required');
+		if (!password || typeof password !== 'string' || password.length < 8) return Res.unprocessable('password must be at least 8 characters');
 		try {
 			const { otp } = await new AuthService(repo).registerEmailUser(email, name, password);
 			try {
@@ -122,7 +123,7 @@ export class AuthController {
 			} catch {
 				// Email delivery is best-effort; the OTP is stored and can be resent.
 			}
-			return json({ message: 'Verification code sent to your email' }, 201);
+			return Res.created({ message: 'Verification code sent to your email' });
 		} catch (err) {
 			const e = err as Error & { status?: number };
 			return json({ error: e.message }, e.status ?? 500);
@@ -135,14 +136,14 @@ export class AuthController {
 		try {
 			body = await request.json() as { email?: string; password?: string };
 		} catch {
-			return json({ error: 'Invalid JSON body' }, 400);
+			return Res.badRequest('Invalid JSON body');
 		}
 		const { email, password } = body;
-		if (!email || typeof email !== 'string') return json({ error: 'email is required' }, 400);
-		if (!password || typeof password !== 'string') return json({ error: 'password is required' }, 400);
+		if (!email || typeof email !== 'string') return Res.badRequest('email is required');
+		if (!password || typeof password !== 'string') return Res.badRequest('password is required');
 		try {
 			const token = await new AuthService(repo).loginWithPassword(email, password, env.JWT_SECRET);
-			return json({ token });
+			return Res.ok({ token });
 		} catch (err) {
 			const e = err as Error & { status?: number };
 			return json({ error: e.message }, e.status ?? 500);
@@ -155,14 +156,14 @@ export class AuthController {
 		try {
 			body = await request.json() as { email?: string; otp?: string };
 		} catch {
-			return json({ error: 'Invalid JSON body' }, 400);
+			return Res.badRequest('Invalid JSON body');
 		}
 		const { email, otp } = body;
-		if (!email || typeof email !== 'string') return json({ error: 'email is required' }, 400);
-		if (!otp || typeof otp !== 'string') return json({ error: 'otp is required' }, 400);
+		if (!email || typeof email !== 'string') return Res.badRequest('email is required');
+		if (!otp || typeof otp !== 'string') return Res.badRequest('otp is required');
 		try {
 			const token = await new AuthService(repo).verifyEmailOtp(email, otp, env.JWT_SECRET);
-			return json({ token });
+			return Res.ok({ token });
 		} catch (err) {
 			const e = err as Error & { status?: number };
 			return json({ error: e.message }, e.status ?? 500);

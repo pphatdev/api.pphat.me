@@ -1,4 +1,4 @@
-import { json } from "../../shared/helpers/json";
+import { Res } from "../../shared/helpers/response";
 import { TagRepository } from "./tags.repo";
 import { TagService } from "./tags.service";
 
@@ -16,69 +16,70 @@ export class TagsController {
 		const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
 		const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "10", 10) || 10));
 		const search = url.searchParams.get("search") ?? undefined;
-		const sort = url.searchParams.get("sort") ?? undefined;
+		const sortParam = url.searchParams.get("sort");
+		const sort = sortParam ? sortParam.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
 		const orderParam = url.searchParams.get("order")?.toLowerCase();
 		const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
 		const result = await new TagService(repository).list({ page, limit, search, sort, order });
-		return json(result);
+		return Res.ok(result);
 	}
 
 	static async create(request: Request, env: Env): Promise<Response> {
 		const repository = new TagRepository(env.DB);
 		const body = await request.json().catch(() => null);
-		if (!body || typeof body !== "object") return json({ error: "Invalid JSON body" }, 400);
+		if (!body || typeof body !== "object") return Res.badRequest("Invalid JSON body");
 
 		const { tag } = body as Record<string, unknown>;
 		if (!tag) {
-			return json({ error: "tag is required" }, 422);
+			return Res.unprocessable("tag is required");
 		}
 
 		const created = await new TagService(repository).create(body as never);
-		return json(created, 201);
+		return Res.created(created);
 	}
 
 	static async getById(request: Request, env: Env, id: string): Promise<Response> {
 		const numericId = TagsController.validateId(id);
-		if (numericId === null) return json({ error: "Invalid tag id" }, 400);
+		if (numericId === null) return Res.badRequest("Invalid tag id");
 
 		const repository = new TagRepository(env.DB);
 		const tag = await new TagService(repository).getById(numericId);
-		if (!tag) return json({ error: "Not Found" }, 404);
-		return json(tag);
+		if (!tag) return Res.notFound();
+		return Res.ok(tag);
 	}
 
 	static async update(request: Request, env: Env, id: string): Promise<Response> {
 		const numericId = TagsController.validateId(id);
-		if (numericId === null) return json({ error: "Invalid tag id" }, 400);
+		if (numericId === null) return Res.badRequest("Invalid tag id");
 
 		const repository = new TagRepository(env.DB);
 		const body = await request.json().catch(() => null);
-		if (!body || typeof body !== "object") return json({ error: "Invalid JSON body" }, 400);
+		if (!body || typeof body !== "object") return Res.badRequest("Invalid JSON body");
 
 		const tag = await new TagService(repository).update(numericId, body as never);
-		if (!tag) return json({ error: "Not Found" }, 404);
-		return json(tag);
+		if (!tag) return Res.notFound();
+		return Res.ok(tag);
 	}
 
 	static async delete(request: Request, env: Env, id: string): Promise<Response> {
 		const numericId = TagsController.validateId(id);
-		if (numericId === null) return json({ error: "Invalid tag id" }, 400);
+		if (numericId === null) return Res.badRequest("Invalid tag id");
 
 		const repository = new TagRepository(env.DB);
 		const deleted = await new TagService(repository).delete(numericId);
-		if (!deleted) return json({ error: "Not Found" }, 404);
-		return new Response(null, { status: 204 });
+		if (!deleted) return Res.notFound();
+		return Res.noContent();
 	}
 
 	static async listByArticle(request: Request, env: Env, articleId: string): Promise<Response> {
 		const repository = new TagRepository(env.DB);
 		const tags = await new TagService(repository).listByArticle(articleId);
-		return json(tags);
+		return Res.ok(tags);
 	}
 
 	static async listByProject(request: Request, env: Env, projectId: string): Promise<Response> {
 		const repository = new TagRepository(env.DB);
 		const tags = await new TagService(repository).listByProject(projectId);
-		return json(tags);
+		return Res.ok(tags);
 	}
 }

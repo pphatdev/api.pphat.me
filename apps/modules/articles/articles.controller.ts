@@ -1,5 +1,5 @@
 import type { Context, Next } from 'hono';
-import { json } from "../../shared/helpers/json";
+import { Res } from "../../shared/helpers/response";
 import { AppEnv } from "./articles.interface";
 import { ArticleRepository } from "./articles.repo";
 import { ArticleService } from "./articles.service";
@@ -31,7 +31,7 @@ export class ArticlesController {
 			id = row?.id;
 		}
 
-		if (!id) return c.json({ error: 'Not Found' }, 404);
+		if (!id) return Res.notFound();
 		c.set('articleId', id);
 		return next();
 	};
@@ -42,7 +42,7 @@ export class ArticlesController {
 	 */
 	static requireWriteAccess = async (c: Context<AppEnv>, next: Next): Promise<Response | void> => {
 		const id = c.req.param('id') ?? '';
-		if (!UUID_RE.test(id)) return c.json({ error: 'Invalid article ID' }, 400);
+		if (!UUID_RE.test(id)) return Res.badRequest('Invalid article ID');
 
 		const user = c.get('user');
 		const repo = new ArticleRepository(c.env.DB);
@@ -52,7 +52,7 @@ export class ArticlesController {
 			.bind(id)
 			.first<{ id: string; owner_id: string | null }>();
 
-		if (!article) return c.json({ error: 'Not Found' }, 404);
+		if (!article) return Res.notFound();
 
 		const isAdmin = user.role === 'admin';
 		const isOwner = article.owner_id === user.sub;
@@ -61,7 +61,7 @@ export class ArticlesController {
 			: false;
 
 		if (!isAdmin && !isOwner && !isContributor) {
-			return c.json({ error: 'Forbidden' }, 403);
+			return Res.forbidden();
 		}
 
 		c.set('articleId', id);
@@ -73,7 +73,7 @@ export class ArticlesController {
 	 */
 	static requireDeleteAccess = async (c: Context<AppEnv>, next: Next): Promise<Response | void> => {
 		const id = c.req.param('id') ?? '';
-		if (!UUID_RE.test(id)) return c.json({ error: 'Invalid article ID' }, 400);
+		if (!UUID_RE.test(id)) return Res.badRequest('Invalid article ID');
 
 		const user = c.get('user');
 
@@ -82,13 +82,13 @@ export class ArticlesController {
 			.bind(id)
 			.first<{ id: string; owner_id: string | null }>();
 
-		if (!article) return c.json({ error: 'Not Found' }, 404);
+		if (!article) return Res.notFound();
 
 		const isAdmin = user.role === 'admin';
 		const isOwner = article.owner_id === user.sub;
 
 		if (!isAdmin && !isOwner) {
-			return c.json({ error: 'Forbidden' }, 403);
+			return Res.forbidden();
 		}
 
 		c.set('articleId', id);
@@ -113,7 +113,7 @@ export class ArticlesController {
 		const tags    = tagsParam    ? tagsParam.split(',').map(t => t.trim()).filter(Boolean)    : undefined;
 		const authors = authorsParam ? authorsParam.split(',').map(a => a.trim()).filter(Boolean) : undefined;
 		const result = await new ArticleService(repository).list({ page, limit, search, sort, order, tags, authors }, true);
-		return c.json(result);
+		return Res.ok(result);
 	}
 
 	/**
@@ -121,7 +121,7 @@ export class ArticlesController {
 	 */
 	static async listByAuthor(c: Context<AppEnv>): Promise<Response> {
 		const authorId = parseInt(c.req.param('authorId') ?? '', 10);
-		if (isNaN(authorId) || authorId < 1) return c.json({ error: 'Invalid author ID' }, 400);
+		if (isNaN(authorId) || authorId < 1) return Res.badRequest('Invalid author ID');
 
 		const user = c.get('user');
 		const isAdmin = user.role === 'admin';
@@ -134,10 +134,10 @@ export class ArticlesController {
 				.bind(authorId)
 				.first<{ user_id: string | null }>();
 
-			if (!authorRow) return c.json({ error: 'Author not found' }, 404);
+			if (!authorRow) return Res.notFound('Author not found');
 			isAuthorOwner = authorRow.user_id === user.sub;
 
-			if (!isAuthorOwner) return c.json({ error: 'Forbidden' }, 403);
+			if (!isAuthorOwner) return Res.forbidden();
 		}
 
 		const repository = new ArticleRepository(c.env.DB);
@@ -152,7 +152,7 @@ export class ArticlesController {
 
 		// Admin sees all; author owner sees all their own drafts too
 		const result = await new ArticleService(repository).listByAuthor(authorId, { page, limit, search, sort, order }, false);
-		return c.json(result);
+		return Res.ok(result);
 	}
 
 	/**
@@ -164,8 +164,8 @@ export class ArticlesController {
 		const article = UUID_RE.test(param)
 			? await service.getById(param)
 			: await service.getBySlug(param);
-		if (!article) return c.json({ error: "Not Found" }, 404);
-		return c.json(article);
+		if (!article) return Res.notFound();
+		return Res.ok(article);
 	}
 
 	/**
@@ -174,11 +174,11 @@ export class ArticlesController {
 	static async create(c: Context<AppEnv>): Promise<Response> {
 		const repository = new ArticleRepository(c.env.DB);
 		const body = await c.req.json().catch(() => null);
-		if (!body || typeof body !== "object") return c.json({ error: "Invalid JSON body" }, 400);
+		if (!body || typeof body !== "object") return Res.badRequest("Invalid JSON body");
 
 		const { title, slug, description } = body as Record<string, unknown>;
 		if (!title || !slug || !description) {
-			return c.json({ error: "title, slug and description are required" }, 422);
+			return Res.unprocessable("title, slug and description are required");
 		}
 
 		const user = c.get('user');
@@ -196,10 +196,10 @@ export class ArticlesController {
 				tags: dto.tags as { tag: string; description?: string }[] | undefined,
 				owner_id: user.sub,
 			});
-			return c.json(article, 201);
+			return Res.created(article);
 		} catch (err) {
 			if (err instanceof Error && err.message.includes("UNIQUE constraint failed: articles.slug")) {
-				return c.json({ error: "An article with this slug already exists" }, 409);
+				return Res.conflict("An article with this slug already exists");
 			}
 			throw err;
 		}
@@ -211,15 +211,15 @@ export class ArticlesController {
 	static async update(c: Context<AppEnv>): Promise<Response> {
 		const id = c.get('articleId'); // set by requireWriteAccess
 		const body = await c.req.json().catch(() => null);
-		if (!body || typeof body !== "object") return c.json({ error: "Invalid JSON body" }, 400);
+		if (!body || typeof body !== "object") return Res.badRequest("Invalid JSON body");
 
 		try {
 			const article = await new ArticleService(new ArticleRepository(c.env.DB)).update(id, body as never);
-			if (!article) return c.json({ error: "Not Found" }, 404);
-			return c.json(article);
+			if (!article) return Res.notFound();
+			return Res.ok(article);
 		} catch (err) {
 			if (err instanceof Error && err.message.includes("UNIQUE constraint failed: articles.slug")) {
-				return c.json({ error: "An article with this slug already exists" }, 409);
+				return Res.conflict("An article with this slug already exists");
 			}
 			throw err;
 		}
@@ -231,8 +231,8 @@ export class ArticlesController {
 	static async delete(c: Context<AppEnv>): Promise<Response> {
 		const id = c.get('articleId'); // set by requireDeleteAccess
 		const deleted = await new ArticleService(new ArticleRepository(c.env.DB)).delete(id);
-		if (!deleted) return c.json({ error: "Not Found" }, 404);
-		return new Response(null, { status: 204 });
+		if (!deleted) return Res.notFound();
+		return Res.noContent();
 	}
 
 	/**
@@ -240,7 +240,7 @@ export class ArticlesController {
 	 */
 	static async addContributor(c: Context<AppEnv>): Promise<Response> {
 		const id = c.req.param('id') ?? '';
-		if (!UUID_RE.test(id)) return c.json({ error: 'Invalid article ID' }, 400);
+		if (!UUID_RE.test(id)) return Res.badRequest('Invalid article ID');
 
 		const user = c.get('user');
 
@@ -250,20 +250,20 @@ export class ArticlesController {
 			.bind(id)
 			.first<{ owner_id: string | null }>();
 
-		if (!article) return c.json({ error: 'Not Found' }, 404);
+		if (!article) return Res.notFound();
 
 		if (user.role !== 'admin' && article.owner_id !== user.sub) {
-			return c.json({ error: 'Forbidden' }, 403);
+			return Res.forbidden();
 		}
 
 		const body = await c.req.json().catch(() => null);
 		const userId = (body as Record<string, unknown>)?.user_id;
 		if (!userId || typeof userId !== 'string') {
-			return c.json({ error: 'user_id is required' }, 422);
+			return Res.unprocessable('user_id is required');
 		}
 
 		await new ArticleService(new ArticleRepository(c.env.DB)).addContributor(id, userId);
-		return c.json({ message: 'Contributor added' }, 201);
+		return Res.created({ message: 'Contributor added' });
 	}
 
 	/**
@@ -271,12 +271,12 @@ export class ArticlesController {
 	 */
 	static async removeSelfAsContributor(c: Context<AppEnv>): Promise<Response> {
 		const id = c.req.param('id') ?? '';
-		if (!UUID_RE.test(id)) return c.json({ error: 'Invalid article ID' }, 400);
+		if (!UUID_RE.test(id)) return Res.badRequest('Invalid article ID');
 
 		const user = c.get('user');
 		const removed = await new ArticleService(new ArticleRepository(c.env.DB)).removeContributor(id, user.sub);
-		if (!removed) return c.json({ error: 'Not a contributor or article not found' }, 404);
-		return new Response(null, { status: 204 });
+		if (!removed) return Res.notFound('Not a contributor or article not found');
+		return Res.noContent();
 	}
 
 	/**
@@ -284,6 +284,6 @@ export class ArticlesController {
 	 */
 	static async getTagsArticle(c: Context<AppEnv>): Promise<Response> {
 		const tags = await new TagService(new TagRepository(c.env.DB)).listByArticle(c.get('articleId'));
-		return c.json(tags);
+		return Res.ok(tags);
 	}
 }
