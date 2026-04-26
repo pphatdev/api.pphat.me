@@ -64,10 +64,6 @@ function parseOutput(result: unknown, mode: GenerateMode): { description?: strin
 
 export class AiController {
 	static async generate(request: Request, env: Env): Promise<Response> {
-		if (!env.AI) {
-			return Res.internalError('Workers AI binding "AI" is not configured');
-		}
-
 		const body = await request.json().catch(() => null);
 		if (!body || typeof body !== 'object') return Res.badRequest('Invalid JSON body');
 
@@ -81,6 +77,10 @@ export class AiController {
 		if (!title) return Res.unprocessable('title is required');
 		if (title.length > MAX_TITLE_LENGTH) return Res.unprocessable('title is too long (max 180 characters)');
 		if (context && context.length > MAX_CONTEXT_LENGTH) return Res.unprocessable('context is too long (max 8000 characters)');
+
+		if (!env.AI) {
+			return Res.internalError('Workers AI binding "AI" is not configured');
+		}
 
 		try {
 			const prompt = buildPrompt({ title, context, tone, language, mode });

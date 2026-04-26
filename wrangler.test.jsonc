@@ -1,0 +1,25 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "blog-api-test",
+	"main": "apps/app.ts",
+	"compatibility_date": "2026-04-15",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"vars": {
+		"GITHUB_CLIENT_ID": "test-github-client-id",
+		"GOOGLE_CLIENT_ID": "test-google-client-id",
+		"APP_URL": "http://localhost:8787",
+		"SMTP_HOST": "smtp.gmail.com",
+		"SMTP_PORT": "587",
+		"SMTP_USER": "test@example.com",
+		"SMTP_FROM": "test@example.com"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "api-test",
+			"database_id": "00000000-0000-4000-8000-000000000000"
+		}
+	]
+}

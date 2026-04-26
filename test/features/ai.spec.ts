@@ -40,33 +40,43 @@ describe("AI API", () => {
 	});
 
 	it("POST /v1/api/ai/generate returns generated description and content", async () => {
-		const aiRun = vi.spyOn(env.AI, "run").mockResolvedValue({
+		const aiRun = vi.fn().mockResolvedValue({
 			response: JSON.stringify({
 				description: "Short generated description.",
 				content: "## Generated\n\nGenerated content body.",
 			}),
 		} as any);
+		const previousAI = (env as any).AI;
+		(env as any).AI = { run: aiRun };
 
-		const res = await SELF.fetch("http://example.com/v1/api/ai/generate", {
-			method: "POST",
-			headers: authHeaders,
-			body: JSON.stringify({
-				title: "Building API with Workers",
-				context: "Blog and project API",
-				mode: "both",
-			}),
-		});
+		try {
+			const res = await SELF.fetch("http://example.com/v1/api/ai/generate", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "Building API with Workers",
+					context: "Blog and project API",
+					mode: "both",
+				}),
+			});
 
-		expect(res.status).toBe(200);
-		expect(aiRun).toHaveBeenCalledTimes(1);
+			expect(res.status).toBe(200);
+			expect(aiRun).toHaveBeenCalledTimes(1);
 
-		const body = await res.json() as {
-			model: string;
-			mode: string;
-			data: { description?: string; content?: string };
-		};
-		expect(body.mode).toBe("both");
-		expect(body.data.description).toBe("Short generated description.");
-		expect(body.data.content).toContain("Generated content body");
+			const body = await res.json() as {
+				model: string;
+				mode: string;
+				data: { description?: string; content?: string };
+			};
+			expect(body.mode).toBe("both");
+			expect(body.data.description).toBe("Short generated description.");
+			expect(body.data.content).toContain("Generated content body");
+		} finally {
+			if (previousAI === undefined) {
+				delete (env as any).AI;
+			} else {
+				(env as any).AI = previousAI;
+			}
+		}
 	});
 });
