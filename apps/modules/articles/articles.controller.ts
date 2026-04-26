@@ -101,16 +101,16 @@ export class ArticlesController {
 	static async list(c: Context<AppEnv>): Promise<Response> {
 		const repository = new ArticleRepository(c.env.DB);
 		const url = new URL(c.req.url);
-		const page  = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1",  10) || 1);
+		const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
 		const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "10", 10) || 10));
-		const search      = url.searchParams.get("search") ?? undefined;
-		const sortParam   = url.searchParams.get("sort");
-		const orderParam  = url.searchParams.get("order")?.trim().toLowerCase();
-		const sort  = sortParam ? sortParam.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+		const search = url.searchParams.get("search") ?? undefined;
+		const sortParam = url.searchParams.get("sort");
+		const orderParam = url.searchParams.get("order")?.trim().toLowerCase();
+		const sort = sortParam ? sortParam.split(',').map(s => s.trim()).filter(Boolean) : undefined;
 		const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
-		const tagsParam    = url.searchParams.get("tags");
+		const tagsParam = url.searchParams.get("tags");
 		const authorsParam = url.searchParams.get("authors");
-		const tags    = tagsParam    ? tagsParam.split(',').map(t => t.trim()).filter(Boolean)    : undefined;
+		const tags = tagsParam ? tagsParam.split(',').map(t => t.trim()).filter(Boolean) : undefined;
 		const authors = authorsParam ? authorsParam.split(',').map(a => a.trim()).filter(Boolean) : undefined;
 		const result = await new ArticleService(repository).list({ page, limit, search, sort, order, tags, authors }, true);
 		return Res.ok(result);
@@ -142,12 +142,12 @@ export class ArticlesController {
 
 		const repository = new ArticleRepository(c.env.DB);
 		const url = new URL(c.req.url);
-		const page  = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1",  10) || 1);
+		const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
 		const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "10", 10) || 10));
-		const search      = url.searchParams.get("search") ?? undefined;
-		const sortParam   = url.searchParams.get("sort");
-		const orderParam  = url.searchParams.get("order")?.trim().toLowerCase();
-		const sort  = sortParam ? sortParam.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+		const search = url.searchParams.get("search") ?? undefined;
+		const sortParam = url.searchParams.get("sort");
+		const orderParam = url.searchParams.get("order")?.trim().toLowerCase();
+		const sort = sortParam ? sortParam.split(',').map(s => s.trim()).filter(Boolean) : undefined;
 		const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
 
 		// Admin sees all; author owner sees all their own drafts too
@@ -160,12 +160,29 @@ export class ArticlesController {
 	 */
 	static async getBySlugOrId(c: Context<AppEnv>): Promise<Response> {
 		const param = c.req.param('slug') ?? '';
-		const service = new ArticleService(new ArticleRepository(c.env.DB));
+
+		const repository = new ArticleRepository(c.env.DB);
+		const service = new ArticleService(repository);
 		const article = UUID_RE.test(param)
 			? await service.getById(param)
 			: await service.getBySlug(param);
 		if (!article) return Res.notFound();
-		return Res.ok(article);
+
+		const [nextSlug, prevSlug] = await Promise.all([
+			repository.getNextSlug(article.slug),
+			repository.getPrevSlug(article.slug),
+		]);
+
+		const baseUrl = new URL(c.req.url).origin;
+		const response = {
+			data: article,
+			navigation: {
+				next: nextSlug ? `${baseUrl}/articles/${nextSlug}` : null,
+				prev: prevSlug ? `${baseUrl}/articles/${prevSlug}` : null,
+			},
+		};
+
+		return Res.ok(response);
 	}
 
 	/**

@@ -9,7 +9,7 @@ function computeReadingMins(content: string): number {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export class ArticleRepository implements IArticleRepository {
-	constructor(private readonly db: D1Database) {}
+	constructor(private readonly db: D1Database) { }
 
 	async findAll({ page, limit, search, sort, order, tags, authors }: PaginationParams, onlyPublished = true): Promise<PaginatedResult<Article>> {
 		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
@@ -133,6 +133,38 @@ export class ArticleRepository implements IArticleRepository {
 		return this.hydrateWithStats(row);
 	}
 
+	async getNextSlug(currentSlug: string): Promise<string | null> {
+		const row = await this.db
+			.prepare("SELECT created_at FROM articles WHERE slug = ?1")
+			.bind(currentSlug)
+			.first<{ created_at: string }>();
+
+		if (!row) return null;
+
+		const result = await this.db
+			.prepare("SELECT slug FROM articles WHERE created_at > ?1 ORDER BY created_at ASC LIMIT 1")
+			.bind(row.created_at)
+			.first<{ slug: string }>();
+
+		return result?.slug ?? null;
+	}
+
+	async getPrevSlug(currentSlug: string): Promise<string | null> {
+		const row = await this.db
+			.prepare("SELECT created_at FROM articles WHERE slug = ?1")
+			.bind(currentSlug)
+			.first<{ created_at: string }>();
+
+		if (!row) return null;
+
+		const result = await this.db
+			.prepare("SELECT slug FROM articles WHERE created_at < ?1 ORDER BY created_at DESC LIMIT 1")
+			.bind(row.created_at)
+			.first<{ slug: string }>();
+
+		return result?.slug ?? null;
+	}
+
 	async findById(id: string): Promise<Article | null> {
 		if (!UUID_RE.test(id)) return null;
 		const row = await this.db
@@ -192,10 +224,10 @@ export class ArticleRepository implements IArticleRepository {
 		const values: unknown[] = [];
 		let idx = 1;
 
-		if (dto.title !== undefined)       { fields.push(`title = ?${idx++}`);       values.push(dto.title); }
-		if (dto.slug !== undefined)        { fields.push(`slug = ?${idx++}`);        values.push(dto.slug); }
+		if (dto.title !== undefined) { fields.push(`title = ?${idx++}`); values.push(dto.title); }
+		if (dto.slug !== undefined) { fields.push(`slug = ?${idx++}`); values.push(dto.slug); }
 		if (dto.description !== undefined) { fields.push(`description = ?${idx++}`); values.push(dto.description); }
-		if (dto.thumbnail !== undefined)   { fields.push(`thumbnail = ?${idx++}`);   values.push(dto.thumbnail); }
+		if (dto.thumbnail !== undefined) { fields.push(`thumbnail = ?${idx++}`); values.push(dto.thumbnail); }
 		if (dto.content !== undefined) {
 			fields.push(`content = ?${idx++}`);
 			values.push(dto.content);

@@ -57,12 +57,12 @@ export class ProjectsController {
 		const repository = new ProjectRepository(env.DB);
 		const project = await new ProjectService(repository).getBySlug(slug);
 		if (!project) return Res.notFound();
-		
+
 		const [nextSlug, prevSlug] = await Promise.all([
 			repository.getNextSlug(slug),
 			repository.getPrevSlug(slug),
 		]);
-		
+
 		const baseUrl = new URL(request.url).origin;
 		const response = {
 			data: project,
@@ -71,7 +71,7 @@ export class ProjectsController {
 				prev: prevSlug ? `${baseUrl}/projects/${prevSlug}` : null,
 			},
 		};
-		
+
 		return Res.ok(response);
 	}
 
