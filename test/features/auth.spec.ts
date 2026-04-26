@@ -72,8 +72,8 @@ describe("Auth API", () => {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
-					email: "newuser@example.com",
-					name: "New User",
+					email: "leatsophat01@gmail.com",
+					name: "Leat Sophat",
 					password: "securepassword123",
 				}),
 			});
