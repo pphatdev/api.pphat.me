@@ -365,6 +365,31 @@ When a limit is exceeded, the API returns `429 Too Many Requests` and includes:
 
 ---
 
+### AI Content Generator — `/v1/api/ai/generate`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/api/ai/generate` | Generate description/content using Cloudflare Workers AI |
+
+> Requires authentication (`Authorization: Bearer <token>`).
+
+**Body:**
+
+```json
+{
+  "title": "Building a Cloudflare Worker API",
+  "context": "API for blog and project management.",
+  "tone": "professional and friendly",
+  "language": "English",
+  "mode": "both",
+  "model": "@cf/meta/llama-3.1-8b-instruct"
+}
+```
+
+**Mode values:** `description`, `content`, `both`
+
+---
+
 ## Postman Collection
 
 Import the collection from [`doc/collections/api-pphat-me.postman_collection.json`](doc/collections/api-pphat-me.postman_collection.json).

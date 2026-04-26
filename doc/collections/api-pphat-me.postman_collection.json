@@ -1496,6 +1496,51 @@
 					]
 				}
 			]
+		},
+		{
+			"name": "AI",
+			"item": [
+				{
+					"name": "Generate Description or Content",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "JWT token — authenticated users only"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Building a Cloudflare Worker API\",\n  \"context\": \"API for blog and project management.\",\n  \"tone\": \"professional and friendly\",\n  \"language\": \"English\",\n  \"mode\": \"both\",\n  \"model\": \"@cf/meta/llama-3.1-8b-instruct\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/api/ai/generate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"ai",
+								"generate"
+							]
+						},
+						"description": "Generates API/article description and markdown content using Cloudflare Workers AI.\n\nModes:\n- description\n- content\n- both"
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [

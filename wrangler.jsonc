@@ -70,5 +70,8 @@
 			"database_name": "api",
 			"database_id": "bc62b597-a418-4e1b-a89d-65bda1564fec"
 		}
-	]
+	],
+	"ai": {
+		"binding": "AI"
+	}
 }
