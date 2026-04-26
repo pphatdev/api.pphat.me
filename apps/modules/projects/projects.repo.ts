@@ -2,12 +2,12 @@ import { PaginatedResult, PaginationParams, TagRow, Tag, Author } from "../../sh
 import type { Project, ProjectRow, IProjectRepository, CreateProjectDto, UpdateProjectDto, ProjectDetailEmbed } from "./projects.interface";
 
 export class ProjectRepository implements IProjectRepository {
-	constructor(private readonly db: D1Database) {}
+	constructor(private readonly db: D1Database) { }
 
 	async findAll({ page, limit, search, sort, order }: PaginationParams): Promise<PaginatedResult<Project>> {
 		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
-		const safeSort = ALLOWED_SORT.includes(sort ?? '') ? sort! : 'created_at';
-		const safeOrder = order === 'asc' ? 'ASC' : 'DESC';
+		const safeSort = typeof sort === 'string' && ALLOWED_SORT.includes(sort) ? sort : 'created_at';
+		const safeOrder = typeof order === 'string' && order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
 		const offset = (page - 1) * limit;
 
 		let dataResult: Awaited<ReturnType<D1PreparedStatement['all']>>;
@@ -75,6 +75,38 @@ export class ProjectRepository implements IProjectRepository {
 		return project;
 	}
 
+	async getNextSlug(currentSlug: string): Promise<string | null> {
+		const row = await this.db
+			.prepare("SELECT created_at FROM projects WHERE slug = ?1")
+			.bind(currentSlug)
+			.first<{ created_at: string }>();
+
+		if (!row) return null;
+
+		const result = await this.db
+			.prepare("SELECT slug FROM projects WHERE created_at > ?1 ORDER BY created_at ASC LIMIT 1")
+			.bind(row.created_at)
+			.first<{ slug: string }>();
+
+		return result?.slug ?? null;
+	}
+
+	async getPrevSlug(currentSlug: string): Promise<string | null> {
+		const row = await this.db
+			.prepare("SELECT created_at FROM projects WHERE slug = ?1")
+			.bind(currentSlug)
+			.first<{ created_at: string }>();
+
+		if (!row) return null;
+
+		const result = await this.db
+			.prepare("SELECT slug FROM projects WHERE created_at < ?1 ORDER BY created_at DESC LIMIT 1")
+			.bind(row.created_at)
+			.first<{ slug: string }>();
+
+		return result?.slug ?? null;
+	}
+
 	async create(dto: CreateProjectDto): Promise<Project> {
 		const id = crypto.randomUUID();
 		const now = new Date().toISOString();
@@ -120,12 +152,12 @@ export class ProjectRepository implements IProjectRepository {
 		const values: unknown[] = [];
 		let idx = 1;
 
-		if (dto.title !== undefined)       { fields.push(`title = ?${idx++}`);       values.push(dto.title); }
-		if (dto.slug !== undefined)        { fields.push(`slug = ?${idx++}`);        values.push(dto.slug); }
+		if (dto.title !== undefined) { fields.push(`title = ?${idx++}`); values.push(dto.title); }
+		if (dto.slug !== undefined) { fields.push(`slug = ?${idx++}`); values.push(dto.slug); }
 		if (dto.description !== undefined) { fields.push(`description = ?${idx++}`); values.push(dto.description); }
-		if (dto.thumbnail !== undefined)   { fields.push(`thumbnail = ?${idx++}`);   values.push(dto.thumbnail); }
-		if (dto.published !== undefined)   { fields.push(`published = ?${idx++}`);   values.push(dto.published ? 1 : 0); }
-		if (dto.languages !== undefined)   { fields.push(`languages = ?${idx++}`);   values.push(JSON.stringify(dto.languages)); }
+		if (dto.thumbnail !== undefined) { fields.push(`thumbnail = ?${idx++}`); values.push(dto.thumbnail); }
+		if (dto.published !== undefined) { fields.push(`published = ?${idx++}`); values.push(dto.published ? 1 : 0); }
+		if (dto.languages !== undefined) { fields.push(`languages = ?${idx++}`); values.push(JSON.stringify(dto.languages)); }
 
 		fields.push(`updated_at = ?${idx++}`);
 		values.push(new Date().toISOString());
@@ -198,10 +230,10 @@ export class ProjectRepository implements IProjectRepository {
 			const values: unknown[] = [];
 			let idx = 1;
 
-			if (dto.content !== undefined)   { fields.push(`content = ?${idx++}`);    values.push(dto.content); }
-			if (dto.demoUrl !== undefined)    { fields.push(`demo_url = ?${idx++}`);   values.push(dto.demoUrl); }
-			if (dto.repoUrl !== undefined)    { fields.push(`repo_url = ?${idx++}`);   values.push(dto.repoUrl); }
-			if (dto.techStack !== undefined)  { fields.push(`tech_stack = ?${idx++}`); values.push(JSON.stringify(dto.techStack)); }
+			if (dto.content !== undefined) { fields.push(`content = ?${idx++}`); values.push(dto.content); }
+			if (dto.demoUrl !== undefined) { fields.push(`demo_url = ?${idx++}`); values.push(dto.demoUrl); }
+			if (dto.repoUrl !== undefined) { fields.push(`repo_url = ?${idx++}`); values.push(dto.repoUrl); }
+			if (dto.techStack !== undefined) { fields.push(`tech_stack = ?${idx++}`); values.push(JSON.stringify(dto.techStack)); }
 			if (dto.status !== undefined && ALLOWED_STATUS.includes(dto.status)) {
 				fields.push(`status = ?${idx++}`);
 				values.push(dto.status);

@@ -57,7 +57,22 @@ export class ProjectsController {
 		const repository = new ProjectRepository(env.DB);
 		const project = await new ProjectService(repository).getBySlug(slug);
 		if (!project) return Res.notFound();
-		return Res.ok(project);
+		
+		const [nextSlug, prevSlug] = await Promise.all([
+			repository.getNextSlug(slug),
+			repository.getPrevSlug(slug),
+		]);
+		
+		const baseUrl = new URL(request.url).origin;
+		const response = {
+			data: project,
+			navigation: {
+				next: nextSlug ? `${baseUrl}/projects/${nextSlug}` : null,
+				prev: prevSlug ? `${baseUrl}/projects/${prevSlug}` : null,
+			},
+		};
+		
+		return Res.ok(response);
 	}
 
 	static async update(request: Request, env: Env, slug: string): Promise<Response> {
