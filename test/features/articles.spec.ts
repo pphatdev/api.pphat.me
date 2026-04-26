@@ -104,8 +104,8 @@ describe("Articles API", () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}`);
 			expect(res.status).toBe(200);
 			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("slug", ARTICLE_SLUG);
-			expect(body).toHaveProperty("title");
+			expect(body.data).toHaveProperty("slug", ARTICLE_SLUG);
+			expect(body.data).toHaveProperty("title");
 		});
 
 		it("returns 404 for non-existent slug", async () => {

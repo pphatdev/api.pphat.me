@@ -32,8 +32,8 @@ describe("Projects API", () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}`);
 			expect(res.status).toBe(200);
 			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("slug", PROJECT_SLUG);
-			expect(body).toHaveProperty("title");
+			expect(body.data).toHaveProperty("slug", PROJECT_SLUG);
+			expect(body.data).toHaveProperty("title");
 		});
 
 		it("GET /v1/api/projects/non-existent returns 404", async () => {
