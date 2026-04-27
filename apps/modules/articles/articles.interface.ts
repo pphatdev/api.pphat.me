@@ -62,7 +62,7 @@ export type AppEnv = {
 	Bindings: Env;
 	Variables: {
 		articleId: string;
-		user: import('../auth/auth.interface').JwtPayload;
+		user?: import('../auth/auth.interface').JwtPayload;
 	};
 };
 

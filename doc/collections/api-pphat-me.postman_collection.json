@@ -1,10 +1,10 @@
 {
 	"info": {
-		"_postman_id": "f34a494e-b463-430f-ae10-b56fe3e4c737",
+		"_postman_id": "aabc9014-6881-4fcc-a242-5b8a0b4d7db3",
 		"name": "api-pphat-me",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "16827919",
-		"_collection_link": "https://go.postman.co/collection/16827919-f34a494e-b463-430f-ae10-b56fe3e4c737?source=collection_link"
+		"_collection_link": "https://go.postman.co/collection/16827919-aabc9014-6881-4fcc-a242-5b8a0b4d7db3?source=collection_link"
 	},
 	"item": [
 		{
@@ -167,7 +167,73 @@
 								},
 								"description": "Creates a new email account and sends a 6-digit OTP to verify the email. Password must be at least 8 characters. Returns 201 on success."
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Register with Email",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"name\": \"John Doe\",\n  \"password\": \"mypassword123\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/auth/email/register",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"auth",
+												"email",
+												"register"
+											]
+										}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "20"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "19"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "60"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"Verification code sent to your email\"\n}"
+								}
+							]
 						},
 						{
 							"name": "Login with Email",
@@ -203,10 +269,89 @@
 								},
 								"description": "Authenticates a verified email account with password. Returns { token } directly."
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Login with Email",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"password\": \"mypassword123\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/auth/email/login",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"auth",
+												"email",
+												"login"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "20"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "18"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "16"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkODBkOTlmZC01MjM3LTQ3NTEtYWQ4Yi04OWU3MTUwYWE4ODkiLCJwcm92aWRlciI6ImVtYWlsIiwiZW1haWwiOiJpbmZvLnNvcGhhdEBnbWFpbC5jb20iLCJuYW1lIjoiSm9obiBEb2UiLCJyb2xlIjoidXNlciIsImlhdCI6MTc3NzI2MTI2OCwiZXhwIjoxNzc3ODY2MDY4fQ.XUh5Zebv25gxIes9cWbaAY6gSQYjyJfKLVR7xCVc5-0\"\n}"
+								}
+							]
 						},
 						{
 							"name": "Verify OTP",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
 							"request": {
 								"method": "POST",
 								"header": [
@@ -217,7 +362,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"otp\": \"123456\"\n}",
+									"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"otp\": \"506102\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -239,7 +384,73 @@
 								},
 								"description": "Verifies the 6-digit OTP. Returns { token } on success. The OTP is valid for 10 minutes and can only be used once."
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Verify OTP",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"otp\": \"506102\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/auth/email/verify",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"auth",
+												"email",
+												"verify"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "20"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "18"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "24"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkODBkOTlmZC01MjM3LTQ3NTEtYWQ4Yi04OWU3MTUwYWE4ODkiLCJwcm92aWRlciI6ImVtYWlsIiwiZW1haWwiOiJpbmZvLnNvcGhhdEBnbWFpbC5jb20iLCJuYW1lIjoiSm9obiBEb2UiLCJyb2xlIjoidXNlciIsImlhdCI6MTc3NzI2MDAwMywiZXhwIjoxNzc3ODY0ODAzfQ._aXMqlOxw7VTBECx1lKLE676nEz8VfaJbtuxFLEfWa4\"\n}"
+								}
+							]
 						}
 					]
 				},
@@ -268,7 +479,64 @@
 						},
 						"description": "Returns the currently authenticated user. Requires a valid Bearer JWT in the Authorization header."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Get Current User",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token obtained from the login callback"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/auth/me",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"auth",
+										"me"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "gzip"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "20"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "19"
+								},
+								{
+									"key": "X-RateLimit-Reset",
+									"value": "60"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"id\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n    \"role\": \"user\",\n    \"provider\": \"email\",\n    \"provider_id\": \"info.sophat@gmail.com\",\n    \"password_hash\": \"c16f1e01b17ad7b8d169822c8fc07f38:354cd49cb931678379fb55164786aa574f25c352064c59be6e74f9913b59618c\",\n    \"email\": \"info.sophat@gmail.com\",\n    \"name\": \"John Doe\",\n    \"email_verified\": 1,\n    \"avatar\": null,\n    \"created_at\": \"2026-04-27 03:19:27\",\n    \"updated_at\": \"2026-04-27 03:20:03\"\n}"
+						}
+					]
 				}
 			]
 		},
@@ -338,7 +606,99 @@
 								},
 								"description": "Returns all published articles. Public — no auth required.\n\nSupports filtering by tags (`?tags=tag1,tag2`) and authors (`?authors=author1,author2`), multi-column sort (`?sort=title,created_at`), and a single order direction applied to all columns (`?order=asc`)."
 							},
-							"response": []
+							"response": [
+								{
+									"name": "List Articles",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles?page=1&limit=10",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1",
+													"description": "Page number (default: 1)"
+												},
+												{
+													"key": "limit",
+													"value": "10",
+													"description": "Items per page (default: 10, max: 100)"
+												},
+												{
+													"key": "search",
+													"value": "",
+													"description": "Search in title, slug, description",
+													"disabled": true
+												},
+												{
+													"key": "sort",
+													"value": "title,created_at",
+													"description": "Comma-separated sort columns: id, title, slug, description, published, created_at, updated_at",
+													"disabled": true
+												},
+												{
+													"key": "order",
+													"value": "desc",
+													"description": "Sort direction applied to all sort columns: asc, desc",
+													"disabled": true
+												},
+												{
+													"key": "tags",
+													"value": "tag1,tag2",
+													"description": "Comma-separated tag names to filter by",
+													"disabled": true
+												},
+												{
+													"key": "authors",
+													"value": "author1,author2",
+													"description": "Comma-separated author names to filter by",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "300"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "299"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "60"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n            \"title\": \"My Article Title\",\n            \"slug\": \"my-article-slug\",\n            \"description\": \"A short description of the article.\",\n            \"tags\": [\n                {\n                    \"id\": 1,\n                    \"tag\": \"typescript\",\n                    \"description\": \"TypeScript articles\"\n                }\n            ],\n            \"authors\": [\n                {\n                    \"name\": \"PPhat Dev\",\n                    \"profile\": \"Front-End Developer\",\n                    \"url\": \"https://pphat.me\"\n                }\n            ],\n            \"thumbnail\": \"https://example.com/thumbnail.png\",\n            \"published\": true,\n            \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n            \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n            \"updatedAt\": \"2026-04-27T03:46:54.340Z\",\n            \"content\": \"Full article content goes here.\",\n            \"filePath\": \"\"\n        }\n    ],\n    \"pagination\": {\n        \"page\": 1,\n        \"limit\": 10,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+								}
+							]
 						},
 						{
 							"name": "List Articles by Author",
@@ -417,7 +777,58 @@
 								},
 								"description": "Accepts either a URL slug or a UUID. Public — no auth required."
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Get Article by Slug or ID",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles/{{slug}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles",
+												"{{slug}}"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "300"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "297"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "10"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n        \"title\": \"My Article Title\",\n        \"slug\": \"my-article-slug\",\n        \"description\": \"A short description of the article.\",\n        \"tags\": [\n            {\n                \"id\": 1,\n                \"tag\": \"typescript\",\n                \"description\": \"TypeScript articles\"\n            }\n        ],\n        \"authors\": [\n            {\n                \"name\": \"PPhat Dev\",\n                \"profile\": \"Front-End Developer\",\n                \"url\": \"https://pphat.me\"\n            }\n        ],\n        \"thumbnail\": \"https://example.com/thumbnail.png\",\n        \"published\": true,\n        \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n        \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n        \"updatedAt\": \"2026-04-27T03:46:54.340Z\",\n        \"content\": \"Full article content goes here.\",\n        \"filePath\": \"\",\n        \"stats\": {\n            \"views\": 0,\n            \"readingMins\": 1\n        }\n    },\n    \"navigation\": {\n        \"next\": null,\n        \"prev\": null\n    }\n}"
+								}
+							]
 						},
 						{
 							"name": "Create Article",
@@ -436,7 +847,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"title\": \"My Article Title\",\n  \"slug\": \"my-article-slug\",\n  \"description\": \"A short description of the article.\",\n  \"thumbnail\": \"https://example.com/thumbnail.png\",\n  \"content\": \"Full article content goes here.\",\n  \"file_path\": \"\",\n  \"published\": false,\n  \"author_ids\": [1],\n  \"tags\": [\n    { \"tag\": \"typescript\", \"description\": \"TypeScript articles\" }\n  ]\n}",
+									"raw": "{\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"content\": \"Full article content goes here.\",\n    \"file_path\": \"\",\n    \"published\": false,\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ]\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -456,7 +867,76 @@
 								},
 								"description": "Creates a new article. The authenticated user becomes the owner (owner_id). Returns 201 with the created article."
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Create Article",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}",
+												"description": "JWT token — authenticated users only"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"content\": \"Full article content goes here.\",\n    \"file_path\": \"\",\n    \"published\": false,\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ]\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles"
+											]
+										}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "60"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "59"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "60"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"tags\": [\n        {\n            \"id\": 1,\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ],\n    \"authors\": [\n        {\n            \"name\": \"PPhat Dev\",\n            \"profile\": \"Front-End Developer\",\n            \"url\": \"https://pphat.me\"\n        }\n    ],\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"published\": false,\n    \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n    \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n    \"updatedAt\": \"2026-04-27T03:45:51.505Z\",\n    \"content\": \"Full article content goes here.\",\n    \"filePath\": \"\"\n}"
+								}
+							]
 						},
 						{
 							"name": "Update Article",
@@ -475,7 +955,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"title\": \"Updated Title\",\n  \"description\": \"Updated description.\",\n  \"thumbnail\": \"https://example.com/new-thumbnail.png\",\n  \"content\": \"Updated content.\",\n  \"published\": true,\n  \"author_ids\": [1],\n  \"tags\": [\n    { \"tag\": \"typescript\" }\n  ]\n}",
+									"raw": "{\n    \"title\": \"Updated Title\",\n    \"description\": \"Updated description.\",\n    \"thumbnail\": \"https://example.com/new-thumbnail.png\",\n    \"content\": \"Updated content.\",\n    \"published\": true,\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\"\n        }\n    ]\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -496,7 +976,77 @@
 								},
 								"description": "Updates an article by UUID. Requires owner, contributor, or admin. The :id parameter must be a UUID (not a slug)."
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Update Article",
+									"originalRequest": {
+										"method": "PATCH",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}",
+												"description": "JWT token — owner, contributor, or admin"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"title\": \"Updated Title\",\n    \"description\": \"Updated description.\",\n    \"thumbnail\": \"https://example.com/new-thumbnail.png\",\n    \"content\": \"Updated content.\",\n    \"published\": true,\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\"\n        }\n    ]\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles/{{articleId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles",
+												"{{articleId}}"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "60"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "59"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "60"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"tags\": [\n        {\n            \"id\": 1,\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ],\n    \"authors\": [\n        {\n            \"name\": \"PPhat Dev\",\n            \"profile\": \"Front-End Developer\",\n            \"url\": \"https://pphat.me\"\n        }\n    ],\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"published\": true,\n    \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n    \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n    \"updatedAt\": \"2026-04-27T03:46:54.340Z\",\n    \"content\": \"Full article content goes here.\",\n    \"filePath\": \"\"\n}"
+								}
+							]
 						},
 						{
 							"name": "Delete Article",
@@ -549,7 +1099,59 @@
 									]
 								}
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Get Article Stats",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/stats",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles",
+												"{{slug}}",
+												"stats"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "300"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "299"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "60"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"articleId\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"views\": 1,\n    \"readingMins\": 1\n}"
+								}
+							]
 						},
 						{
 							"name": "Increment Article View",
@@ -577,7 +1179,66 @@
 									]
 								}
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Increment Article View",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}",
+												"description": "JWT token — authenticated users only"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/stats/view",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles",
+												"{{slug}}",
+												"stats",
+												"view"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "120"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "119"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "60"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"articleId\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"views\": 1,\n    \"readingMins\": 1\n}"
+								}
+							]
 						}
 					]
 				},
@@ -603,7 +1264,59 @@
 									]
 								}
 							},
-							"response": []
+							"response": [
+								{
+									"name": "List Reactions",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/reactions",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles",
+												"{{slug}}",
+												"reactions"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "300"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "297"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "37"
+										}
+									],
+									"cookie": [],
+									"body": "[\n    {\n        \"id\": 1,\n        \"articleId\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n        \"type\": \"like\",\n        \"count\": 1\n    }\n]"
+								}
+							]
 						},
 						{
 							"name": "Add Reaction",
@@ -643,7 +1356,78 @@
 									]
 								}
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Add Reaction",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}",
+												"description": "JWT token — authenticated users only"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"type\": \"like\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/reactions",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles",
+												"{{slug}}",
+												"reactions"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "120"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "119"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "60"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"id\": 1,\n    \"articleId\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"type\": \"like\",\n    \"count\": 1\n}"
+								}
+							]
 						},
 						{
 							"name": "Increment Reaction by Type",
@@ -672,7 +1456,66 @@
 								},
 								"description": "Increments the count for a specific reaction type (like, love, haha, sad, angry)."
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Increment Reaction by Type",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}",
+												"description": "JWT token — authenticated users only"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/reactions/like",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles",
+												"{{slug}}",
+												"reactions",
+												"like"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "120"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "118"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "45"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"id\": 1,\n    \"articleId\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"type\": \"like\",\n    \"count\": 2\n}"
+								}
+							]
 						},
 						{
 							"name": "Decrement Reaction by Type",
@@ -739,7 +1582,71 @@
 									]
 								}
 							},
-							"response": []
+							"response": [
+								{
+									"name": "List Comments",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/comments?page=1&limit=10",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles",
+												"{{slug}}",
+												"comments"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1",
+													"description": "Page number (default: 1)"
+												},
+												{
+													"key": "limit",
+													"value": "10",
+													"description": "Items per page (default: 10, max: 100)"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "300"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "299"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "60"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": 1,\n            \"articleId\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n            \"authorName\": \"John Doe\",\n            \"content\": \"Great article!\",\n            \"createdAt\": \"2026-04-27T03:52:57.288Z\",\n            \"updatedAt\": \"2026-04-27T03:52:57.288Z\"\n        }\n    ],\n    \"pagination\": {\n        \"page\": 1,\n        \"limit\": 10,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+								}
+							]
 						},
 						{
 							"name": "Create Comment",
@@ -779,7 +1686,78 @@
 									]
 								}
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Create Comment",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}",
+												"description": "JWT token — authenticated users only"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"authorName\": \"John Doe\",\n  \"content\": \"Great article!\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/comments",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles",
+												"{{slug}}",
+												"comments"
+											]
+										}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "120"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "117"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "25"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"id\": 1,\n    \"articleId\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"authorName\": \"John Doe\",\n    \"content\": \"Great article!\",\n    \"createdAt\": \"2026-04-27T03:52:57.288Z\",\n    \"updatedAt\": \"2026-04-27T03:52:57.288Z\"\n}"
+								}
+							]
 						},
 						{
 							"name": "Update Comment",
@@ -820,7 +1798,79 @@
 									]
 								}
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Update Comment",
+									"originalRequest": {
+										"method": "PATCH",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}",
+												"description": "JWT token — authenticated users only"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"content\": \"Updated comment text.\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/comments/{{commentId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles",
+												"{{slug}}",
+												"comments",
+												"{{commentId}}"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "120"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "119"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "60"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"id\": 1,\n    \"articleId\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"authorName\": \"John Doe\",\n    \"content\": \"Updated comment text.\",\n    \"createdAt\": \"2026-04-27T03:52:57.288Z\",\n    \"updatedAt\": \"2026-04-27T03:53:32.863Z\"\n}"
+								}
+							]
 						},
 						{
 							"name": "Delete Comment",
@@ -875,7 +1925,59 @@
 								},
 								"description": "Returns all tags associated with the given article slug."
 							},
-							"response": []
+							"response": [
+								{
+									"name": "Get Tags by Article",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/articles/{{slug}}/tags",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"articles",
+												"{{slug}}",
+												"tags"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "300"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "298"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "32"
+										}
+									],
+									"cookie": [],
+									"body": "[\n    {\n        \"id\": 1,\n        \"tag\": \"typescript\",\n        \"description\": \"TypeScript articles\",\n        \"article_id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n        \"project_id\": null\n    }\n]"
+								}
+							]
 						}
 					]
 				},
@@ -899,7 +2001,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"user_id\": \"USER_UUID_HERE\"\n}",
+									"raw": "{\n  \"user_id\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -1006,7 +2108,87 @@
 							]
 						}
 					},
-					"response": []
+					"response": [
+						{
+							"name": "List Authors",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/authors?page=1&limit=10",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"authors"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number (default: 1)"
+										},
+										{
+											"key": "limit",
+											"value": "10",
+											"description": "Items per page (default: 10, max: 100)"
+										},
+										{
+											"key": "search",
+											"value": "",
+											"description": "Search in name",
+											"disabled": true
+										},
+										{
+											"key": "sort",
+											"value": "id",
+											"description": "Sort column: id, name, profile, url",
+											"disabled": true
+										},
+										{
+											"key": "order",
+											"value": "asc",
+											"description": "Sort order: asc, desc",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "gzip"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "300"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "298"
+								},
+								{
+									"key": "X-RateLimit-Reset",
+									"value": "44"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": [\n        {\n            \"id\": 1,\n            \"name\": \"PPhat Dev\",\n            \"profile\": \"Front-End Developer\",\n            \"url\": \"https://pphat.me\",\n            \"bio\": \"A passionate writer and developer.\",\n            \"avatarUrl\": \"https://example.com/avatar.png\",\n            \"socialLinks\": [\n                \"https://pphat.me\"\n            ],\n            \"status\": 1,\n            \"createdAt\": \"2026-04-27T03:44:09.952Z\",\n            \"updatedAt\": \"2026-04-27T03:44:09.952Z\"\n        }\n    ],\n    \"pagination\": {\n        \"page\": 1,\n        \"limit\": 10,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+						}
+					]
 				},
 				{
 					"name": "Get Author by ID",
@@ -1026,7 +2208,58 @@
 							]
 						}
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Get Author by ID",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/authors/{{authorId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"authors",
+										"{{authorId}}"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "gzip"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "300"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "297"
+								},
+								{
+									"key": "X-RateLimit-Reset",
+									"value": "34"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"id\": 1,\n    \"name\": \"PPhat Dev\",\n    \"profile\": \"Front-End Developer\",\n    \"url\": \"https://pphat.me\",\n    \"bio\": \"A passionate writer and developer.\",\n    \"avatarUrl\": \"https://example.com/avatar.png\",\n    \"socialLinks\": [\n        \"https://pphat.me\"\n    ],\n    \"status\": 1,\n    \"createdAt\": \"2026-04-27T03:44:09.952Z\",\n    \"updatedAt\": \"2026-04-27T03:44:09.952Z\"\n}"
+						}
+					]
 				},
 				{
 					"name": "Create Author",
@@ -1040,7 +2273,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"PPhat Dev\",\n  \"profile\": \"Front-End Developer\",\n  \"url\": \"https://pphat.me\",\n  \"bio\": \"A passionate writer and developer.\",\n  \"avatar_url\": \"https://example.com/avatar.png\",\n  \"social_links\": [\"https://pphat.me\"],\n  \"status\": 1\n}",
+							"raw": "{\n    \"name\": \"PPhat Dev\",\n    \"profile\": \"Front-End Developer\",\n    \"url\": \"https://pphat.me\",\n    \"bio\": \"A passionate writer and developer.\",\n    \"avatar_url\": \"https://example.com/avatar.png\",\n    \"social_links\": [\n        \"https://pphat.me\"\n    ],\n    \"status\": 1\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1059,7 +2292,71 @@
 							]
 						}
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Create Author",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"PPhat Dev\",\n    \"profile\": \"Front-End Developer\",\n    \"url\": \"https://pphat.me\",\n    \"bio\": \"A passionate writer and developer.\",\n    \"avatar_url\": \"https://example.com/avatar.png\",\n    \"social_links\": [\n        \"https://pphat.me\"\n    ],\n    \"status\": 1\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/authors",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"authors"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "gzip"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "60"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "59"
+								},
+								{
+									"key": "X-RateLimit-Reset",
+									"value": "60"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"id\": 1,\n    \"name\": \"PPhat Dev\",\n    \"profile\": \"Front-End Developer\",\n    \"url\": \"https://pphat.me\",\n    \"bio\": \"A passionate writer and developer.\",\n    \"avatarUrl\": \"https://example.com/avatar.png\",\n    \"socialLinks\": [\n        \"https://pphat.me\"\n    ],\n    \"status\": 1,\n    \"createdAt\": \"2026-04-27T03:44:09.952Z\",\n    \"updatedAt\": \"2026-04-27T03:44:09.952Z\"\n}"
+						}
+					]
 				},
 				{
 					"name": "Update Author",
@@ -1073,7 +2370,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Jane Doe\",\n  \"profile\": \"Senior Engineer\",\n  \"url\": \"https://janedoe.com\",\n  \"bio\": \"Updated bio.\",\n  \"avatar_url\": \"https://example.com/new-avatar.png\",\n  \"social_links\": [\"https://twitter.com/janedoe\"],\n  \"status\": 1\n}",
+							"raw": "{\n    \"name\": \"Jane Doe\",\n    \"profile\": \"Senior Engineer\",\n    \"url\": \"https://janedoe.com\",\n    \"bio\": \"Updated bio.\",\n    \"avatar_url\": \"https://example.com/new-avatar.png\",\n    \"social_links\": [\n        \"https://twitter.com/janedoe\"\n    ],\n    \"status\": 1\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1517,7 +2814,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"title\": \"Building a Cloudflare Worker API\",\n  \"context\": \"API for blog and project management.\",\n  \"tone\": \"professional and friendly\",\n  \"language\": \"English\",\n  \"mode\": \"both\",\n  \"model\": \"@cf/meta/llama-3.1-8b-instruct\"\n}",
+							"raw": "{\n  \"title\": \"Hello World\",\n  \"context\": \"API for blog and project management.\",\n  \"tone\": \"professional and friendly\",\n  \"language\": \"English\",\n  \"mode\": \"both\",\n  \"model\": \"@cf/meta/llama-3.1-8b-instruct\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1538,52 +2835,148 @@
 						},
 						"description": "Generates API/article description and markdown content using Cloudflare Workers AI.\n\nModes:\n- description\n- content\n- both"
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Generate Description or Content",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT token — authenticated users only"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"Hello World\",\n  \"context\": \"API for blog and project management.\",\n  \"tone\": \"professional and friendly\",\n  \"language\": \"English\",\n  \"mode\": \"both\",\n  \"model\": \"@cf/meta/llama-3.1-8b-instruct\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/ai/generate",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"ai",
+										"generate"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "gzip"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "60"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "59"
+								},
+								{
+									"key": "X-RateLimit-Reset",
+									"value": "60"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"model\": \"@cf/meta/llama-3.1-8b-instruct\",\n    \"mode\": \"both\",\n    \"data\": {\n        \"description\": \"A basic 'Hello World' example for the API, demonstrating a successful request.\",\n        \"content\": \"# Hello World\\n\\n## Overview\\n\\nThis is a basic example of a successful request to the API.\\n\\n## Request\\n\\n### HTTP Method\\n\\n* `GET`\\n\\n### Endpoint\\n\\n* `/hello`\\n\\n### Request Body\\n\\n* None\\n\\n## Response\\n\\n### Status Code\\n\\n* `200 OK`\\n\\n### Response Body\\n\\n* `Hello World!`\\n\\n## Example Use Case\\n\\nYou can use this endpoint to test your API connection and ensure it's working as expected.\"\n    },\n    \"usage\": {\n        \"tokens\": {\n            \"prompt_tokens\": 235,\n            \"completion_tokens\": 138,\n            \"total_tokens\": 373,\n            \"prompt_tokens_details\": {\n                \"cached_tokens\": 0\n            }\n        }\n    }\n}"
+						}
+					]
 				}
 			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
 		}
 	],
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "http://localhost:8787",
-			"type": "string"
+			"value": "http://localhost:8787"
 		},
 		{
 			"key": "token",
 			"value": "",
-			"type": "string",
 			"description": "JWT token returned by /auth/github/callback or /auth/google/callback"
 		},
 		{
 			"key": "slug",
-			"value": "my-article-slug",
-			"type": "string"
+			"value": "my-article-slug"
 		},
 		{
 			"key": "authorId",
-			"value": "1",
-			"type": "string"
+			"value": "1"
 		},
 		{
 			"key": "tagId",
-			"value": "1",
-			"type": "string"
+			"value": "1"
 		},
 		{
 			"key": "commentId",
-			"value": "1",
-			"type": "string"
+			"value": "1"
 		},
 		{
 			"key": "projectSlug",
-			"value": "my-project",
-			"type": "string"
+			"value": "my-project"
 		},
 		{
 			"key": "articleId",
 			"value": "00000000-0000-4000-8000-000000000000",
-			"type": "string",
 			"description": "UUID of the article — used for update, delete, and contributor routes"
 		}
 	]

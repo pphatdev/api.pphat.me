@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
-import { ArticlesController }         from './articles.controller';
-import { ArticleStatsController }     from '../article-stats/article-stats.controller';
+import { ArticlesController } from './articles.controller';
+import { ArticleStatsController } from '../article-stats/article-stats.controller';
 import { ArticleReactionsController } from '../article-reactions/article-reactions.controller';
-import { ArticleCommentsController }  from '../article-comments/article-comments.controller';
-import { authGuard }                  from '../../middlewares/auth.middleware';
-import type { AppEnv }                from './articles.interface';
+import { ArticleCommentsController } from '../article-comments/article-comments.controller';
+import { authGuard, optionalAuth } from '../../middlewares/auth.middleware';
+import type { AppEnv } from './articles.interface';
 
 const app = new Hono<AppEnv>();
 
@@ -52,7 +52,7 @@ app.post(
  */
 app.get(
     '/v1/api/articles/author/:authorId',
-    authGuard,
+    optionalAuth,
     ArticlesController.listByAuthor
 );
 

@@ -54,9 +54,9 @@ export class ArticlesController {
 
 		if (!article) return Res.notFound();
 
-		const isAdmin = user.role === 'admin';
-		const isOwner = article.owner_id === user.sub;
-		const isContributor = !isAdmin && !isOwner
+		const isAdmin = user?.role === 'admin';
+		const isOwner = user && article.owner_id === user.sub;
+		const isContributor = user && !isAdmin && !isOwner
 			? await repo.isContributor(id, user.sub)
 			: false;
 
@@ -84,8 +84,8 @@ export class ArticlesController {
 
 		if (!article) return Res.notFound();
 
-		const isAdmin = user.role === 'admin';
-		const isOwner = article.owner_id === user.sub;
+		const isAdmin = user?.role === 'admin';
+		const isOwner = user && article.owner_id === user.sub;
 
 		if (!isAdmin && !isOwner) {
 			return Res.forbidden();
@@ -124,21 +124,18 @@ export class ArticlesController {
 		if (isNaN(authorId) || authorId < 1) return Res.badRequest('Invalid author ID');
 
 		const user = c.get('user');
-		const isAdmin = user.role === 'admin';
+		const isAdmin = user?.role === 'admin';
 
-		// Check if the requesting user is linked to this author profile
-		let isAuthorOwner = false;
-		if (!isAdmin) {
-			const authorRow = await c.env.DB
-				.prepare('SELECT user_id FROM authors WHERE id = ?1')
-				.bind(authorId)
-				.first<{ user_id: string | null }>();
+		// Check author exists and if the user is the owner
+		const authorRow = await c.env.DB
+			.prepare('SELECT user_id FROM authors WHERE id = ?1')
+			.bind(authorId)
+			.first<{ user_id: string | null }>();
 
-			if (!authorRow) return Res.notFound('Author not found');
-			isAuthorOwner = authorRow.user_id === user.sub;
+		if (!authorRow) return Res.notFound('Author not found');
 
-			if (!isAuthorOwner) return Res.forbidden();
-		}
+		const isAuthorOwner = user && authorRow.user_id === user.sub;
+		const onlyPublished = !isAdmin && !isAuthorOwner;
 
 		const repository = new ArticleRepository(c.env.DB);
 		const url = new URL(c.req.url);
@@ -151,7 +148,7 @@ export class ArticlesController {
 		const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
 
 		// Admin sees all; author owner sees all their own drafts too
-		const result = await new ArticleService(repository).listByAuthor(authorId, { page, limit, search, sort, order }, false);
+		const result = await new ArticleService(repository).listByAuthor(authorId, { page, limit, search, sort, order }, onlyPublished);
 		return Res.ok(result);
 	}
 
@@ -211,7 +208,7 @@ export class ArticlesController {
 				published: dto.published as boolean | undefined,
 				author_ids: dto.author_ids as number[] | undefined,
 				tags: dto.tags as { tag: string; description?: string }[] | undefined,
-				owner_id: user.sub,
+				owner_id: user?.sub,
 			});
 			return Res.created(article);
 		} catch (err) {
@@ -269,7 +266,7 @@ export class ArticlesController {
 
 		if (!article) return Res.notFound();
 
-		if (user.role !== 'admin' && article.owner_id !== user.sub) {
+		if (user?.role !== 'admin' && article.owner_id !== user?.sub) {
 			return Res.forbidden();
 		}
 
@@ -291,7 +288,7 @@ export class ArticlesController {
 		if (!UUID_RE.test(id)) return Res.badRequest('Invalid article ID');
 
 		const user = c.get('user');
-		const removed = await new ArticleService(new ArticleRepository(c.env.DB)).removeContributor(id, user.sub);
+		const removed = await new ArticleService(new ArticleRepository(c.env.DB)).removeContributor(id, user?.sub ?? '');
 		if (!removed) return Res.notFound('Not a contributor or article not found');
 		return Res.noContent();
 	}
