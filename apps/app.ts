@@ -6,9 +6,11 @@ import { authorRoutes }  from './modules/authors/authors.routes';
 import { tagRoutes }     from './modules/tags/tags.routes';
 import { aiRoutes }      from './modules/ai/ai.route';
 import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
+import { securityMiddleware } from './middlewares/security.middleware';
 
 const app = new Hono<{ Bindings: Env }>();
 
+app.use('*', securityMiddleware);
 app.use('/v1/api/*', rateLimitMiddleware);
 app.get('/', (c) => c.json({ message: 'Welcome to the API' }));
 

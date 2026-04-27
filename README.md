@@ -1,10 +1,14 @@
 # API.PPHAT.ME
 
-> Version 0.9.0
+> Version 0.9.1
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
 ---
+
+## 🛡️ Security
+
+We take security seriously. Please refer to our [Security Policy](SECURITY.md) for information on reporting vulnerabilities.
 
 ## Tech Stack
 

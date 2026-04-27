@@ -1,0 +1,6 @@
+Contact: mailto:security@pphat.me
+Expires: 2027-04-27T16:00:00.000Z
+Preferred-Languages: en, km
+Policy: https://api.pphat.me/SECURITY.md
+Canonical: https://api.pphat.me/.well-known/security.txt
+Acknowledgments: https://api.pphat.me/acknowledgments
