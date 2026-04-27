@@ -1,6 +1,6 @@
 # API.PPHAT.ME
 
-> Version 0.8.5
+> Version 0.9.0
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
@@ -94,6 +94,23 @@ npm test
 ```bash
 npx wrangler deploy
 ```
+
+---
+
+## Environment Variables & Secrets
+
+The API requires several environment variables for full functionality. Configure these in `wrangler.jsonc` or as secrets.
+
+| Name | Type | Description |
+|------|------|-------------|
+| `APP_URL` | Var | The canonical base URL of the API |
+| `JWT_SECRET` | Secret | Secret key for JWT signing |
+| `GITHUB_CLIENT_ID` | Var | GitHub OAuth App Client ID |
+| `GITHUB_CLIENT_SECRET` | Secret | GitHub OAuth App Client Secret |
+| `SMTP_HOST` | Var | SMTP server hostname |
+| `SMTP_PORT` | Var | SMTP server port |
+| `SMTP_USER` | Var | SMTP username / sender email |
+| `SMTP_PASS` | Secret | SMTP password |
 
 ---
 
@@ -369,7 +386,7 @@ When a limit is exceeded, the API returns `429 Too Many Requests` and includes:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/v1/api/ai/generate` | Generate description/content using Cloudflare Workers AI |
+| `POST` | `/v1/api/ai/generate` | Generate structured description/content using Cloudflare Workers AI with JSON schema validation |
 
 > Requires authentication (`Authorization: Bearer <token>`).
 
@@ -387,6 +404,8 @@ When a limit is exceeded, the API returns `429 Too Many Requests` and includes:
 ```
 
 **Mode values:** `description`, `content`, `both`
+
+> **Note:** The AI now uses optimized prompt engineering and `response_format: json_schema` for highly reliable structured output. Mode-specific token limits are applied (400 for description, 1200 for content, 1800 for both).
 
 ---
 

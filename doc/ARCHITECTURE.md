@@ -1,6 +1,6 @@
 # Architecture Flow — api.pphat.me
 
-> Version 0.8.3 · Cloudflare Workers + D1
+> Version 0.9.0 · Cloudflare Workers + D1
 
 ---
 
@@ -78,6 +78,9 @@ mindmap
       profiles · social links
     tags
       shared by articles & projects
+    ai
+      Workers AI generator
+      JSON schema output
 ```
 
 ---
@@ -254,6 +257,7 @@ erDiagram
 | `SMTP_USER` | Var | SMTP sender display name + address |
 | `SMTP_FROM` | Var | SMTP from address |
 | `SMTP_PASS` | Secret | SMTP password |
+| `AI` | Binding | Cloudflare Workers AI binding |
 
 ---
 
