@@ -6,4 +6,5 @@ export interface GeneratePayload {
 	tone?: string;
 	language?: string;
 	mode?: GenerateMode;
+	model?: string;
 }
