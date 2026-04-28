@@ -1,6 +1,6 @@
 # Architecture Flow — api.pphat.me
 
-> Version 0.9.0 · Cloudflare Workers + D1
+> Version 0.10.1 · Cloudflare Workers + D1
 
 ---
 
@@ -16,7 +16,9 @@ flowchart TD
     RL --> R3[projectRoutes]
     RL --> R4[authorRoutes]
     RL --> R5[tagRoutes]
-    R1 & R2 & R3 & R4 & R5 --> Controller
+    RL --> R6[aiRoutes]
+    RL --> R7[chatRoutes]
+    R1 & R2 & R3 & R4 & R5 & R6 & R7 --> Controller
     Controller --> Service
     Service --> Repository
     Repository --> D1[(D1 SQLite)]
@@ -81,6 +83,11 @@ mindmap
     ai
       Workers AI generator
       JSON schema output
+      AI tag suggestions
+    chat
+      Portfolio chatbot
+      Persistence in D1
+      History retrieval/clearing
 ```
 
 ---
@@ -237,6 +244,7 @@ erDiagram
     authors  ||--o{ project_contributors : "contributes to"
 
     projects ||--o| project_details : "has"
+    users    ||--o{ chat_history : "has"
 ```
 
 ---

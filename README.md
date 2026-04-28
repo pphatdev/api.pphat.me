@@ -69,13 +69,17 @@ graph TD
 
     subgraph Controllers
         ArtC[Article Controller]
+        ProjC[Project Controller]
+        AuthC[Auth Controller]
         ChatC[Chat Controller]
         AiC[AI Controller]
+        SocialC[Social: Comments/Reactions]
     end
 
     subgraph Services
         AI{{Cloudflare Workers AI}}
         D1[(Cloudflare D1 Database)]
+        Email[Email Service]
     end
 
     User --> Gateway
@@ -84,13 +88,20 @@ graph TD
     Sec --> Rate
     Rate --> Auth
     Auth --> ArtC
+    Auth --> ProjC
+    Auth --> AuthC
     Auth --> ChatC
     Auth --> AiC
+    Auth --> SocialC
 
     ArtC <--> D1
+    ProjC <--> D1
+    AuthC <--> D1
+    AuthC --> Email
     ChatC <--> D1
     ChatC <--> AI
     AiC <--> AI
+    SocialC <--> D1
 ```
 
 ---
