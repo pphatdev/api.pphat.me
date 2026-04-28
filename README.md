@@ -1,6 +1,6 @@
 # API.PPHAT.ME
 
-> Version 0.9.2
+> Version 0.10.1
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
@@ -19,6 +19,7 @@ We take security seriously. Please refer to our [Security Policy](SECURITY.md) f
 | Database | Cloudflare D1 (SQLite) |
 | Language | TypeScript |
 | Testing | Vitest + `@cloudflare/vitest-pool-workers` |
+| AI | Cloudflare Workers AI |
 | Tooling | Wrangler v4 |
 
 ---
@@ -40,7 +41,8 @@ apps/
 │   ├── project-details/             # Extended project details
 │   ├── authors/                     # Author management
 │   ├── tags/                        # Tag management
-│   └── auth/                        # Authentication (email-based)
+│   ├── auth/                        # Authentication (email-based)
+│   └── chat/                        # Portfolio Chatbot API
 └── shared/                          # Utility helpers and common interfaces
 migrations/                          # D1 SQL migrations
 doc/collections/                     # Postman collection
@@ -140,6 +142,7 @@ npx wrangler d1 migrations apply api --remote
 | `0009_create_project_contributors.sql` | `project_contributors` |
 | `0010_create_users.sql` | `users` table |
 | `0011_email_auth.sql` | Email authentication setup |
+| `0012_create_chat_history.sql` | `chat_history` table |
 | `9999_create_tags.sql` | `tags`, `article_tags` |
 
 ---
@@ -410,6 +413,25 @@ When a limit is exceeded, the API returns `429 Too Many Requests` and includes:
 **Mode values:** `description`, `content`, `both`
 
 > **Note:** The AI now uses optimized prompt engineering and `response_format: json_schema` for highly reliable structured output. Mode-specific token limits are applied (400 for description, 1200 for content, 1800 for both).
+
+---
+
+### Portfolio Chatbot — `/v1/api/chat`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/api/chat` | Chat with the AI about the portfolio |
+| `GET` | `/v1/api/chat/history` | Get chat history (Requires authentication) |
+
+**Chat Body:**
+
+```json
+{
+  "message": "What is Sophat's tech stack?"
+}
+```
+
+> The chatbot uses Cloudflare Workers AI and is pre-seeded with knowledge about the project architecture, skills, and contact information.
 
 ---
 
