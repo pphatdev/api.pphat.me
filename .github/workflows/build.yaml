@@ -3,7 +3,6 @@ name: "🧪 Testing before Build"
 on:
   push:
     branches: [ master ]
-    tags: [ 'v*' ]
   pull_request:
     branches: [ master ]
 
@@ -64,23 +63,31 @@ jobs:
             echo "❌ Tests failed. Please check the logs for more information." >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: 📦 Archive Release
-        if: github.ref_type == 'tag' && matrix.node-version == 24
+      - name: 🏷️ Get Version Info
+        id: get_version
+        if: github.event_name == 'pull_request' && matrix.node-version == 24
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "version=v$PACKAGE_VERSION-pr${{ github.event.number }}" >> $GITHUB_OUTPUT
+
+      - name: 📦 Archive Release
+        if: github.event_name == 'pull_request' && matrix.node-version == 24
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
           zip -r "api-pphat-me-$VERSION.zip" . -x "node_modules/*" ".git/*" ".github/*" "tests/*"
 
       - name: 🛡️ Attest Build Provenance
-        if: github.ref_type == 'tag' && matrix.node-version == 24
+        if: github.event_name == 'pull_request' && matrix.node-version == 24
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: 'api-pphat-me-*.zip'
 
-      - name: 🚀 Create Release
-        if: github.ref_type == 'tag' && matrix.node-version == 24
+      - name: 🚀 Create Release (Draft)
+        if: github.event_name == 'pull_request' && matrix.node-version == 24
         uses: softprops/action-gh-release@v2.0.9
         with:
+          tag_name: ${{ steps.get_version.outputs.version }}
           files: api-pphat-me-*.zip
           generate_release_notes: true
-          draft: false
-          prerelease: false
+          draft: true
+          prerelease: true
