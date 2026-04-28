@@ -1,9 +1,6 @@
 import { Res } from '../../shared/helpers/response';
 import type { GeneratePayload, GenerateMode } from './ai.interface';
 
-/**
- * Constants for validation and defaults
- */
 const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 const MAX_TITLE_LENGTH = 200;
 const MAX_CONTEXT_LENGTH = 10000;
@@ -30,7 +27,7 @@ function getSystemPrompt(mode: GenerateMode, language: string, tone: string): st
 	];
 
 	if (mode === 'description' || mode === 'both') {
-		rules.push('- description: A concise 1-2 sentence summary.');
+		rules.push('- description: A concise 1-2 sentence summary. Plain text only, no markdown.');
 	}
 	if (mode === 'content' || mode === 'both') {
 		rules.push('- content: Practical, high-quality markdown content with sections. Use bullet points and bold text where appropriate.');
@@ -57,7 +54,6 @@ function getUserPrompt(payload: GeneratePayload): string {
  * Parses the AI output safely
  */
 function parseOutput(result: any, mode: GenerateMode): { description?: string; content?: string } {
-	// 1. Handle case where result is already an object (common with response_format)
 	const data = result?.response ?? result?.result ?? result;
 
 	if (data && typeof data === 'object' && !Array.isArray(data)) {
@@ -67,12 +63,9 @@ function parseOutput(result: any, mode: GenerateMode): { description?: string; c
 		};
 	}
 
-	// 2. Handle case where result is a JSON string
 	let rawText = (data || '').toString().trim();
 
 	if (!rawText || rawText === '[object Object]') return {};
-
-	// Clean up potential markdown fences if the model ignored instructions
 	if (rawText.includes('```')) {
 		rawText = rawText.replace(/```(?:json)?/g, '').trim();
 	}
@@ -101,7 +94,7 @@ function getJsonSchema(mode: GenerateMode) {
 	if (mode === 'description' || mode === 'both') {
 		properties.description = {
 			type: 'string',
-			description: 'A concise summary of the topic'
+			description: 'A concise summary of the topic (plain text only, no markdown)'
 		};
 		required.push('description');
 	}
@@ -179,7 +172,7 @@ export class AiController {
 			return Res.ok({
 				model,
 				mode,
-				data,
+				data: mode === 'description' ? data.description : (mode === 'content' ? data.content : data),
 				usage: {
 					tokens: (response as any).usage || 'unknown'
 				}
