@@ -83,7 +83,6 @@ mindmap
     ai
       Workers AI generator
       JSON schema output
-      AI tag suggestions
     chat
       Portfolio chatbot
       Persistence in D1
