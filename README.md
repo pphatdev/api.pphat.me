@@ -1,6 +1,6 @@
 # API.PPHAT.ME
 
-> Version 0.10.0
+> Version 0.10.1
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
@@ -19,6 +19,7 @@ We take security seriously. Please refer to our [Security Policy](SECURITY.md) f
 | Database | Cloudflare D1 (SQLite) |
 | Language | TypeScript |
 | Testing | Vitest + `@cloudflare/vitest-pool-workers` |
+| AI | Cloudflare Workers AI |
 | Tooling | Wrangler v4 |
 
 ---
@@ -46,6 +47,50 @@ apps/
 migrations/                          # D1 SQL migrations
 doc/collections/                     # Postman collection
 test/                                # Vitest integration tests
+```
+
+---
+
+## Architecture Flow
+
+The following diagram illustrates how requests are processed through the API, including interactions with Cloudflare Workers AI and D1 Database.
+
+```mermaid
+graph TD
+    User([User / Client])
+    Gateway[Cloudflare Gateway]
+    Entry[app.ts - Hono Router]
+    
+    subgraph Middlewares
+        Auth[Auth Middleware]
+        Rate[Rate Limit Middleware]
+        Sec[Security Middleware]
+    end
+
+    subgraph Controllers
+        ArtC[Article Controller]
+        ChatC[Chat Controller]
+        AiC[AI Controller]
+    end
+
+    subgraph Services
+        AI{{Cloudflare Workers AI}}
+        D1[(Cloudflare D1 Database)]
+    end
+
+    User --> Gateway
+    Gateway --> Entry
+    Entry --> Sec
+    Sec --> Rate
+    Rate --> Auth
+    Auth --> ArtC
+    Auth --> ChatC
+    Auth --> AiC
+
+    ArtC <--> D1
+    ChatC <--> D1
+    ChatC <--> AI
+    AiC <--> AI
 ```
 
 ---
