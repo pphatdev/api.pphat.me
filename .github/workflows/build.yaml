@@ -21,7 +21,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22, 24]
+        node-version: [20, 22, 24]
 
     steps:
       - name: Checkout
@@ -65,23 +65,22 @@ jobs:
           fi
 
       - name: 📦 Archive Release
-        if: startsWith(github.ref, 'refs/tags/') && matrix.node-version == 24
+        if: github.ref_type == 'tag' && matrix.node-version == 24
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           zip -r "api-pphat-me-$VERSION.zip" . -x "node_modules/*" ".git/*" ".github/*" "tests/*"
 
+      - name: 🛡️ Attest Build Provenance
+        if: github.ref_type == 'tag' && matrix.node-version == 24
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'api-pphat-me-*.zip'
+
       - name: 🚀 Create Release
-        if: startsWith(github.ref, 'refs/tags/') && matrix.node-version == 24
+        if: github.ref_type == 'tag' && matrix.node-version == 24
         uses: softprops/action-gh-release@v2.0.9
         with:
           files: api-pphat-me-*.zip
           generate_release_notes: true
           draft: false
           prerelease: false
-
-      - name: 🛡️ Attest Build Provenance
-        if: startsWith(github.ref, 'refs/tags/') && matrix.node-version == 24
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: 'api-pphat-me-*.zip'
-        
