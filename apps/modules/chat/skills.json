@@ -1,0 +1,57 @@
+{
+    "name": "Portfolio Chatbot",
+    "description": "A chatbot that answers questions based on the api.pphat.me project - a RESTful API built with Cloudflare Workers, Hono, and D1.",
+    "skills": [
+        {
+            "name": "Greeting",
+            "description": "Responds to greetings and introduces the chatbot.",
+            "triggers": [
+                "hello",
+                "hi",
+                "greetings"
+            ],
+            "response": "Hello! I'm the official chatbot for the api.pphat.me project. I can help you understand our architecture, tech stack, and API features. How can I assist you today?"
+        },
+        {
+            "name": "Portfolio Overview",
+            "description": "Provides an overview of the project architecture and purpose.",
+            "triggers": [
+                "portfolio",
+                "overview",
+                "what is this project about"
+            ],
+            "response": "This project is a high-performance RESTful API managing articles, projects, authors, and tags. It follows a modular architecture and is designed for the Cloudflare Developer Platform."
+        },
+        {
+            "name": "Tech Stack",
+            "description": "Lists the technologies used in the project.",
+            "triggers": [
+                "stack",
+                "technologies",
+                "framework",
+                "database"
+            ],
+            "response": "The tech stack includes: \n- **Runtime**: Cloudflare Workers\n- **Router**: Hono v4\n- **Database**: Cloudflare D1 (SQLite)\n- **Language**: TypeScript\n- **Testing**: Vitest with @cloudflare/vitest-pool-workers\n- **Tooling**: Wrangler v4"
+        },
+        {
+            "name": "Project Modules",
+            "description": "Provides details about specific modules in the API.",
+            "triggers": [
+                "modules",
+                "features",
+                "endpoints"
+            ],
+            "response": "The API is organized into several modules: \n- **Articles**: CRUD operations, stats, reactions, and comments.\n- **Projects**: Portfolio project management with extended details.\n- **Authors & Tags**: Managing contributors and content categorization.\n- **Auth**: Secure email-based authentication with JWT and OTP."
+        },
+        {
+            "name": "Contact Information",
+            "description": "Provides contact information for Sophat.",
+            "triggers": [
+                "contact",
+                "reach you",
+                "sophat"
+            ],
+            "response": "You can reach out to Sophat L. via email at info.sophat@gmail.com. You can also find more information at https://pphat.me."
+        }
+    ]
+}

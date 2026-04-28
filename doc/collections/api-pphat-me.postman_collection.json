@@ -2908,6 +2908,78 @@
 					]
 				}
 			]
+		},
+		{
+			"name": "Chat",
+			"item": [
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "Optional JWT token",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"Hello! What is this portfolio about?\",\n  \"history\": [],\n  \"model\": \"@cf/meta/llama-3.1-8b-instruct\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/api/chat",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"chat"
+							]
+						},
+						"description": "Send a message to the portfolio chatbot. If authenticated, chat history will be saved."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Chat History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "JWT token required"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/v1/api/chat/history",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"chat",
+								"history"
+							]
+						},
+						"description": "Returns the chat history for the authenticated user."
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"auth": {
