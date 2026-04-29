@@ -21,11 +21,27 @@ describe("Projects API", () => {
 			expect(body).toHaveProperty("pagination");
 		});
 
-		it("GET /v1/api/projects with search param filters results", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/projects?search=Test&page=1&limit=10");
-			expect(res.status).toBe(200);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("data");
+		it("GET /v1/api/projects does not return unpublished projects", async () => {
+			// First, create an unpublished project
+			const slug = "unpublished-project-" + Date.now();
+			await SELF.fetch("http://example.com/v1/api/projects", {
+				method: "POST",
+				headers: { ...authHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					title: "Unpublished Project",
+					slug,
+					description: "Hidden project.",
+					published: false,
+				}),
+			});
+
+			// Fetch the list
+			const res = await SELF.fetch("http://example.com/v1/api/projects?limit=100");
+			const body = await res.json() as { data: { slug: string; published: boolean }[] };
+			
+			// Verify it's not in the list
+			const found = body.data.find(p => p.slug === slug);
+			expect(found).toBeUndefined();
 		});
 
 		it(`GET /v1/api/projects/${PROJECT_SLUG} returns project by slug`, async () => {
