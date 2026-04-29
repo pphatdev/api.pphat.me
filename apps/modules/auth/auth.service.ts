@@ -223,7 +223,7 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
  */
 
 export class AuthService {
-	constructor(private readonly repo: IAuthRepository) {}
+	constructor(private readonly repo: IAuthRepository) { }
 
 	async handleOAuthCallback(
 		provider: 'github' | 'google',

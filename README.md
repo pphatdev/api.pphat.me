@@ -101,6 +101,17 @@ npm test
 npx wrangler deploy
 ```
 
+### Deployment Secrets
+
+After deployment, you **must** set the following secrets in Cloudflare for the production API to function correctly:
+
+```bash
+npx wrangler secret put JWT_SECRET
+npx wrangler secret put GITHUB_CLIENT_SECRET
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx wrangler secret put SMTP_PASS
+```
+
 ---
 
 ## Environment Variables & Secrets
