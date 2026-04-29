@@ -4,38 +4,39 @@ import type { Project, ProjectRow, IProjectRepository, CreateProjectDto, UpdateP
 export class ProjectRepository implements IProjectRepository {
 	constructor(private readonly db: D1Database) { }
 
-	async findAll({ page, limit, search, sort, order }: PaginationParams): Promise<PaginatedResult<Project>> {
+	async findAll({ page, limit, search, sort, order }: PaginationParams, onlyPublished = true): Promise<PaginatedResult<Project>> {
 		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
 		const safeSort = typeof sort === 'string' && ALLOWED_SORT.includes(sort) ? sort : 'created_at';
 		const safeOrder = typeof order === 'string' && order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
 		const offset = (page - 1) * limit;
 
-		let dataResult: Awaited<ReturnType<D1PreparedStatement['all']>>;
-		let countRow: { count: number } | null;
+		const conditions: string[] = ['1=1'];
+		const bindings: unknown[] = [];
+		let idx = 1;
+
+		if (onlyPublished) {
+			conditions.push('published = 1');
+		}
 
 		if (search) {
 			const like = `%${search}%`;
-			[dataResult, countRow] = await Promise.all([
-				this.db
-					.prepare(`SELECT * FROM projects WHERE (title LIKE ?1 OR slug LIKE ?2 OR description LIKE ?3) ORDER BY ${safeSort} ${safeOrder} LIMIT ?4 OFFSET ?5`)
-					.bind(like, like, like, limit, offset)
-					.all<ProjectRow>(),
-				this.db
-					.prepare("SELECT COUNT(*) as count FROM projects WHERE (title LIKE ?1 OR slug LIKE ?2 OR description LIKE ?3)")
-					.bind(like, like, like)
-					.first<{ count: number }>(),
-			]);
-		} else {
-			[dataResult, countRow] = await Promise.all([
-				this.db
-					.prepare(`SELECT * FROM projects ORDER BY ${safeSort} ${safeOrder} LIMIT ?1 OFFSET ?2`)
-					.bind(limit, offset)
-					.all<ProjectRow>(),
-				this.db
-					.prepare("SELECT COUNT(*) as count FROM projects")
-					.first<{ count: number }>(),
-			]);
+			conditions.push(`(title LIKE ?${idx} OR slug LIKE ?${idx + 1} OR description LIKE ?${idx + 2})`);
+			bindings.push(like, like, like);
+			idx += 3;
 		}
+
+		const where = conditions.join(' AND ');
+
+		const [dataResult, countRow] = await Promise.all([
+			this.db
+				.prepare(`SELECT * FROM projects WHERE ${where} ORDER BY ${safeSort} ${safeOrder} LIMIT ?${idx} OFFSET ?${idx + 1}`)
+				.bind(...bindings, limit, offset)
+				.all<ProjectRow>(),
+			this.db
+				.prepare(`SELECT COUNT(*) as count FROM projects WHERE ${where}`)
+				.bind(...bindings)
+				.first<{ count: number }>(),
+		]);
 
 		const total = countRow?.count ?? 0;
 		const data = await Promise.all((dataResult.results as ProjectRow[]).map((row) => this.hydrate(row)));

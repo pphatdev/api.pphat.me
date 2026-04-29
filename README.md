@@ -1,6 +1,6 @@
 # API.PPHAT.ME
 
-> Version 0.10.1
+> Version 0.10.2
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
@@ -99,6 +99,17 @@ npm test
 
 ```bash
 npx wrangler deploy
+```
+
+### Deployment Secrets
+
+After deployment, you **must** set the following secrets in Cloudflare for the production API to function correctly:
+
+```bash
+npx wrangler secret put JWT_SECRET
+npx wrangler secret put GITHUB_CLIENT_SECRET
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx wrangler secret put SMTP_PASS
 ```
 
 ---

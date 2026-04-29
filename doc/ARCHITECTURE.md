@@ -1,6 +1,6 @@
 # Architecture Flow — api.pphat.me
 
-> Version 0.10.1 · Cloudflare Workers + D1
+> Version 0.10.2 · Cloudflare Workers + D1
 
 ---
 
