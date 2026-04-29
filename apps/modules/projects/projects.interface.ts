@@ -73,7 +73,7 @@ export interface AppEnv {
 }
 
 export interface IProjectRepository {
-	findAll(params: PaginationParams): Promise<PaginatedResult<Project>>;
+	findAll(params: PaginationParams, onlyPublished?: boolean): Promise<PaginatedResult<Project>>;
 	findBySlug(slug: string): Promise<Project | null>;
 	create(dto: CreateProjectDto): Promise<Project>;
 	update(slug: string, dto: UpdateProjectDto): Promise<Project | null>;

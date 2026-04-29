@@ -4,8 +4,8 @@ import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 export class ProjectService {
 	constructor(private readonly repo: IProjectRepository) {}
 
-	list(params: PaginationParams): Promise<PaginatedResult<Project>> {
-		return this.repo.findAll(params);
+	list(params: PaginationParams, onlyPublished?: boolean): Promise<PaginatedResult<Project>> {
+		return this.repo.findAll(params, onlyPublished);
 	}
 
 	getBySlug(slug: string): Promise<Project | null> {

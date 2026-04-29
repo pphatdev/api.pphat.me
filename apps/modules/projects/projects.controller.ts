@@ -28,7 +28,7 @@ export class ProjectsController {
 		const sort = sortParam ? sortParam.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
 		const orderParam = url.searchParams.get("order")?.toLowerCase();
 		const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
-		const result = await new ProjectService(repository).list({ page, limit, search, sort, order });
+		const result = await new ProjectService(repository).list({ page, limit, search, sort, order }, true);
 		return Res.ok(result);
 	}
 
