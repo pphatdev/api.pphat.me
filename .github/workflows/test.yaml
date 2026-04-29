@@ -1,0 +1,23 @@
+name: "🧪 Testing"
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        node-version: ["20", "22", "24"]
+    uses: ./.github/workflows/test-jobs.yaml
+    with:
+      node-version: ${{ matrix.node-version }}
+    secrets: inherit
