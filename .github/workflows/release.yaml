@@ -3,8 +3,6 @@ name: "🚀 Release New Version"
 on:
   release:
     types: [published]
-  pull_request:
-    branches: [ master ]
 
 permissions:
   contents: write
