@@ -1,8 +1,7 @@
 export const ARTICLE_ID = "00000000-0000-4000-8000-000000000001";
 export const ARTICLE_SLUG = "test-article-slug";
-export const PROJECT_ID = "00000000-0000-4000-8000-000000000002";
 export const PROJECT_SLUG = "test-project-slug";
-export const TEST_USER_ID = "test-user-id";
+const TEST_USER_ID = "test-user-id";
 
 /**
  * Generate a valid Bearer token header for auth-guarded routes.

@@ -1,4 +1,5 @@
 import { Res } from "../../shared/helpers/response";
+import { parseListParams } from "../../shared/helpers/query";
 import { TagRepository } from "./tags.repo";
 import { TagService } from "./tags.service";
 
@@ -12,15 +13,8 @@ export class TagsController {
 
 	static async list(request: Request, env: Env): Promise<Response> {
 		const repository = new TagRepository(env.DB);
-		const url = new URL(request.url);
-		const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
-		const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "10", 10) || 10));
-		const search = url.searchParams.get("search") ?? undefined;
-		const sortParam = url.searchParams.get("sort");
-		const sort = sortParam ? sortParam.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
-		const orderParam = url.searchParams.get("order")?.toLowerCase();
-		const order: 'asc' | 'desc' | undefined = orderParam === 'asc' ? 'asc' : orderParam === 'desc' ? 'desc' : undefined;
-		const result = await new TagService(repository).list({ page, limit, search, sort, order });
+		const options = parseListParams(request.url);
+		const result = await new TagService(repository).list(options);
 		return Res.ok(result);
 	}
 

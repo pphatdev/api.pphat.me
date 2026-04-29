@@ -1,4 +1,8 @@
-import { PaginatedResult, PaginationParams, TagRow, Tag, Author } from "../../shared/interfaces";
+import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
+import { Tag } from "../tags/tags.interface";
+import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface";
+
+import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions } from "../../shared/helpers/repo";
 import type { Project, ProjectRow, IProjectRepository, CreateProjectDto, UpdateProjectDto, ProjectDetailEmbed } from "./projects.interface";
 
 export class ProjectRepository implements IProjectRepository {
@@ -6,30 +10,16 @@ export class ProjectRepository implements IProjectRepository {
 
 	async findAll({ page, limit, search, sort, order }: PaginationParams, onlyPublished = true): Promise<PaginatedResult<Project>> {
 		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
-		const safeSort = typeof sort === 'string' && ALLOWED_SORT.includes(sort) ? sort : 'created_at';
-		const safeOrder = typeof order === 'string' && order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+		const safeSort = sort?.[0] && ALLOWED_SORT.includes(sort[0]) ? sort[0] : 'created_at';
+		const safeOrder = order === 'desc' ? 'DESC' : 'ASC';
 		const offset = (page - 1) * limit;
 
-		const conditions: string[] = ['1=1'];
-		const bindings: unknown[] = [];
-		let idx = 1;
-
-		if (onlyPublished) {
-			conditions.push('published = 1');
-		}
-
-		if (search) {
-			const like = `%${search}%`;
-			conditions.push(`(title LIKE ?${idx} OR slug LIKE ?${idx + 1} OR description LIKE ?${idx + 2})`);
-			bindings.push(like, like, like);
-			idx += 3;
-		}
-
+		const { conditions, bindings, nextIdx } = buildListConditions(search, onlyPublished);
 		const where = conditions.join(' AND ');
 
 		const [dataResult, countRow] = await Promise.all([
 			this.db
-				.prepare(`SELECT * FROM projects WHERE ${where} ORDER BY ${safeSort} ${safeOrder} LIMIT ?${idx} OFFSET ?${idx + 1}`)
+				.prepare(`SELECT * FROM projects WHERE ${where} ORDER BY ${safeSort} ${safeOrder} LIMIT ?${nextIdx} OFFSET ?${nextIdx + 1}`)
 				.bind(...bindings, limit, offset)
 				.all<ProjectRow>(),
 			this.db
@@ -77,35 +67,11 @@ export class ProjectRepository implements IProjectRepository {
 	}
 
 	async getNextSlug(currentSlug: string): Promise<string | null> {
-		const row = await this.db
-			.prepare("SELECT created_at FROM projects WHERE slug = ?1")
-			.bind(currentSlug)
-			.first<{ created_at: string }>();
-
-		if (!row) return null;
-
-		const result = await this.db
-			.prepare("SELECT slug FROM projects WHERE created_at > ?1 ORDER BY created_at ASC LIMIT 1")
-			.bind(row.created_at)
-			.first<{ slug: string }>();
-
-		return result?.slug ?? null;
+		return getNextSlug(this.db, 'projects', currentSlug);
 	}
 
 	async getPrevSlug(currentSlug: string): Promise<string | null> {
-		const row = await this.db
-			.prepare("SELECT created_at FROM projects WHERE slug = ?1")
-			.bind(currentSlug)
-			.first<{ created_at: string }>();
-
-		if (!row) return null;
-
-		const result = await this.db
-			.prepare("SELECT slug FROM projects WHERE created_at < ?1 ORDER BY created_at DESC LIMIT 1")
-			.bind(row.created_at)
-			.first<{ slug: string }>();
-
-		return result?.slug ?? null;
+		return getPrevSlug(this.db, 'projects', currentSlug);
 	}
 
 	async create(dto: CreateProjectDto): Promise<Project> {
@@ -142,60 +108,54 @@ export class ProjectRepository implements IProjectRepository {
 	}
 
 	async update(slug: string, dto: UpdateProjectDto): Promise<Project | null> {
-		const existing = await this.db
-			.prepare("SELECT * FROM projects WHERE slug = ?1")
-			.bind(slug)
-			.first<ProjectRow>();
-
+		const existing = await this.findBySlug(slug);
 		if (!existing) return null;
 
-		const fields: string[] = [];
-		const values: unknown[] = [];
-		let idx = 1;
+		const mappings: [keyof UpdateProjectDto, string, ((v: any) => any)?][] = [
+			['title', 'title'],
+			['slug', 'slug'],
+			['description', 'description'],
+			['thumbnail', 'thumbnail'],
+			['published', 'published', (v) => (v ? 1 : 0)],
+			['languages', 'languages', (v) => JSON.stringify(v)],
+		];
 
-		if (dto.title !== undefined) { fields.push(`title = ?${idx++}`); values.push(dto.title); }
-		if (dto.slug !== undefined) { fields.push(`slug = ?${idx++}`); values.push(dto.slug); }
-		if (dto.description !== undefined) { fields.push(`description = ?${idx++}`); values.push(dto.description); }
-		if (dto.thumbnail !== undefined) { fields.push(`thumbnail = ?${idx++}`); values.push(dto.thumbnail); }
-		if (dto.published !== undefined) { fields.push(`published = ?${idx++}`); values.push(dto.published ? 1 : 0); }
-		if (dto.languages !== undefined) { fields.push(`languages = ?${idx++}`); values.push(JSON.stringify(dto.languages)); }
+		const { fields, values, nextIdx } = buildUpdateFields(dto, mappings);
 
-		fields.push(`updated_at = ?${idx++}`);
-		values.push(new Date().toISOString());
-		values.push(existing.id);
-
-		await this.db
-			.prepare(`UPDATE projects SET ${fields.join(", ")} WHERE id = ?${idx}`)
-			.bind(...values)
-			.run();
-
-		if (dto.tags !== undefined) {
-			await this.db.prepare("DELETE FROM tags WHERE project_id = ?1").bind(existing.id).run();
-			if (dto.tags.length) {
-				await this.db.batch(
-					dto.tags.map((t) =>
-						this.db.prepare("INSERT INTO tags (tag, description, project_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", existing.id)
-					)
-				);
-			}
+		if (fields.length > 0) {
+			fields.push(`updated_at = ?${nextIdx}`);
+			values.push(new Date().toISOString());
+			values.push(existing.id);
+			await this.db.prepare(`UPDATE projects SET ${fields.join(", ")} WHERE id = ?${nextIdx + 1}`).bind(...values).run();
 		}
 
-		if (dto.contributor_ids !== undefined) {
-			await this.db.prepare("DELETE FROM project_contributors WHERE project_id = ?1").bind(existing.id).run();
-			if (dto.contributor_ids.length) {
-				await this.db.batch(
-					dto.contributor_ids.map((aid) =>
-						this.db.prepare("INSERT OR IGNORE INTO project_contributors (project_id, author_id) VALUES (?1, ?2)").bind(existing.id, aid)
-					)
-				);
-			}
-		}
-
+		if (dto.tags !== undefined) await this.updateTags(existing.id, dto.tags);
+		if (dto.contributor_ids !== undefined) await this.updateContributors(existing.id, dto.contributor_ids);
 		await this.upsertDetails(existing.id, dto, new Date().toISOString());
 
-		const newSlug = dto.slug ?? slug;
-		const updated = await this.db.prepare("SELECT * FROM projects WHERE slug = ?1").bind(newSlug).first<ProjectRow>();
-		return this.hydrateWithDetails(updated!);
+		return this.findBySlug(dto.slug ?? slug);
+	}
+
+	private async updateTags(projectId: string, tags: { tag: string; description?: string }[]): Promise<void> {
+		await this.db.prepare("DELETE FROM tags WHERE project_id = ?1").bind(projectId).run();
+		if (tags.length > 0) {
+			await this.db.batch(
+				tags.map((t) =>
+					this.db.prepare("INSERT INTO tags (tag, description, project_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", projectId)
+				)
+			);
+		}
+	}
+
+	private async updateContributors(projectId: string, contributorIds: number[]): Promise<void> {
+		await this.db.prepare("DELETE FROM project_contributors WHERE project_id = ?1").bind(projectId).run();
+		if (contributorIds.length > 0) {
+			await this.db.batch(
+				contributorIds.map((aid) =>
+					this.db.prepare("INSERT OR IGNORE INTO project_contributors (project_id, author_id) VALUES (?1, ?2)").bind(projectId, aid)
+				)
+			);
+		}
 	}
 
 	async delete(slug: string): Promise<boolean> {
@@ -214,42 +174,42 @@ export class ProjectRepository implements IProjectRepository {
 			.first<{ id: string }>();
 
 		if (!existing) {
-			const detailId = crypto.randomUUID();
-			const safeStatus = ALLOWED_STATUS.includes(dto.status ?? '') ? dto.status! : 'in-progress';
-			await this.db
-				.prepare(
-					"INSERT INTO project_details (id, project_id, content, demo_url, repo_url, tech_stack, status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
-				)
-				.bind(
-					detailId, projectId,
-					dto.content ?? '', dto.demoUrl ?? '', dto.repoUrl ?? '',
-					JSON.stringify(dto.techStack ?? []), safeStatus, now, now
-				)
-				.run();
+			await this.insertDetails(projectId, dto, now, ALLOWED_STATUS);
 		} else {
-			const fields: string[] = [];
-			const values: unknown[] = [];
-			let idx = 1;
+			await this.updateDetails(projectId, dto, now, ALLOWED_STATUS);
+		}
+	}
 
-			if (dto.content !== undefined) { fields.push(`content = ?${idx++}`); values.push(dto.content); }
-			if (dto.demoUrl !== undefined) { fields.push(`demo_url = ?${idx++}`); values.push(dto.demoUrl); }
-			if (dto.repoUrl !== undefined) { fields.push(`repo_url = ?${idx++}`); values.push(dto.repoUrl); }
-			if (dto.techStack !== undefined) { fields.push(`tech_stack = ?${idx++}`); values.push(JSON.stringify(dto.techStack)); }
-			if (dto.status !== undefined && ALLOWED_STATUS.includes(dto.status)) {
-				fields.push(`status = ?${idx++}`);
-				values.push(dto.status);
-			}
+	private async insertDetails(projectId: string, dto: any, now: string, allowedStatus: string[]): Promise<void> {
+		const safeStatus = allowedStatus.includes(dto.status ?? '') ? dto.status! : 'in-progress';
+		await this.db
+			.prepare(
+				"INSERT INTO project_details (id, project_id, content, demo_url, repo_url, tech_stack, status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+			)
+			.bind(
+				crypto.randomUUID(), projectId,
+				dto.content ?? '', dto.demoUrl ?? '', dto.repoUrl ?? '',
+				JSON.stringify(dto.techStack ?? []), safeStatus, now, now
+			)
+			.run();
+	}
 
-			if (fields.length > 0) {
-				fields.push(`updated_at = ?${idx++}`);
-				values.push(now);
-				values.push(projectId);
+	private async updateDetails(projectId: string, dto: any, now: string, allowedStatus: string[]): Promise<void> {
+		const mappings: [keyof UpdateProjectDto | 'demoUrl' | 'repoUrl' | 'techStack', string, ((v: any) => any)?][] = [
+			['content', 'content'],
+			['demoUrl', 'demo_url'],
+			['repoUrl', 'repo_url'],
+			['techStack', 'tech_stack', (v) => JSON.stringify(v)],
+			['status', 'status', (v) => (allowedStatus.includes(v) ? v : undefined)],
+		];
 
-				await this.db
-					.prepare(`UPDATE project_details SET ${fields.join(", ")} WHERE project_id = ?${idx}`)
-					.bind(...values)
-					.run();
-			}
+		const { fields, values, nextIdx } = buildUpdateFields(dto, mappings as any);
+
+		if (fields.length > 0) {
+			fields.push(`updated_at = ?${nextIdx}`);
+			values.push(now);
+			values.push(projectId);
+			await this.db.prepare(`UPDATE project_details SET ${fields.join(", ")} WHERE project_id = ?${nextIdx + 1}`).bind(...values).run();
 		}
 	}
 
@@ -281,17 +241,24 @@ export class ProjectRepository implements IProjectRepository {
 				.all<Tag>(),
 			this.db
 				.prepare(
-					"SELECT a.name, a.profile, a.url FROM project_contributors pc JOIN authors a ON pc.author_id = a.id WHERE pc.project_id = ?1"
+					"SELECT a.id, a.name, a.profile, a.url, ad.bio, ad.avatar_url, ad.social_links, ad.status, ad.created_at, ad.updated_at FROM project_contributors pc JOIN authors a ON pc.author_id = a.id LEFT JOIN author_details ad ON a.id = ad.author_id WHERE pc.project_id = ?1"
 				)
 				.bind(row.id)
-				.all<Author>(),
+				.all<AuthorRow & AuthorDetailRow>(),
 		]);
 
 		const tags: Tag[] = tagsResult.results;
-		const contributors: Author[] = contributorsResult.results.map((a) => ({
+		const contributors: Author[] = contributorsResult.results.map((a: any) => ({
+			id: a.id,
 			name: a.name,
 			profile: a.profile,
 			url: a.url,
+			bio: a.bio || "",
+			avatarUrl: a.avatar_url || "",
+			socialLinks: JSON.parse(a.social_links || "[]"),
+			status: a.status || 0,
+			createdAt: a.created_at || "",
+			updatedAt: a.updated_at || "",
 		}));
 
 		return {

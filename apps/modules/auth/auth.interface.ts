@@ -12,15 +12,6 @@ export interface User {
 	updated_at: string;
 }
 
-export interface EmailOtp {
-	id: string;
-	email: string;
-	code: string;
-	expires_at: string;
-	used: number;
-	created_at: string;
-}
-
 export interface JwtPayload {
 	sub: string;
 	provider: string;
