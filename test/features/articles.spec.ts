@@ -34,9 +34,14 @@ describe("Articles API", () => {
 			expect(body).toHaveProperty("data");
 		});
 
-		it("with sort and order params succeeds", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/articles?sort=created_at&order=desc");
+		it("excludes content field from list results", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles?page=1&limit=10");
 			expect(res.status).toBe(200);
+			const body = await res.json() as { data: any[] };
+			expect(body.data.length).toBeGreaterThan(0);
+			body.data.forEach(article => {
+				expect(article).not.toHaveProperty("content");
+			});
 		});
 	});
 
@@ -106,6 +111,7 @@ describe("Articles API", () => {
 			const body = await res.json() as Record<string, unknown>;
 			expect(body.data).toHaveProperty("slug", ARTICLE_SLUG);
 			expect(body.data).toHaveProperty("title");
+			expect(body.data).toHaveProperty("content");
 		});
 
 		it("returns 404 for non-existent slug", async () => {
