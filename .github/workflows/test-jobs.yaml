@@ -1,0 +1,50 @@
+name: "🧪 Test Job"
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: true
+        type: string
+
+jobs:
+  test:
+    name: "Test (Node ${{ inputs.node-version }})"
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Wrangler Types
+        run: npm run cf-typegen
+
+      - name: Testing
+        run: npm run test
+
+      - name: Job Summary
+        if: always()
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "# 🏭 API.PPHAT.ME v$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "## 🧪 Testing Summary for Node Version: ${{ inputs.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "The testing process for **${{ github.repository }}** has completed with status: **${{ job.status }}**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node Version:** ${{ inputs.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow:** ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Event:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
