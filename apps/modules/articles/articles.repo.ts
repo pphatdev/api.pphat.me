@@ -63,7 +63,7 @@ export class ArticleRepository implements IArticleRepository {
 		]);
 
 		const total = countRow?.count ?? 0;
-		const data = await Promise.all((dataResult.results as ArticleRow[]).map((row) => this.hydrate(row)));
+		const data = await Promise.all((dataResult.results as ArticleRow[]).map((row) => this.hydrate(row, { includeContent: false })));
 
 		return {
 			data,
@@ -115,7 +115,7 @@ export class ArticleRepository implements IArticleRepository {
 		}
 
 		const total = countRow?.count ?? 0;
-		const data = await Promise.all((dataResult.results as ArticleRow[]).map((row) => this.hydrate(row)));
+		const data = await Promise.all((dataResult.results as ArticleRow[]).map((row) => this.hydrate(row, { includeContent: false })));
 
 		return {
 			data,
@@ -342,7 +342,7 @@ export class ArticleRepository implements IArticleRepository {
 		return article;
 	}
 
-	private async hydrate(row: ArticleRow): Promise<Article> {
+	private async hydrate(row: ArticleRow, options: { includeContent?: boolean } = { includeContent: true }): Promise<Article> {
 		const [authorsResult, tagsResult] = await Promise.all([
 			this.db
 				.prepare(
@@ -364,7 +364,7 @@ export class ArticleRepository implements IArticleRepository {
 
 		const tags: Tag[] = tagsResult.results;
 
-		return {
+		const article: Article = {
 			id: row.id,
 			title: row.title,
 			slug: row.slug,
@@ -376,9 +376,14 @@ export class ArticleRepository implements IArticleRepository {
 			ownerId: row.owner_id,
 			createdAt: row.created_at,
 			updatedAt: row.updated_at,
-			content: row.content,
 			filePath: row.file_path,
 		};
+
+		if (options.includeContent !== false) {
+			article.content = row.content;
+		}
+
+		return article;
 	}
 }
 

@@ -12,7 +12,7 @@ export interface Article {
 	ownerId: string | null;
 	createdAt: string;
 	updatedAt: string;
-	content: string;
+	content?: string;
 	filePath: string;
 	stats?: { views: number; readingMins: number };
 	reactions?: { type: string; count: number }[];
