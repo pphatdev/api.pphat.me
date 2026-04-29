@@ -21,61 +21,61 @@ export class ProjectDetailRepository implements IProjectDetailRepository {
 	}
 
 	async upsert(projectId: string, dto: CreateProjectDetailDto | UpdateProjectDetailDto): Promise<ProjectDetail> {
-		const existing = await this.db
-			.prepare("SELECT * FROM project_details WHERE project_id = ?1")
-			.bind(projectId)
-			.first<ProjectDetailRow>();
-
+		const existing = await this.findByProjectId(projectId);
 		const now = new Date().toISOString();
 
 		if (!existing) {
-			const id = crypto.randomUUID();
-			const safeStatus = ALLOWED_STATUS.includes(dto.status ?? '') ? dto.status! : 'in-progress';
-			await this.db
-				.prepare(
-					"INSERT INTO project_details (id, project_id, content, demo_url, repo_url, tech_stack, status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
-				)
-				.bind(
-					id,
-					projectId,
-					dto.content ?? '',
-					dto.demoUrl ?? '',
-					dto.repoUrl ?? '',
-					JSON.stringify(dto.techStack ?? []),
-					safeStatus,
-					now,
-					now,
-				)
-				.run();
+			await this.insertRow(projectId, dto, now);
 		} else {
-			const fields: string[] = [];
-			const values: unknown[] = [];
-			let idx = 1;
+			await this.updateRow(projectId, dto, now);
+		}
 
-			if (dto.content !== undefined)   { fields.push(`content = ?${idx++}`);    values.push(dto.content); }
-			if (dto.demoUrl !== undefined)   { fields.push(`demo_url = ?${idx++}`);   values.push(dto.demoUrl); }
-			if (dto.repoUrl !== undefined)   { fields.push(`repo_url = ?${idx++}`);   values.push(dto.repoUrl); }
-			if (dto.techStack !== undefined) { fields.push(`tech_stack = ?${idx++}`); values.push(JSON.stringify(dto.techStack)); }
-			if (dto.status !== undefined && ALLOWED_STATUS.includes(dto.status)) {
-				fields.push(`status = ?${idx++}`);
-				values.push(dto.status);
+		return (await this.findByProjectId(projectId))!;
+	}
+
+	private async insertRow(projectId: string, dto: any, now: string): Promise<void> {
+		const safeStatus = ALLOWED_STATUS.includes(dto.status ?? '') ? dto.status! : 'in-progress';
+		await this.db
+			.prepare(
+				"INSERT INTO project_details (id, project_id, content, demo_url, repo_url, tech_stack, status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+			)
+			.bind(
+				crypto.randomUUID(), projectId,
+				dto.content ?? '', dto.demoUrl ?? '', dto.repoUrl ?? '',
+				JSON.stringify(dto.techStack ?? []), safeStatus, now, now
+			)
+			.run();
+	}
+
+	private async updateRow(projectId: string, dto: any, now: string): Promise<void> {
+		const fields: string[] = [];
+		const values: unknown[] = [];
+		let idx = 1;
+
+		const mappings: [string, string, ((v: any) => any)?][] = [
+			['content', 'content'],
+			['demoUrl', 'demo_url'],
+			['repoUrl', 'repo_url'],
+			['techStack', 'tech_stack', (v) => JSON.stringify(v)],
+			['status', 'status', (v) => (ALLOWED_STATUS.includes(v) ? v : undefined)],
+		];
+
+		for (const [key, field, transform] of mappings) {
+			if (dto[key] !== undefined) {
+				const val = transform ? transform(dto[key]) : dto[key];
+				if (val !== undefined) {
+					fields.push(`${field} = ?${idx++}`);
+					values.push(val);
+				}
 			}
+		}
 
+		if (fields.length > 0) {
 			fields.push(`updated_at = ?${idx++}`);
 			values.push(now);
 			values.push(projectId);
-
-			await this.db
-				.prepare(`UPDATE project_details SET ${fields.join(", ")} WHERE project_id = ?${idx}`)
-				.bind(...values)
-				.run();
+			await this.db.prepare(`UPDATE project_details SET ${fields.join(", ")} WHERE project_id = ?${idx}`).bind(...values).run();
 		}
-
-		const row = await this.db
-			.prepare("SELECT * FROM project_details WHERE project_id = ?1")
-			.bind(projectId)
-			.first<ProjectDetailRow>();
-		return this.mapRow(row!);
 	}
 
 	async delete(projectId: string): Promise<boolean> {

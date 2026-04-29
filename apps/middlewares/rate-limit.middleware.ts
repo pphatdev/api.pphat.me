@@ -21,17 +21,20 @@ const RATE_LIMITS: Record<ApiType, RateLimitPolicy> = {
 
 const counters = new Map<string, RateLimitCounter>();
 
+function isEngagementRoute(pathname: string): boolean {
+	return (
+		pathname.includes('/comments') ||
+		pathname.includes('/reactions') ||
+		pathname.endsWith('/stats/view')
+	);
+}
+
 function getApiType(request: Request): ApiType | null {
 	const { pathname } = new URL(request.url);
 	if (!pathname.startsWith('/v1/api/')) return null;
 	if (pathname.startsWith('/v1/api/auth/')) return 'auth';
 	if (request.method === 'GET' || request.method === 'HEAD') return 'read';
-	if (
-		pathname.includes('/comments') ||
-		pathname.includes('/reactions') ||
-		pathname.endsWith('/stats/view')
-	) return 'engagement';
-	return 'write';
+	return isEngagementRoute(pathname) ? 'engagement' : 'write';
 }
 
 function getClientIdentity(request: Request): string {

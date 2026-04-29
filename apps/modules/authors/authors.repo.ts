@@ -13,7 +13,7 @@ export class AuthorRepository implements IAuthorRepository {
 
 	async findAll({ page, limit, search, sort, order }: PaginationParams): Promise<PaginatedResult<Author>> {
 		const ALLOWED_SORT = ['id', 'name', 'profile', 'url'];
-		const safeSort = ALLOWED_SORT.includes(sort ?? '') ? sort! : 'id';
+		const safeSort = sort?.[0] && ALLOWED_SORT.includes(sort[0]) ? sort[0] : 'id';
 		const safeOrder = order === 'desc' ? 'DESC' : 'ASC';
 		const offset = (page - 1) * limit;
 
@@ -101,53 +101,45 @@ export class AuthorRepository implements IAuthorRepository {
 	}
 
 	async update(id: number, dto: UpdateAuthorDto): Promise<Author | null> {
-		const existing = await this.db
-			.prepare("SELECT * FROM authors WHERE id = ?1")
-			.bind(id)
-			.first<AuthorRow>();
-
+		const existing = await this.findById(id);
 		if (!existing) return null;
 
-		const authorFields: string[] = [];
-		const authorValues: unknown[] = [];
+		await this.updateAuthorTable(id, dto);
+		await this.updateDetailsTable(id, dto);
+
+		return this.findById(id);
+	}
+
+	private async updateAuthorTable(id: number, dto: UpdateAuthorDto): Promise<void> {
+		const fields: string[] = [];
+		const values: unknown[] = [];
 		let idx = 1;
 
-		if (dto.name !== undefined) { authorFields.push(`name = ?${idx++}`); authorValues.push(dto.name); }
-		if (dto.profile !== undefined) { authorFields.push(`profile = ?${idx++}`); authorValues.push(dto.profile); }
-		if (dto.url !== undefined) { authorFields.push(`url = ?${idx++}`); authorValues.push(dto.url); }
+		if (dto.name !== undefined) { fields.push(`name = ?${idx++}`); values.push(dto.name); }
+		if (dto.profile !== undefined) { fields.push(`profile = ?${idx++}`); values.push(dto.profile); }
+		if (dto.url !== undefined) { fields.push(`url = ?${idx++}`); values.push(dto.url); }
 
-		if (authorFields.length) {
-			authorValues.push(id);
-			await this.db
-				.prepare(`UPDATE authors SET ${authorFields.join(", ")} WHERE id = ?${idx}`)
-				.bind(...authorValues)
-				.run();
+		if (fields.length > 0) {
+			values.push(id);
+			await this.db.prepare(`UPDATE authors SET ${fields.join(", ")} WHERE id = ?${idx}`).bind(...values).run();
 		}
+	}
 
-		const detailFields: string[] = [];
-		const detailValues: unknown[] = [];
-		let didx = 1;
+	private async updateDetailsTable(id: number, dto: UpdateAuthorDto): Promise<void> {
+		const fields: string[] = [];
+		const values: unknown[] = [];
+		let idx = 1;
 
-		if (dto.bio !== undefined) { detailFields.push(`bio = ?${didx++}`); detailValues.push(dto.bio); }
-		if (dto.avatar_url !== undefined) { detailFields.push(`avatar_url = ?${didx++}`); detailValues.push(dto.avatar_url); }
-		if (dto.social_links !== undefined) { detailFields.push(`social_links = ?${didx++}`); detailValues.push(JSON.stringify(dto.social_links)); }
-		if (dto.status !== undefined) { detailFields.push(`status = ?${didx++}`); detailValues.push(dto.status); }
+		if (dto.bio !== undefined) { fields.push(`bio = ?${idx++}`); values.push(dto.bio); }
+		if (dto.avatar_url !== undefined) { fields.push(`avatar_url = ?${idx++}`); values.push(dto.avatar_url); }
+		if (dto.social_links !== undefined) { fields.push(`social_links = ?${idx++}`); values.push(JSON.stringify(dto.social_links)); }
+		if (dto.status !== undefined) { fields.push(`status = ?${idx++}`); values.push(dto.status); }
 
-		detailFields.push(`updated_at = ?${didx++}`);
-		detailValues.push(new Date().toISOString());
-		detailValues.push(id);
+		fields.push(`updated_at = ?${idx++}`);
+		values.push(new Date().toISOString());
+		values.push(id);
 
-		await this.db
-			.prepare(`UPDATE author_details SET ${detailFields.join(", ")} WHERE author_id = ?${didx}`)
-			.bind(...detailValues)
-			.run();
-
-		const updated = await this.db
-			.prepare("SELECT * FROM authors WHERE id = ?1")
-			.bind(id)
-			.first<AuthorRow>();
-
-		return this.hydrate(updated!);
+		await this.db.prepare(`UPDATE author_details SET ${fields.join(", ")} WHERE author_id = ?${idx}`).bind(...values).run();
 	}
 
 	async delete(id: number): Promise<boolean> {
@@ -164,26 +156,36 @@ export class AuthorRepository implements IAuthorRepository {
 			.bind(row.id)
 			.first<AuthorDetailRow>();
 
-		let socialLinks: string[] = [];
-		if (detail?.social_links) {
-			try {
-				socialLinks = JSON.parse(detail.social_links);
-			} catch {
-				socialLinks = [];
-			}
-		}
+		return this.mapToAuthor(row, detail);
+	}
 
+	private mapToAuthor(row: AuthorRow, detail: AuthorDetailRow | null): Author {
+		if (!detail) {
+			return {
+				id: row.id, name: row.name, profile: row.profile, url: row.url,
+				bio: "", avatarUrl: "", socialLinks: [], status: 0, createdAt: "", updatedAt: ""
+			};
+		}
 		return {
 			id: row.id,
 			name: row.name,
 			profile: row.profile,
 			url: row.url,
-			bio: detail?.bio ?? "",
-			avatarUrl: detail?.avatar_url ?? "",
-			socialLinks,
-			status: detail?.status ?? 0,
-			createdAt: detail?.created_at ?? "",
-			updatedAt: detail?.updated_at ?? "",
+			bio: detail.bio || "",
+			avatarUrl: detail.avatar_url || "",
+			socialLinks: this.parseSocialLinks(detail.social_links),
+			status: detail.status || 0,
+			createdAt: detail.created_at || "",
+			updatedAt: detail.updated_at || "",
 		};
+	}
+
+	private parseSocialLinks(links: string | undefined): string[] {
+		if (!links) return [];
+		try {
+			return JSON.parse(links);
+		} catch {
+			return [];
+		}
 	}
 }

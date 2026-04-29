@@ -6,7 +6,7 @@ export class TagRepository implements ITagRepository {
 
 	async findAll({ page, limit, search, sort, order }: PaginationParams): Promise<PaginatedResult<Tag>> {
 		const ALLOWED_SORT = ['id', 'tag', 'description'];
-		const safeSort = ALLOWED_SORT.includes(sort ?? '') ? sort! : 'id';
+		const safeSort = sort?.[0] && ALLOWED_SORT.includes(sort[0]) ? sort[0] : 'id';
 		const safeOrder = order === 'desc' ? 'DESC' : 'ASC';
 		const offset = (page - 1) * limit;
 

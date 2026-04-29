@@ -1,10 +1,12 @@
 import { Res } from '../../shared/helpers/response';
+import { isObject } from '../../shared/helpers/json';
 import type { GeneratePayload, GenerateMode } from './ai.interface';
 
 const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 const MAX_TITLE_LENGTH = 200;
 const MAX_CONTEXT_LENGTH = 10000;
 const ALLOWED_MODES: GenerateMode[] = ['description', 'content', 'both'];
+
 
 /**
  * Normalizes the generation mode to a valid value
@@ -51,36 +53,55 @@ function getUserPrompt(payload: GeneratePayload): string {
 }
 
 /**
+ * Handles fallback parsing for non-JSON or partial responses
+ */
+function handleParseFallback(rawText: string, mode: GenerateMode): { description?: string; content?: string } {
+	if (mode === 'description') return { description: rawText };
+	if (mode === 'content') return { content: rawText };
+	return { description: rawText.substring(0, 250) + '...' };
+}
+
+/**
+ * Extracts raw data from AI result
+ */
+function extractData(result: any): any {
+	return result?.response || result?.result || result;
+}
+
+/**
+ * Normalizes a field value from AI output
+ */
+function normalizeField(val: unknown): string | undefined {
+	if (typeof val !== 'string') return undefined;
+	return val.trim() || undefined;
+}
+
+/**
  * Parses the AI output safely
  */
 function parseOutput(result: any, mode: GenerateMode): { description?: string; content?: string } {
-	const data = result?.response ?? result?.result ?? result;
+	const data = extractData(result);
 
-	if (data && typeof data === 'object' && !Array.isArray(data)) {
+	if (isObject(data)) {
 		return {
-			description: typeof data.description === 'string' ? data.description.trim() : undefined,
-			content: typeof data.content === 'string' ? data.content.trim() : undefined,
+			description: normalizeField(data.description),
+			content: normalizeField(data.content),
 		};
 	}
 
-	let rawText = (data || '').toString().trim();
-
+	const rawText = (data || '').toString().trim();
 	if (!rawText || rawText === '[object Object]') return {};
-	if (rawText.includes('```')) {
-		rawText = rawText.replace(/```(?:json)?/g, '').trim();
-	}
+
+	const cleaned = rawText.replace(/```(?:json)?/g, '').trim();
 
 	try {
-		const parsed = JSON.parse(rawText);
+		const parsed = JSON.parse(cleaned);
 		return {
-			description: typeof parsed.description === 'string' ? parsed.description.trim() : undefined,
-			content: typeof parsed.content === 'string' ? parsed.content.trim() : undefined,
+			description: normalizeField(parsed.description),
+			content: normalizeField(parsed.content),
 		};
-	} catch (error) {
-		// Fallback for non-JSON or partial responses
-		if (mode === 'description') return { description: rawText };
-		if (mode === 'content') return { content: rawText };
-		return { description: rawText.substring(0, 250) + '...' };
+	} catch {
+		return handleParseFallback(cleaned, mode);
 	}
 }
 
@@ -114,74 +135,80 @@ function getJsonSchema(mode: GenerateMode) {
 	};
 }
 
+/**
+ * Validates the generation payload
+ */
+function validatePayload(payload: GeneratePayload): Response | null {
+	const title = payload.title?.trim() || '';
+	const context = payload.context?.trim();
+
+	if (!title) return Res.unprocessable('title is required');
+	if (title.length > MAX_TITLE_LENGTH) {
+		return Res.unprocessable(`title exceeds maximum length of ${MAX_TITLE_LENGTH} characters`);
+	}
+	if (context && context.length > MAX_CONTEXT_LENGTH) {
+		return Res.unprocessable(`context exceeds maximum length of ${MAX_CONTEXT_LENGTH} characters`);
+	}
+
+	return null;
+}
+
+/**
+ * Gets the max tokens based on mode
+ */
+function getMaxTokens(mode: GenerateMode): number {
+	if (mode === 'description') return 400;
+	if (mode === 'content') return 1200;
+	return 1800;
+}
+
+/**
+ * Runs the AI generation using Cloudflare Workers AI
+ */
+async function runAiGeneration(env: Env, model: string, mode: GenerateMode, body: any) {
+	return env.AI.run(model as any, {
+		messages: [
+			{ role: 'system', content: getSystemPrompt(mode, body.language || 'English', body.tone || 'professional and clear') },
+			{ role: 'user', content: getUserPrompt(body as any) },
+		],
+		response_format: { type: 'json_schema', json_schema: getJsonSchema(mode) },
+		max_tokens: getMaxTokens(mode),
+		temperature: 0.1,
+	});
+}
+
 export class AiController {
 	/**
 	 * Main generation endpoint
 	 */
 	static async generate(request: Request, env: Env): Promise<Response> {
 		try {
-			// Basic input validation
 			const body = await request.json().catch(() => null);
-			if (!body || typeof body !== 'object') {
-				return Res.badRequest('Invalid request body. Expected JSON.');
-			}
+			if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
 
-			const payload = body as GeneratePayload;
-			const title = payload.title?.trim() || '';
-			const context = payload.context?.trim();
-			const tone = payload.tone?.trim() || 'professional and clear';
-			const language = payload.language?.trim() || 'English';
-			const mode = normalizeMode(payload.mode);
-			const model = payload.model?.trim() || DEFAULT_MODEL;
+			const error = validatePayload(body as GeneratePayload);
+			if (error) return error;
 
-			// Logic constraints
-			if (!title) return Res.unprocessable('title is required');
-			if (title.length > MAX_TITLE_LENGTH) {
-				return Res.unprocessable(`title exceeds maximum length of ${MAX_TITLE_LENGTH} characters`);
-			}
-			if (context && context.length > MAX_CONTEXT_LENGTH) {
-				return Res.unprocessable(`context exceeds maximum length of ${MAX_CONTEXT_LENGTH} characters`);
-			}
+			if (!env.AI) return Res.internalError('Workers AI binding "AI" is not configured');
 
-			// Check AI binding
-			if (!env.AI) {
-				return Res.internalError('Workers AI binding "AI" is not configured');
-			}
+			const mode = normalizeMode(body.mode);
+			const model = (body.model || DEFAULT_MODEL).trim();
 
-			// Prepare prompts
-			const systemPrompt = getSystemPrompt(mode, language, tone);
-			const userPrompt = getUserPrompt({ title, context });
-
-			// Run AI with Optimized settings
-			const response = await env.AI.run(model as any, {
-				messages: [
-					{ role: 'system', content: systemPrompt },
-					{ role: 'user', content: userPrompt },
-				],
-				response_format: {
-					type: 'json_schema',
-					json_schema: getJsonSchema(mode),
-				},
-				// Dynamic token limit
-				max_tokens: mode === 'description' ? 400 : mode === 'content' ? 1200 : 1800,
-				temperature: 0.1, // Lower temperature for more reliable JSON structure
-			});
+			const response: any = await runAiGeneration(env, model, mode, body);
 
 			const data = parseOutput(response, mode);
+			const result = mode === 'description' ? data.description : (mode === 'content' ? data.content : data);
 
 			return Res.ok({
 				model,
 				mode,
-				data: mode === 'description' ? data.description : (mode === 'content' ? data.content : data),
-				usage: {
-					tokens: (response as any).usage || 'unknown'
-				}
+				data: result,
+				usage: { tokens: response.usage || 'unknown' }
 			});
-
 		} catch (error) {
 			console.error('[AI_GENERATE_ERROR]', error);
-			const message = error instanceof Error ? error.message : 'An unexpected error occurred during generation';
-			return Res.internalError(message);
+			return Res.internalError(error instanceof Error ? error.message : 'An unexpected error occurred during generation');
 		}
 	}
 }
+

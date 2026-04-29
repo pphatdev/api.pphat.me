@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import { Res } from '../../shared/helpers/response';
+import { isObject } from '../../shared/helpers/json';
 import type { ChatPayload, ChatMessage } from './chat.interface';
 import skillsData from './skills.json';
 
@@ -33,6 +34,41 @@ Guidelines:
 `.trim();
 }
 
+/**
+ * Extracts AI response from the result
+ */
+function getAiResponse(response: any): string {
+	return response.response || response.result?.response || 'I am sorry, I could not process your request.';
+}
+
+/**
+ * Prepares the message list for the AI model
+ */
+function prepareChatMessages(userMessage: string, history: ChatMessage[]): ChatMessage[] {
+	return [
+		{ role: 'system', content: getSystemPrompt() },
+		...history,
+		{ role: 'user', content: userMessage }
+	];
+}
+
+/**
+ * Saves chat history to the database
+ */
+async function saveChatHistory(db: D1Database | undefined, userId: string | undefined, userMessage: string, aiResponse: string) {
+	if (!userId || !db) return;
+	try {
+		await db.prepare(
+			'INSERT INTO chat_history (user_id, role, content) VALUES (?, ?, ?), (?, ?, ?)'
+		).bind(
+			userId, 'user', userMessage,
+			userId, 'assistant', aiResponse
+		).run();
+	} catch (dbError) {
+		console.error('[DB_SAVE_CHAT_ERROR]', dbError);
+	}
+}
+
 export class ChatController {
 	/**
 	 * Main chat endpoint
@@ -40,70 +76,31 @@ export class ChatController {
 	static async chat(c: Context): Promise<Response> {
 		try {
 			const env = c.env as Env;
-			const user = c.get('user');
 			const body = await c.req.json().catch(() => null);
-
-			if (!body || typeof body !== 'object') {
-				return Res.badRequest('Invalid request body. Expected JSON.');
-			}
+			if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
 
 			const payload = body as ChatPayload;
 			const userMessage = payload.message?.trim();
-			const history = payload.history || [];
-			const model = payload.model || DEFAULT_MODEL;
+			if (!userMessage) return Res.unprocessable('message is required');
 
-			if (!userMessage) {
-				return Res.unprocessable('message is required');
-			}
+			if (!env.AI) return Res.internalError('Workers AI binding "AI" is not configured');
 
-			if (!env.AI) {
-				return Res.internalError('Workers AI binding "AI" is not configured');
-			}
-
-			const systemPrompt = getSystemPrompt();
-
-			// Prepare messages for the AI
-			const messages: ChatMessage[] = [
-				{ role: 'system', content: systemPrompt },
-				...history,
-				{ role: 'user', content: userMessage }
-			];
-
-			// Run AI
-			const response: any = await env.AI.run(model as any, {
+			const messages = prepareChatMessages(userMessage, payload.history || []);
+			const response: any = await env.AI.run((payload.model || DEFAULT_MODEL) as any, {
 				messages,
 				max_tokens: 1000,
 				temperature: 0.7,
 			});
 
-			const aiResponse = response.response || response.result?.response || 'I am sorry, I could not process your request.';
+			const aiResponse = getAiResponse(response);
+			const user = c.get('user');
+			await saveChatHistory(env.DB, user?.sub, userMessage, aiResponse);
 
-			// Construct new history for the response
-			const newHistory: ChatMessage[] = [
-				...history,
-				{ role: 'user', content: userMessage },
-				{ role: 'assistant', content: aiResponse }
-			];
-
-			// Optional: Save history to DB if user is logged in
-			if (user?.sub && env.DB) {
-				try {
-					await env.DB.prepare(
-						'INSERT INTO chat_history (user_id, role, content) VALUES (?, ?, ?), (?, ?, ?)'
-					).bind(
-						user.sub, 'user', userMessage,
-						user.sub, 'assistant', aiResponse
-					).run();
-				} catch (dbError) {
-					console.error('[DB_SAVE_CHAT_ERROR]', dbError);
-					// We don't fail the request if history saving fails
-				}
-			}
-
+			const history = payload.history || [];
 			return Res.ok({
 				response: aiResponse,
-				history: newHistory,
-				model
+				history: [...history, { role: 'user', content: userMessage }, { role: 'assistant', content: aiResponse }],
+				model: payload.model || DEFAULT_MODEL
 			});
 
 		} catch (error) {

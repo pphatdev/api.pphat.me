@@ -1,4 +1,7 @@
-import { Author, Tag, PaginatedResult, PaginationParams } from "../../shared/interfaces";
+import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
+import { Tag } from "../tags/tags.interface";
+import { Author } from "../authors/authors.interface";
+
 
 export interface Project {
 	id: string;
