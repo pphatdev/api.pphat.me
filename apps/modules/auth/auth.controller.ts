@@ -109,6 +109,14 @@ export class AuthController {
 			return handleAuthError(err);
 		}
 	}
+
+	static async logout(request: Request, env: Env): Promise<Response> {
+		// As this uses stateless JWT tokens without cookies,
+		// logout is largely a client-side responsibility.
+		// However, we provide this endpoint for completeness and
+		// to allow future token invalidation strategies.
+		return Res.ok({ message: 'Logged out successfully' });
+	}
 }
 
 function validateRegisterBody(body: any): Response | null {

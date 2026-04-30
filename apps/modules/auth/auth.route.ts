@@ -71,4 +71,11 @@ app.post('/v1/api/auth/email/login', (c) => AuthController.emailLogin(c.req.raw,
 */
 app.post('/v1/api/auth/email/verify', (c) => AuthController.emailVerify(c.req.raw, c.env));
 
+/**
+ * @description Logout
+ * @method POST
+ * ---------------------------------------
+*/
+app.post('/v1/api/auth/logout', (c) => AuthController.logout(c.req.raw, c.env));
+
 export { app as authRoutes };
