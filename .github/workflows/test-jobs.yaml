@@ -28,14 +28,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: |
-          export NODE_ENV=development
-          export RATE_CONTACT=20
-          export RATE_AUTH=20
-          export RATE_READ=3000
-          export RATE_WRITE=600
-          export RATE_ENGAGEMENT=1200
-          npm ci
+        run: npm ci
 
       - name: Generate Wrangler Types
         run: npm run cf-typegen

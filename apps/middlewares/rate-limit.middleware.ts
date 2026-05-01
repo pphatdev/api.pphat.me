@@ -13,11 +13,11 @@ interface RateLimitCounter {
 }
 
 const RATE_LIMITS: Record<ApiType, RateLimitPolicy> = {
-	auth: { limit: parseInt(process.env.RATE_AUTH ?? '20'), windowMs: 60 * 60 * 1000 },
-	read: { limit: parseInt(process.env.RATE_READ ?? '300'), windowMs: 60 * 60 * 1000 },
-	write: { limit: parseInt(process.env.RATE_WRITE ?? '60'), windowMs: 60 * 60 * 1000 },
-	engagement: { limit: parseInt(process.env.RATE_ENGAGEMENT ?? '120'), windowMs: 60 * 60 * 1000 },
-	contact: { limit: parseInt(process.env.RATE_CONTACT ?? '5'), windowMs: 24 * 60 * 60 * 1000 }, // 5 requests per 24 hours
+	auth: { limit: parseInt(process.env.RATE_AUTH ?? '500'), windowMs: 60 * 60 * 1000 },
+	read: { limit: parseInt(process.env.RATE_READ ?? '500'), windowMs: 60 * 60 * 1000 },
+	write: { limit: parseInt(process.env.RATE_WRITE ?? '500'), windowMs: 60 * 60 * 1000 },
+	engagement: { limit: parseInt(process.env.RATE_ENGAGEMENT ?? '500'), windowMs: 60 * 60 * 1000 },
+	contact: { limit: parseInt(process.env.RATE_CONTACT ?? '500'), windowMs: 24 * 60 * 60 * 1000 }, // 5 requests per 24 hours
 };
 
 const counters = new Map<string, RateLimitCounter>();
