@@ -2,7 +2,7 @@ import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 import { Tag } from "../tags/tags.interface";
 import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface";
 
-import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions } from "../../shared/helpers/repo";
+import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow } from "../../shared/helpers/repo";
 import type { Project, ProjectRow, IProjectRepository, CreateProjectDto, UpdateProjectDto, ProjectDetailEmbed } from "./projects.interface";
 
 export class ProjectRepository implements IProjectRepository {
@@ -192,21 +192,7 @@ export class ProjectRepository implements IProjectRepository {
 	}
 
 	async getStatsSummary(): Promise<{ total: number; published: number; draft: number }> {
-		const row = await this.db
-			.prepare(`
-				SELECT 
-					COUNT(*) as total,
-					SUM(CASE WHEN published = 1 THEN 1 ELSE 0 END) as published,
-					SUM(CASE WHEN published = 0 THEN 1 ELSE 0 END) as draft
-				FROM projects
-			`)
-			.first<{ total: number; published: number; draft: number }>();
-		
-		return {
-			total: row?.total ?? 0,
-			published: row?.published ?? 0,
-			draft: row?.draft ?? 0
-		};
+		return getStatsSummary(this.db, 'projects');
 	}
 
 	private async upsertDetails(projectId: string, dto: { content?: string; demoUrl?: string; repoUrl?: string; techStack?: string[]; status?: string }, now: string): Promise<void> {
@@ -291,18 +277,7 @@ export class ProjectRepository implements IProjectRepository {
 		]);
 
 		const tags: Tag[] = tagsResult.results;
-		const contributors: Author[] = contributorsResult.results.map((a: any) => ({
-			id: a.id,
-			name: a.name,
-			profile: a.profile,
-			url: a.url,
-			bio: a.bio || "",
-			avatarUrl: a.avatar_url || "",
-			socialLinks: JSON.parse(a.social_links || "[]"),
-			status: a.status || 0,
-			createdAt: a.created_at || "",
-			updatedAt: a.updated_at || "",
-		}));
+		const contributors: Author[] = contributorsResult.results.map((a: any) => mapAuthorRow(a));
 
 		return {
 			id: row.id,

@@ -2,7 +2,7 @@ import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 import { Tag } from "../tags/tags.interface";
 import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface";
 
-import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions } from "../../shared/helpers/repo";
+import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow } from "../../shared/helpers/repo";
 import type { Article, IArticleRepository, ArticleRow, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
 
 function computeReadingMins(content: string): number {
@@ -287,26 +287,12 @@ export class ArticleRepository implements IArticleRepository {
 			`)
 			.bind(limit)
 			.all<ArticleRow>();
-		
+
 		return Promise.all((result.results as ArticleRow[]).map(row => this.hydrate(row, { includeContent: false })));
 	}
 
 	async getStatsSummary(): Promise<{ total: number; published: number; draft: number }> {
-		const row = await this.db
-			.prepare(`
-				SELECT 
-					COUNT(*) as total,
-					SUM(CASE WHEN published = 1 THEN 1 ELSE 0 END) as published,
-					SUM(CASE WHEN published = 0 THEN 1 ELSE 0 END) as draft
-				FROM articles
-			`)
-			.first<{ total: number; published: number; draft: number }>();
-		
-		return {
-			total: row?.total ?? 0,
-			published: row?.published ?? 0,
-			draft: row?.draft ?? 0
-		};
+		return getStatsSummary(this.db, 'articles');
 	}
 
 	private async hydrateWithStats(row: ArticleRow): Promise<Article> {
@@ -347,18 +333,7 @@ export class ArticleRepository implements IArticleRepository {
 				.all<Tag>(),
 		]);
 
-		const authors: Author[] = authorsResult.results.map((a: any) => ({
-			id: a.id,
-			name: a.name,
-			profile: a.profile,
-			url: a.url,
-			bio: a.bio || "",
-			avatarUrl: a.avatar_url || "",
-			socialLinks: JSON.parse(a.social_links || "[]"),
-			status: a.status || 0,
-			createdAt: a.created_at || "",
-			updatedAt: a.updated_at || "",
-		}));
+		const authors: Author[] = authorsResult.results.map((a: any) => mapAuthorRow(a));
 
 		const tags: Tag[] = tagsResult.results;
 

@@ -7,6 +7,7 @@ import { ArticleRepository } from "./articles.repo";
 import { ArticleService } from "./articles.service";
 import { TagRepository } from "../tags/tags.repo";
 import { TagService } from "../tags/tags.service";
+import { getValidBody, validateRequired } from "../../shared/helpers/request";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -165,17 +166,15 @@ export class ArticlesController {
 	 * Authenticated: create article
 	 */
 	static async create(c: Context<AppEnv>): Promise<Response> {
-		const body = await c.req.json().catch(() => null);
-		if (!isObject(body)) return Res.badRequest("Invalid request body. Expected JSON.");
-
-		const { title, slug, description } = body;
-		if (!title || !slug || !description) return Res.unprocessable("title, slug and description are required");
-
 		try {
+			const body = await getValidBody<any>(c);
+			validateRequired(body, ['title', 'slug', 'description']);
+
 			const repo = new ArticleRepository(c.env.DB);
 			const article = await repo.create({ ...body, owner_id: c.get('user')?.sub } as any);
 			return Res.created(article);
 		} catch (err) {
+			if (err instanceof Response) return err;
 			return ArticlesController.handleSlugConflict(err);
 		}
 	}
@@ -192,14 +191,13 @@ export class ArticlesController {
 	 */
 	static async update(c: Context<AppEnv>): Promise<Response> {
 		const id = c.get('articleId'); // set by requireWriteAccess
-		const body = await c.req.json().catch(() => null);
-		if (!body || typeof body !== "object") return Res.badRequest("Invalid JSON body");
-
 		try {
+			const body = await getValidBody<any>(c);
 			const article = await new ArticleService(new ArticleRepository(c.env.DB)).update(id, body as never);
 			if (!article) return Res.notFound();
 			return Res.ok(article);
 		} catch (err) {
+			if (err instanceof Response) return err;
 			return ArticlesController.handleSlugConflict(err);
 		}
 	}
