@@ -1,6 +1,6 @@
 # API.PPHAT.ME
 
-> Version 0.13.0
+> Version 0.13.1
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
@@ -480,7 +480,7 @@ When a limit is exceeded, the API returns `429 Too Many Requests` and includes:
 > Both endpoints require **Admin** role.
 
 #### Live Traffic Streaming (SSE)
-The `/live-traffic` endpoint uses Server-Sent Events to push updates whenever the unique visitor count changes (polled every 2 seconds from D1).
+The `/live-traffic` endpoint uses Server-Sent Events to push updates whenever the unique visitor count changes (polled every 5 seconds from D1).
 
 **Example Client Usage:**
 ```javascript
