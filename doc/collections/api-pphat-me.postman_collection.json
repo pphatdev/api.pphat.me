@@ -2980,6 +2980,108 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Contact",
+			"item": [
+				{
+					"name": "Submit Contact Form",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@example.com\",\n  \"subject\": \"Inquiry about your services\",\n  \"message\": \"Hello, I am interested in collaborating on a project.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/api/contact",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"contact"
+							]
+						},
+						"description": "Submit a message via the contact form. Public endpoint with rate limiting."
+					},
+					"response": []
+				},
+				{
+					"name": "List Contact Messages",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "Admin JWT required"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/v1/api/contact?page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"contact"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "List all contact messages. Admin only."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Contact Message by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "Admin JWT required"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/v1/api/contact/{{contactId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"contact",
+								"{{contactId}}"
+							]
+						},
+						"description": "Get details of a specific contact message. Admin only."
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"auth": {
@@ -3050,6 +3152,11 @@
 			"key": "articleId",
 			"value": "00000000-0000-4000-8000-000000000000",
 			"description": "UUID of the article — used for update, delete, and contributor routes"
+		},
+		{
+			"key": "contactId",
+			"value": "00000000-0000-4000-8000-000000000000",
+			"description": "UUID of the contact message"
 		}
 	]
 }

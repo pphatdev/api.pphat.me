@@ -166,4 +166,8 @@ dist
 !.env.example
 .wrangler/
 .fallow/
+.agent/
 
+# Rules
+.rules
+.llm-rule.md

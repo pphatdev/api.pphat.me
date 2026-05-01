@@ -6,6 +6,7 @@ import { authorRoutes }  from './modules/authors/authors.routes';
 import { tagRoutes }     from './modules/tags/tags.routes';
 import { aiRoutes }      from './modules/ai/ai.route';
 import { chatRoutes }    from './modules/chat/chat.route';
+import { contactRoutes } from './modules/contact/contact.route';
 import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 import { securityMiddleware } from './middlewares/security.middleware';
 
@@ -24,5 +25,6 @@ app.route('/', authorRoutes);
 app.route('/', tagRoutes);
 app.route('/', aiRoutes);
 app.route('/', chatRoutes);
+app.route('/', contactRoutes);
 
 export default app;

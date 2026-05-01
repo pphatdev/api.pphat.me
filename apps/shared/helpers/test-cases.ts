@@ -16,6 +16,18 @@ export async function getAuthHeaders(jwtSecret: string): Promise<Record<string, 
 }
 
 /**
+ * Generate a valid Admin Bearer token header for admin-only routes.
+ */
+export async function getAdminHeaders(jwtSecret: string): Promise<Record<string, string>> {
+	const { createJwt } = await import("../../modules/auth/auth.service");
+	const token = await createJwt(
+		{ sub: "admin-user-id", provider: "email", email: "admin@example.com", name: "Admin User", role: "admin" },
+		jwtSecret,
+	);
+	return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+}
+
+/**
  * Creates all required tables and inserts seed data into the given D1 database.
  * Call this inside a `beforeAll` in each spec file.
  */

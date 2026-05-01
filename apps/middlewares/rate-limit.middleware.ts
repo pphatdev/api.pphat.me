@@ -1,6 +1,6 @@
 import type { Context, Next } from 'hono';
 
-type ApiType = 'auth' | 'read' | 'write' | 'engagement';
+type ApiType = 'auth' | 'read' | 'write' | 'engagement' | 'contact';
 
 interface RateLimitPolicy {
 	limit: number;
@@ -13,10 +13,11 @@ interface RateLimitCounter {
 }
 
 const RATE_LIMITS: Record<ApiType, RateLimitPolicy> = {
-	auth:       { limit: 20,  windowMs: 60_000 },
-	read:       { limit: 300, windowMs: 60_000 },
-	write:      { limit: 60,  windowMs: 60_000 },
+	auth: { limit: 20, windowMs: 60_000 },
+	read: { limit: 300, windowMs: 60_000 },
+	write: { limit: 60, windowMs: 60_000 },
 	engagement: { limit: 120, windowMs: 60_000 },
+	contact: { limit: 5, windowMs: 3_600_000 }, // 5 messages per hour
 };
 
 const counters = new Map<string, RateLimitCounter>();
@@ -33,6 +34,7 @@ function getApiType(request: Request): ApiType | null {
 	const { pathname } = new URL(request.url);
 	if (!pathname.startsWith('/v1/api/')) return null;
 	if (pathname.startsWith('/v1/api/auth/')) return 'auth';
+	if (pathname === '/v1/api/contact') return 'contact';
 	if (request.method === 'GET' || request.method === 'HEAD') return 'read';
 	return isEngagementRoute(pathname) ? 'engagement' : 'write';
 }
@@ -62,24 +64,24 @@ export async function rateLimitMiddleware(c: Context, next: Next): Promise<Respo
 	counters.set(key, counter);
 
 	const remaining = Math.max(0, policy.limit - counter.count);
-	const resetIn   = Math.max(0, Math.ceil((counter.resetAt - now) / 1000));
+	const resetIn = Math.max(0, Math.ceil((counter.resetAt - now) / 1000));
 
 	if (counter.count > policy.limit) {
 		return c.json(
 			{ error: `Too Many Requests for ${apiType} API type` },
 			429,
 			{
-				'X-RateLimit-Limit':     String(policy.limit),
+				'X-RateLimit-Limit': String(policy.limit),
 				'X-RateLimit-Remaining': '0',
-				'X-RateLimit-Reset':     String(resetIn),
-				'Retry-After':           String(resetIn),
+				'X-RateLimit-Reset': String(resetIn),
+				'Retry-After': String(resetIn),
 			},
 		);
 	}
 
 	await next();
 
-	c.header('X-RateLimit-Limit',     String(policy.limit));
+	c.header('X-RateLimit-Limit', String(policy.limit));
 	c.header('X-RateLimit-Remaining', String(remaining));
-	c.header('X-RateLimit-Reset',     String(resetIn));
+	c.header('X-RateLimit-Reset', String(resetIn));
 }
