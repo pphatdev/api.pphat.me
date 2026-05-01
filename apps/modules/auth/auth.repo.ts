@@ -1,7 +1,7 @@
 import type { User, IAuthRepository } from './auth.interface';
 
 export class AuthRepository implements IAuthRepository {
-	constructor(private readonly db: D1Database) {}
+	constructor(private readonly db: D1Database) { }
 
 	async findOrCreateUser(
 		provider: string,
@@ -34,9 +34,9 @@ export class AuthRepository implements IAuthRepository {
 			email: data.email,
 			name: data.name,
 			avatar: data.avatar,
+			role: 'user',
 			email_verified: 0,
 			password_hash: null,
-			role: 'user',
 			created_at: new Date().toISOString(),
 			updated_at: new Date().toISOString(),
 		};
@@ -63,7 +63,7 @@ export class AuthRepository implements IAuthRepository {
 			.prepare('INSERT INTO users (id, provider, provider_id, email, name, avatar, email_verified, password_hash) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, ?7)')
 			.bind(id, 'email', email, email, name, null, passwordHash)
 			.run();
-		return { id, provider: 'email', provider_id: email, email, name, avatar: null, email_verified: 0, password_hash: passwordHash, role: 'user', created_at: now, updated_at: now };
+		return { id, provider: 'email', provider_id: email, email, name, avatar: null, role: 'user', email_verified: 0, password_hash: passwordHash, created_at: now, updated_at: now };
 	}
 
 	async createOtp(email: string, code: string, expiresAt: string): Promise<void> {

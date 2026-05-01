@@ -8,6 +8,52 @@
 	},
 	"item": [
 		{
+			"name": "Welcome",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						""
+					]
+				},
+				"description": "Welcome message and API version information."
+			},
+			"response": [
+				{
+					"name": "Welcome",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								""
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"Welcome to the API\",\n    \"version\": \"0.11.0\"\n}"
+				}
+			]
+		},
+		{
 			"name": "Auth",
 			"item": [
 				{
@@ -3014,9 +3060,53 @@
 								"contact"
 							]
 						},
-						"description": "Submit a message via the contact form. Public endpoint with rate limiting."
+						"description": "Submit a message via the contact form. Public endpoint with rate limiting. Returns 422 if the email format is invalid."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Submit Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@example.com\",\n  \"subject\": \"Inquiry about your services\",\n  \"message\": \"Hello, I am interested in collaborating on a project.\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/contact",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"contact"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"message\": \"Message sent successfully\"\n}"
+						}
+					]
 				},
 				{
 					"name": "List Contact Messages",
@@ -3050,9 +3140,55 @@
 								}
 							]
 						},
-						"description": "List all contact messages. Admin only."
+						"description": "List all contact messages. Admin only. Supports standard pagination."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "List Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "Admin JWT required"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/contact?page=1&limit=10",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"contact"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": [\n        {\n            \"id\": \"...\",\n            \"name\": \"Jane Doe\",\n            \"email\": \"jane@example.com\",\n            \"subject\": \"Inquiry\",\n            \"message\": \"...\",\n            \"createdAt\": \"...\"\n        }\n    ],\n    \"pagination\": {\n        \"page\": 1,\n        \"limit\": 10,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+						}
+					]
 				},
 				{
 					"name": "Get Contact Message by ID",

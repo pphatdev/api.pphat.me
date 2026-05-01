@@ -55,7 +55,6 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
 /**
  * OAuth state (CSRF protection)
  */
-
 export async function generateOAuthState(secret: string): Promise<string> {
 	const ts = Date.now().toString();
 	const key = await importHmacKey(secret, 'sign');
@@ -80,7 +79,6 @@ export async function verifyOAuthState(state: string, secret: string): Promise<b
 /**
  * GitHub OAuth
  */
-
 export async function exchangeGitHubCode(
 	code: string,
 	clientId: string,
@@ -122,7 +120,6 @@ export async function fetchGitHubUser(
 /**
  * Google OAuth
  */
-
 export async function exchangeGoogleCode(
 	code: string,
 	clientId: string,
@@ -163,7 +160,6 @@ export async function fetchGoogleUser(
 /**
  * Email OTP helpers
  */
-
 function generateOtp(): string {
 	const bytes = new Uint8Array(3);
 	crypto.getRandomValues(bytes);
@@ -178,7 +174,6 @@ function otpExpiresAt(ttlMinutes = 10): string {
 /**
  * Password helpers (PBKDF2 via Web Crypto)
  */
-
 async function hashPassword(password: string): Promise<string> {
 	const salt = crypto.getRandomValues(new Uint8Array(16));
 	const keyMaterial = await crypto.subtle.importKey(
@@ -221,7 +216,6 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
 /**
  * Use cases
  */
-
 export class AuthService {
 	constructor(private readonly repo: IAuthRepository) { }
 

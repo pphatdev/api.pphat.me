@@ -33,16 +33,17 @@ export class ContactController {
 
             // Basic validation
             if (!body.name || !body.email || !body.message) {
-                return Res.unprocessable('Missing required fields');
+                return Res.badRequest('Missing required fields');
             }
 
+            // Email validation
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(body.email)) {
                 return Res.unprocessable('Invalid email format');
             }
 
             if (body.message.length < 10) {
-                return Res.unprocessable('Message must be at least 10 characters long');
+                return Res.badRequest('Message must be at least 10 characters long');
             }
 
             const meta = {
@@ -60,10 +61,10 @@ export class ContactController {
 
             await ContactService.submit(c.env.DB, body, meta, smtp);
 
-            return c.json({ message: 'Message sent successfully' }, 201);
+            return Res.created({ message: 'Message sent successfully' });
         } catch (error: any) {
             console.error('Contact submission error:', error);
-            return c.json({ error: error.message || 'Internal server error' }, 500);
+            return Res.internalError(error.message || 'Internal server error');
         }
     }
 }

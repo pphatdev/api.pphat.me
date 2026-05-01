@@ -53,7 +53,7 @@ describe("Contact API", () => {
                     message: "Too short"
                 }),
             });
-            expect(res.status).toBe(422);
+            expect(res.status).toBe(400);
         });
     });
 
