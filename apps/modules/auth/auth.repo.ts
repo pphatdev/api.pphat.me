@@ -110,4 +110,33 @@ export class AuthRepository implements IAuthRepository {
 			.bind(email)
 			.run();
 	}
+
+	async saveRefreshToken(userId: string, token: string, expiresAt: string): Promise<void> {
+		const id = crypto.randomUUID();
+		await this.db
+			.prepare('INSERT INTO refresh_tokens (id, user_id, token, expires_at) VALUES (?1, ?2, ?3, ?4)')
+			.bind(id, userId, token, expiresAt)
+			.run();
+	}
+
+	async findRefreshToken(token: string): Promise<{ user_id: string; expires_at: string } | null> {
+		return this.db
+			.prepare('SELECT user_id, expires_at FROM refresh_tokens WHERE token = ?1')
+			.bind(token)
+			.first<{ user_id: string; expires_at: string }>();
+	}
+
+	async deleteRefreshToken(token: string): Promise<void> {
+		await this.db
+			.prepare('DELETE FROM refresh_tokens WHERE token = ?1')
+			.bind(token)
+			.run();
+	}
+
+	async deleteUserRefreshTokens(userId: string): Promise<void> {
+		await this.db
+			.prepare('DELETE FROM refresh_tokens WHERE user_id = ?1')
+			.bind(userId)
+			.run();
+	}
 }

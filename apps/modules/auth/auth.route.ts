@@ -72,6 +72,14 @@ app.post('/v1/api/auth/email/login', (c) => AuthController.emailLogin(c.req.raw,
 app.post('/v1/api/auth/email/verify', (c) => AuthController.emailVerify(c.req.raw, c.env));
 
 /**
+ * @description Token Refresh
+ * @method POST
+ * ---------------------------------------
+ * @param { String } refreshToken - The refresh token
+*/
+app.post('/v1/api/auth/refresh', (c) => AuthController.tokenRefresh(c.req.raw, c.env));
+
+/**
  * @description Logout
  * @method POST
  * ---------------------------------------
