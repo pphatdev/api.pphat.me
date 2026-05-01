@@ -275,6 +275,40 @@ export class ArticleRepository implements IArticleRepository {
 		return result.meta.changes > 0;
 	}
 
+	async findTop(limit: number): Promise<Article[]> {
+		const result = await this.db
+			.prepare(`
+				SELECT a.* 
+				FROM articles a 
+				JOIN article_stats s ON a.id = s.article_id 
+				WHERE a.published = 1 
+				ORDER BY s.views DESC 
+				LIMIT ?1
+			`)
+			.bind(limit)
+			.all<ArticleRow>();
+		
+		return Promise.all((result.results as ArticleRow[]).map(row => this.hydrate(row, { includeContent: false })));
+	}
+
+	async getStatsSummary(): Promise<{ total: number; published: number; draft: number }> {
+		const row = await this.db
+			.prepare(`
+				SELECT 
+					COUNT(*) as total,
+					SUM(CASE WHEN published = 1 THEN 1 ELSE 0 END) as published,
+					SUM(CASE WHEN published = 0 THEN 1 ELSE 0 END) as draft
+				FROM articles
+			`)
+			.first<{ total: number; published: number; draft: number }>();
+		
+		return {
+			total: row?.total ?? 0,
+			published: row?.published ?? 0,
+			draft: row?.draft ?? 0
+		};
+	}
+
 	private async hydrateWithStats(row: ArticleRow): Promise<Article> {
 		const [article, statsRow, reactionsResult] = await Promise.all([
 			this.hydrate(row),
@@ -299,7 +333,7 @@ export class ArticleRepository implements IArticleRepository {
 		return article;
 	}
 
-	private async hydrate(row: ArticleRow, options: { includeContent?: boolean } = { includeContent: true }): Promise<Article> {
+	public async hydrate(row: ArticleRow, options: { includeContent?: boolean } = { includeContent: true }): Promise<Article> {
 		const [authorsResult, tagsResult] = await Promise.all([
 			this.db
 				.prepare(

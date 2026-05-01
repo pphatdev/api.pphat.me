@@ -1,6 +1,6 @@
 -- Seed users
 INSERT OR IGNORE INTO users (id, provider, provider_id, email, name, role) 
-VALUES ('test-user-id', 'email', 'test-user-id', 'test@example.com', 'Test User', 'user');
+VALUES ('test-user-id', 'email', 'test-user-id', 'test@example.com', 'Test User', 'admin');
 
 -- Seed articles
 INSERT OR IGNORE INTO articles (id, title, slug, description, thumbnail, published, content, file_path, owner_id, created_at, updated_at) 

@@ -47,17 +47,23 @@ export class ProjectsController {
 		}
 	}
 
-	static async getBySlug(request: Request, env: Env, slug: string): Promise<Response> {
-		const repository = new ProjectRepository(env.DB);
+	static async getBySlug(c: Context<AppEnv>): Promise<Response> {
+		const slug = c.req.param('slug')!;
+		const repository = new ProjectRepository(c.env.DB);
 		const project = await new ProjectService(repository).getBySlug(slug);
 		if (!project) return Res.notFound();
+
+		// Increment views in background
+		c.executionCtx.waitUntil(
+			repository.incrementViews(project.id).catch(err => console.error("Failed to increment project views:", err))
+		);
 
 		const [nextSlug, prevSlug] = await Promise.all([
 			repository.getNextSlug(slug),
 			repository.getPrevSlug(slug),
 		]);
 
-		const baseUrl = new URL(request.url).origin;
+		const baseUrl = new URL(c.req.url).origin;
 		const response = {
 			data: project,
 			navigation: {

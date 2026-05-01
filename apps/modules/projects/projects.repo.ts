@@ -166,6 +166,49 @@ export class ProjectRepository implements IProjectRepository {
 		return result.meta.changes > 0;
 	}
 
+	async incrementViews(projectId: string): Promise<void> {
+		await this.db
+			.prepare(
+				"INSERT INTO project_stats (project_id, views) VALUES (?1, 1) ON CONFLICT(project_id) DO UPDATE SET views = views + 1"
+			)
+			.bind(projectId)
+			.run();
+	}
+
+	async findTop(limit: number): Promise<Project[]> {
+		const result = await this.db
+			.prepare(`
+				SELECT p.* 
+				FROM projects p 
+				JOIN project_stats s ON p.id = s.project_id 
+				WHERE p.published = 1 
+				ORDER BY s.views DESC 
+				LIMIT ?1
+			`)
+			.bind(limit)
+			.all<ProjectRow>();
+		
+		return Promise.all((result.results as ProjectRow[]).map(row => this.hydrate(row)));
+	}
+
+	async getStatsSummary(): Promise<{ total: number; published: number; draft: number }> {
+		const row = await this.db
+			.prepare(`
+				SELECT 
+					COUNT(*) as total,
+					SUM(CASE WHEN published = 1 THEN 1 ELSE 0 END) as published,
+					SUM(CASE WHEN published = 0 THEN 1 ELSE 0 END) as draft
+				FROM projects
+			`)
+			.first<{ total: number; published: number; draft: number }>();
+		
+		return {
+			total: row?.total ?? 0,
+			published: row?.published ?? 0,
+			draft: row?.draft ?? 0
+		};
+	}
+
 	private async upsertDetails(projectId: string, dto: { content?: string; demoUrl?: string; repoUrl?: string; techStack?: string[]; status?: string }, now: string): Promise<void> {
 		const ALLOWED_STATUS = ['in-progress', 'completed', 'archived'];
 		const existing = await this.db
@@ -233,7 +276,7 @@ export class ProjectRepository implements IProjectRepository {
 		return project;
 	}
 
-	private async hydrate(row: ProjectRow): Promise<Project> {
+	public async hydrate(row: ProjectRow): Promise<Project> {
 		const [tagsResult, contributorsResult] = await Promise.all([
 			this.db
 				.prepare("SELECT id, tag, description FROM tags WHERE project_id = ?1")

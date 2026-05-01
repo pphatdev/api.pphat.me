@@ -9,8 +9,16 @@ import { json } from "../shared/helpers/json";
  */
 export async function authGuard(c: Context<any>, next: Next): Promise<Response | void> {
 	const authHeader = c.req.header("Authorization");
-	if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
-	const token = authHeader.slice(7);
+	let token = '';
+
+	if (authHeader?.startsWith("Bearer ")) {
+		token = authHeader.slice(7);
+	} else {
+		// Fallback to query parameter for EventSource/SSE support
+		token = c.req.query("token") || '';
+	}
+
+	if (!token) return json({ error: "Unauthorized" }, 401);
 	const payload = await verifyJwt(token, (c.env as Env).JWT_SECRET);
 	if (!payload || payload.type === 'refresh') return json({ error: "Invalid or expired token" }, 401);
 	c.set('user', payload as JwtPayload);

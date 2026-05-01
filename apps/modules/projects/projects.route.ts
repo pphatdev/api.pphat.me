@@ -60,7 +60,7 @@ app.get('/v1/api/projects/:slug/tags', ProjectsController.resolveProject, (c) =>
  * ---------------------------------------
  * @param { String } slug - The slug of the project
 */
-app.get('/v1/api/projects/:slug', (c) => ProjectsController.getBySlug(c.req.raw, c.env, c.req.param('slug')!));
+app.get('/v1/api/projects/:slug', (c) => ProjectsController.getBySlug(c));
 
 /**
  * @description Update Project

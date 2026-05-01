@@ -1,6 +1,6 @@
 # API.PPHAT.ME
 
-> Version 0.12.1
+> Version 0.13.0
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
@@ -155,6 +155,7 @@ npx wrangler d1 migrations apply api --remote
 | `0011_email_auth.sql` | Email authentication setup |
 | `0012_create_chat_history.sql` | `chat_history` table |
 | `0013_create_contact_messages.sql` | `contact_messages` table |
+| `0015_dashboard_stats.sql` | `visitor_logs` table for traffic tracking |
 | `9999_create_tags.sql` | `tags`, `article_tags` |
 
 ---
@@ -465,6 +466,29 @@ When a limit is exceeded, the API returns `429 Too Many Requests` and includes:
   "subject": "Inquiry",
   "message": "Hello!"
 }
+```
+
+---
+
+### Dashboard & Real-time Traffic — `/v1/api/dashboard`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/api/dashboard` | Get dashboard overview (stats, top items, etc.) |
+| `GET` | `/v1/api/dashboard/live-traffic` | **SSE Stream**: Real-time unique visitor updates |
+
+> Both endpoints require **Admin** role.
+
+#### Live Traffic Streaming (SSE)
+The `/live-traffic` endpoint uses Server-Sent Events to push updates whenever the unique visitor count changes (polled every 2 seconds from D1).
+
+**Example Client Usage:**
+```javascript
+const es = new EventSource('/v1/api/dashboard/live-traffic?token=ADMIN_JWT');
+es.onmessage = (e) => {
+  const { liveTraffic } = JSON.parse(e.data);
+  console.log(`Active visitors: ${liveTraffic}`);
+};
 ```
 
 ---
