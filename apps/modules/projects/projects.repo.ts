@@ -2,7 +2,7 @@ import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 import { Tag } from "../tags/tags.interface";
 import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface";
 
-import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions } from "../../shared/helpers/repo";
+import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow } from "../../shared/helpers/repo";
 import type { Project, ProjectRow, IProjectRepository, CreateProjectDto, UpdateProjectDto, ProjectDetailEmbed } from "./projects.interface";
 
 export class ProjectRepository implements IProjectRepository {
@@ -166,6 +166,35 @@ export class ProjectRepository implements IProjectRepository {
 		return result.meta.changes > 0;
 	}
 
+	async incrementViews(projectId: string): Promise<void> {
+		await this.db
+			.prepare(
+				"INSERT INTO project_stats (project_id, views) VALUES (?1, 1) ON CONFLICT(project_id) DO UPDATE SET views = views + 1"
+			)
+			.bind(projectId)
+			.run();
+	}
+
+	async findTop(limit: number): Promise<Project[]> {
+		const result = await this.db
+			.prepare(`
+				SELECT p.* 
+				FROM projects p 
+				JOIN project_stats s ON p.id = s.project_id 
+				WHERE p.published = 1 
+				ORDER BY s.views DESC 
+				LIMIT ?1
+			`)
+			.bind(limit)
+			.all<ProjectRow>();
+		
+		return Promise.all((result.results as ProjectRow[]).map(row => this.hydrate(row)));
+	}
+
+	async getStatsSummary(): Promise<{ total: number; published: number; draft: number }> {
+		return getStatsSummary(this.db, 'projects');
+	}
+
 	private async upsertDetails(projectId: string, dto: { content?: string; demoUrl?: string; repoUrl?: string; techStack?: string[]; status?: string }, now: string): Promise<void> {
 		const ALLOWED_STATUS = ['in-progress', 'completed', 'archived'];
 		const existing = await this.db
@@ -233,7 +262,7 @@ export class ProjectRepository implements IProjectRepository {
 		return project;
 	}
 
-	private async hydrate(row: ProjectRow): Promise<Project> {
+	public async hydrate(row: ProjectRow): Promise<Project> {
 		const [tagsResult, contributorsResult] = await Promise.all([
 			this.db
 				.prepare("SELECT id, tag, description FROM tags WHERE project_id = ?1")
@@ -248,18 +277,7 @@ export class ProjectRepository implements IProjectRepository {
 		]);
 
 		const tags: Tag[] = tagsResult.results;
-		const contributors: Author[] = contributorsResult.results.map((a: any) => ({
-			id: a.id,
-			name: a.name,
-			profile: a.profile,
-			url: a.url,
-			bio: a.bio || "",
-			avatarUrl: a.avatar_url || "",
-			socialLinks: JSON.parse(a.social_links || "[]"),
-			status: a.status || 0,
-			createdAt: a.created_at || "",
-			updatedAt: a.updated_at || "",
-		}));
+		const contributors: Author[] = contributorsResult.results.map((a: any) => mapAuthorRow(a));
 
 		return {
 			id: row.id,

@@ -5,7 +5,7 @@ import { JwtService } from '../../shared/helpers/jwt';
  * JWT helpers (Delegated to JwtService)
  */
 
-export async function generateTokens(
+async function generateTokens(
 	payload: Omit<JwtPayload, 'iat' | 'exp'>,
 	repo: IAuthRepository,
 	secret: string,

@@ -77,3 +77,42 @@ export function buildListConditions(search?: string, onlyPublished?: boolean, st
 
 	return { conditions, bindings, nextIdx: idx };
 }
+
+/**
+ * Common summary stats for collections (total, published, draft).
+ */
+export async function getStatsSummary(db: D1Database, tableName: string): Promise<{ total: number; published: number; draft: number }> {
+	const row = await db
+		.prepare(`
+			SELECT 
+				COUNT(*) as total,
+				SUM(CASE WHEN published = 1 THEN 1 ELSE 0 END) as published,
+				SUM(CASE WHEN published = 0 THEN 1 ELSE 0 END) as draft
+			FROM ${tableName}
+		`)
+		.first<{ total: number; published: number; draft: number }>();
+
+	return {
+		total: row?.total ?? 0,
+		published: row?.published ?? 0,
+		draft: row?.draft ?? 0
+	};
+}
+
+/**
+ * Maps database author rows to the Author interface.
+ */
+export function mapAuthorRow(a: any): any {
+	return {
+		id: a.id,
+		name: a.name,
+		profile: a.profile,
+		url: a.url,
+		bio: a.bio || "",
+		avatarUrl: a.avatar_url || "",
+		socialLinks: JSON.parse(a.social_links || "[]"),
+		status: a.status || 0,
+		createdAt: a.created_at || "",
+		updatedAt: a.updated_at || "",
+	};
+}

@@ -3118,6 +3118,65 @@
 			]
 		},
 		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Get Dashboard Initialize Data",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "Admin JWT required"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/v1/api/dashboard",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"dashboard",
+								"init"
+							]
+						},
+						"description": "Returns a summary of stats, live traffic, top visited items, and newest items for the admin dashboard. Requires Admin role."
+					},
+					"response": []
+				},
+				{
+					"name": "Live Traffic Stream",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "Admin JWT required"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/v1/api/dashboard/live-traffic",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"dashboard",
+								"live-traffic"
+							]
+						},
+						"description": "SSE stream that sends real-time updates for live traffic. Polled from D1 every 5 seconds. Requires Admin role."
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Contact",
 			"item": [
 				{
@@ -3351,7 +3410,7 @@
 						}
 					],
 					"cookie": [],
-					"body": "{\n    \"message\": \"Welcome to the API\",\n    \"version\": \"0.12.1\"\n}"
+					"body": "{\n    \"message\": \"Welcome to the API\",\n    \"version\": \"0.13.0\"\n}"
 				}
 			]
 		}

@@ -2,6 +2,7 @@ import { Res } from "../../shared/helpers/response";
 import { parseListParams } from "../../shared/helpers/query";
 import { AuthorRepository } from "./authors.repo";
 import { AuthorService } from "./authors.service";
+import { getValidBody, validateRequired } from "../../shared/helpers/request";
 
 export class AuthorsController {
 
@@ -19,17 +20,17 @@ export class AuthorsController {
 	}
 
 	static async create(request: Request, env: Env): Promise<Response> {
-		const repository = new AuthorRepository(env.DB);
-		const body = await request.json().catch(() => null);
-		if (!body || typeof body !== "object") return Res.badRequest("Invalid JSON body");
+		const c = { req: request } as any; // Shim for Context-based helper
+		try {
+			const body = await getValidBody<any>(c);
+			validateRequired(body, ['name']);
 
-		const { name } = body as Record<string, unknown>;
-		if (!name) {
-			return Res.unprocessable("name is required");
+			const author = await new AuthorService(new AuthorRepository(env.DB)).create(body as never);
+			return Res.created(author);
+		} catch (err) {
+			if (err instanceof Response) return err;
+			throw err;
 		}
-
-		const author = await new AuthorService(repository).create(body as never);
-		return Res.created(author);
 	}
 
 	static async getById(request: Request, env: Env, id: string): Promise<Response> {
@@ -46,13 +47,16 @@ export class AuthorsController {
 		const numericId = AuthorsController.validateId(id);
 		if (numericId === null) return Res.badRequest("Invalid author id");
 
-		const repository = new AuthorRepository(env.DB);
-		const body = await request.json().catch(() => null);
-		if (!body || typeof body !== "object") return Res.badRequest("Invalid JSON body");
-
-		const author = await new AuthorService(repository).update(numericId, body as never);
-		if (!author) return Res.notFound();
-		return Res.ok(author);
+		const c = { req: request } as any;
+		try {
+			const body = await getValidBody<any>(c);
+			const author = await new AuthorService(new AuthorRepository(env.DB)).update(numericId, body as never);
+			if (!author) return Res.notFound();
+			return Res.ok(author);
+		} catch (err) {
+			if (err instanceof Response) return err;
+			throw err;
+		}
 	}
 
 	static async delete(request: Request, env: Env, id: string): Promise<Response> {

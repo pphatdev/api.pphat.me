@@ -81,4 +81,7 @@ export interface IProjectRepository {
 	create(dto: CreateProjectDto): Promise<Project>;
 	update(slug: string, dto: UpdateProjectDto): Promise<Project | null>;
 	delete(slug: string): Promise<boolean>;
+	incrementViews(projectId: string): Promise<void>;
+	findTop(limit: number): Promise<Project[]>;
+	getStatsSummary(): Promise<{ total: number; published: number; draft: number }>;
 }
