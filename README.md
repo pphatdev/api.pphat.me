@@ -154,6 +154,7 @@ npx wrangler d1 migrations apply api --remote
 | `0010_create_users.sql` | `users` table |
 | `0011_email_auth.sql` | Email authentication setup |
 | `0012_create_chat_history.sql` | `chat_history` table |
+| `0013_create_contact_messages.sql` | `contact_messages` table |
 | `9999_create_tags.sql` | `tags`, `article_tags` |
 
 ---
@@ -182,6 +183,7 @@ Requests are rate-limited by API type in a 60-second window. Limits are tracked 
 | `read` | 300 requests / 60s |
 | `write` | 60 requests / 60s |
 | `engagement` | 120 requests / 60s |
+| `contact` | 5 requests / 3600s (1h) |
 
 Classification summary:
 
@@ -446,6 +448,41 @@ When a limit is exceeded, the API returns `429 Too Many Requests` and includes:
 
 ---
 
+### Contact — `/v1/api/contact`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/api/contact` | Submit contact form (Public) |
+| `GET` | `/v1/api/contact` | List messages (Admin only) |
+| `GET` | `/v1/api/contact/:id` | Get message by ID (Admin only) |
+
+**Submit Body:**
+
+```json
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "subject": "Inquiry",
+  "message": "Hello!"
+}
+```
+
+---
+
+## 🧪 Testing
+
+The project uses **Vitest** for integration testing. Tests run against a local D1 instance.
+
+```bash
+# Run all tests
+npm test
+
+# Run contact tests specifically
+npm test test/features/contact.spec.ts
+```
+
+---
+
 ## Postman Collection
 
 Import the collection from [`doc/collections/api-pphat-me.postman_collection.json`](doc/collections/api-pphat-me.postman_collection.json).
@@ -462,6 +499,7 @@ Set the `baseUrl` variable to your local or production URL.
 | `authorId` | `1` | Author ID |
 | `tagId` | `1` | Tag ID |
 | `commentId` | `1` | Comment ID |
+| `contactId` | `...` | Contact Message UUID |
 
 ---
 
