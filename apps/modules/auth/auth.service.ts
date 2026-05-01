@@ -1,79 +1,44 @@
 import type { User, JwtPayload, GitHubUser, GitHubEmail, GoogleUser, IAuthRepository } from './auth.interface';
+import { JwtService } from '../../shared/helpers/jwt';
 
 /**
- * JWT helpers
+ * JWT helpers (Delegated to JwtService)
  */
 
-function b64url(data: string | Uint8Array): string {
-	const str = typeof data === 'string' ? data : String.fromCharCode(...data);
-	return btoa(str).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-}
-
-async function importHmacKey(secret: string, usage: 'sign' | 'verify'): Promise<CryptoKey> {
-	return crypto.subtle.importKey(
-		'raw',
-		new TextEncoder().encode(secret),
-		{ name: 'HMAC', hash: 'SHA-256' },
-		false,
-		[usage],
-	);
-}
-
-export async function createJwt(
+export async function generateTokens(
 	payload: Omit<JwtPayload, 'iat' | 'exp'>,
+	repo: IAuthRepository,
 	secret: string,
-	expiresInSecs = 60 * 60 * 24 * 7,
-): Promise<string> {
-	const now = Math.floor(Date.now() / 1000);
-	const fullPayload: JwtPayload = { ...payload, iat: now, exp: now + expiresInSecs };
-	const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-	const body = b64url(JSON.stringify(fullPayload));
-	const signingInput = `${header}.${body}`;
-	const key = await importHmacKey(secret, 'sign');
-	const sigBuffer = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signingInput));
-	return `${signingInput}.${b64url(new Uint8Array(sigBuffer))}`;
+	accessTTL = 60 * 60, // 1 hour
+	refreshTTL = 60 * 60 * 24 * 30, // 30 days
+): Promise<{ accessToken: string; refreshToken: string }> {
+	const jwt = JwtService.create({ secret });
+	const { accessToken, refreshToken } = await jwt.generatePair(payload, accessTTL, refreshTTL);
+
+	const expiresAt = new Date(Date.now() + refreshTTL * 1000).toISOString();
+	await repo.saveRefreshToken(payload.sub, refreshToken, expiresAt);
+
+	return { accessToken, refreshToken };
 }
 
 export async function verifyJwt(token: string, secret: string): Promise<JwtPayload | null> {
-	const parts = token.split('.');
-	if (parts.length !== 3) return null;
-	const [header, body, sig] = parts;
-	const signingInput = `${header}.${body}`;
-	try {
-		const key = await importHmacKey(secret, 'verify');
-		const sigBytes = Uint8Array.from(atob(sig.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
-		const valid = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(signingInput));
-		if (!valid) return null;
-		const decoded = JSON.parse(atob(body.replace(/-/g, '+').replace(/_/g, '/'))) as JwtPayload;
-		if (Math.floor(Date.now() / 1000) > decoded.exp) return null;
-		return decoded;
-	} catch {
-		return null;
-	}
+	return JwtService.create({ secret }).verify<JwtPayload>(token);
+}
+
+export async function createJwt(payload: Record<string, any>, secret: string, expiresIn?: number): Promise<string> {
+	return JwtService.create({ secret }).generate(payload, expiresIn);
 }
 
 /**
  * OAuth state (CSRF protection)
  */
 export async function generateOAuthState(secret: string): Promise<string> {
-	const ts = Date.now().toString();
-	const key = await importHmacKey(secret, 'sign');
-	const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(ts));
-	return `${b64url(ts)}.${b64url(new Uint8Array(sig))}`;
+	return JwtService.create({ secret, expiresIn: 600 }).generate({ ts: Date.now() });
 }
 
 export async function verifyOAuthState(state: string, secret: string): Promise<boolean> {
-	const [b64ts, b64sig] = state.split('.');
-	if (!b64ts || !b64sig) return false;
-	try {
-		const ts = atob(b64ts.replace(/-/g, '+').replace(/_/g, '/'));
-		if (Date.now() - parseInt(ts, 10) > 10 * 60 * 1000) return false;
-		const key = await importHmacKey(secret, 'verify');
-		const sigBytes = Uint8Array.from(atob(b64sig.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
-		return crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(ts));
-	} catch {
-		return false;
-	}
+	const payload = await JwtService.create({ secret }).verify(state);
+	return !!payload;
 }
 
 /**
@@ -223,13 +188,17 @@ export class AuthService {
 		provider: 'github' | 'google',
 		userInfo: { providerId: string; email: string | null; name: string | null; avatar: string | null },
 		jwtSecret: string,
-	): Promise<string> {
+	): Promise<{ accessToken: string; refreshToken: string }> {
 		const user = await this.repo.findOrCreateUser(provider, userInfo.providerId, {
 			email: userInfo.email,
 			name: userInfo.name,
 			avatar: userInfo.avatar,
 		});
-		return createJwt({ sub: user.id, provider, email: user.email, name: user.name, role: user.role ?? 'user' }, jwtSecret);
+		return generateTokens(
+			{ sub: user.id, provider, email: user.email, name: user.name, role: user.role ?? 'user' },
+			this.repo,
+			jwtSecret
+		);
 	}
 
 	getCurrentUser(id: string): Promise<User | null> {
@@ -252,23 +221,57 @@ export class AuthService {
 		return { otp };
 	}
 
-	async loginWithPassword(email: string, password: string, jwtSecret: string): Promise<string> {
+	async loginWithPassword(email: string, password: string, jwtSecret: string): Promise<{ accessToken: string; refreshToken: string }> {
 		const user = await this.repo.findEmailUser(email);
 		if (!user) throw Object.assign(new Error('Invalid email or password'), { status: 401 });
 		if (!user.email_verified) throw Object.assign(new Error('Email not verified. Complete registration first.'), { status: 403 });
 		if (!user.password_hash || !(await verifyPassword(password, user.password_hash))) {
 			throw Object.assign(new Error('Invalid email or password'), { status: 401 });
 		}
-		return createJwt({ sub: user.id, provider: 'email', email: user.email, name: user.name, role: user.role ?? 'user' }, jwtSecret);
+		return generateTokens(
+			{ sub: user.id, provider: 'email', email: user.email, name: user.name, role: user.role ?? 'user' },
+			this.repo,
+			jwtSecret
+		);
 	}
 
-	async verifyEmailOtp(email: string, code: string, jwtSecret: string): Promise<string> {
+	async verifyEmailOtp(email: string, code: string, jwtSecret: string): Promise<{ accessToken: string; refreshToken: string }> {
 		const valid = await this.repo.verifyAndConsumeOtp(email, code);
 		if (!valid) throw Object.assign(new Error('Invalid or expired verification code'), { status: 400 });
 		await this.repo.markEmailVerified(email);
 		const user = await this.repo.findEmailUser(email);
 		if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
-		return createJwt({ sub: user.id, provider: 'email', email: user.email, name: user.name, role: user.role ?? 'user' }, jwtSecret);
+		return generateTokens(
+			{ sub: user.id, provider: 'email', email: user.email, name: user.name, role: user.role ?? 'user' },
+			this.repo,
+			jwtSecret
+		);
+	}
+
+	async refresh(refreshToken: string, jwtSecret: string): Promise<{ accessToken: string; refreshToken: string }> {
+		const payload = await verifyJwt(refreshToken, jwtSecret);
+		if (!payload || (payload as any).type !== 'refresh') {
+			throw Object.assign(new Error('Invalid refresh token'), { status: 401 });
+		}
+
+		const stored = await this.repo.findRefreshToken(refreshToken);
+		if (!stored) throw Object.assign(new Error('Refresh token revoked or not found'), { status: 401 });
+
+		// Optional: Rotate refresh token (delete old, issue new)
+		await this.repo.deleteRefreshToken(refreshToken);
+
+		const user = await this.repo.findUserById(stored.user_id);
+		if (!user) throw Object.assign(new Error('User not found'), { status: 401 });
+
+		return generateTokens(
+			{ sub: user.id, provider: user.provider, email: user.email, name: user.name, role: user.role ?? 'user' },
+			this.repo,
+			jwtSecret
+		);
+	}
+
+	async logout(refreshToken: string): Promise<void> {
+		await this.repo.deleteRefreshToken(refreshToken);
 	}
 }
 

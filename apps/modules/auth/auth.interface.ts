@@ -18,6 +18,7 @@ export interface JwtPayload {
 	email: string | null;
 	name: string | null;
 	role: 'user' | 'admin';
+	type?: 'access' | 'refresh';
 	iat: number;
 	exp: number;
 }
@@ -56,4 +57,10 @@ export interface IAuthRepository {
 	verifyAndConsumeOtp(email: string, code: string): Promise<boolean>;
 	invalidateUserOtps(email: string): Promise<void>;
 	markEmailVerified(email: string): Promise<void>;
+
+	// Refresh Tokens
+	saveRefreshToken(userId: string, token: string, expiresAt: string): Promise<void>;
+	findRefreshToken(token: string): Promise<{ user_id: string; expires_at: string } | null>;
+	deleteRefreshToken(token: string): Promise<void>;
+	deleteUserRefreshTokens(userId: string): Promise<void>;
 }

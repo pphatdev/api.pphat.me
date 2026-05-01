@@ -86,8 +86,8 @@ export class AuthController {
 
 		try {
 			const repo = new AuthRepository(env.DB);
-			const token = await new AuthService(repo).loginWithPassword(email, password, env.JWT_SECRET);
-			return Res.ok({ token });
+			const tokens = await new AuthService(repo).loginWithPassword(email, password, env.JWT_SECRET);
+			return Res.ok(tokens);
 		} catch (err) {
 			return handleAuthError(err);
 		}
@@ -103,18 +103,41 @@ export class AuthController {
 
 		try {
 			const repo = new AuthRepository(env.DB);
-			const token = await new AuthService(repo).verifyEmailOtp(email, otp, env.JWT_SECRET);
-			return Res.ok({ token });
+			const tokens = await new AuthService(repo).verifyEmailOtp(email, otp, env.JWT_SECRET);
+			return Res.ok(tokens);
+		} catch (err) {
+			return handleAuthError(err);
+		}
+	}
+
+	static async tokenRefresh(request: Request, env: Env): Promise<Response> {
+		const body = await request.json().catch(() => null);
+		if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
+
+		const { refreshToken } = body as any;
+		if (!refreshToken || typeof refreshToken !== 'string') return Res.badRequest('refreshToken is required');
+
+		try {
+			const repo = new AuthRepository(env.DB);
+			const tokens = await new AuthService(repo).refresh(refreshToken, env.JWT_SECRET);
+			return Res.ok(tokens);
 		} catch (err) {
 			return handleAuthError(err);
 		}
 	}
 
 	static async logout(request: Request, env: Env): Promise<Response> {
-		// As this uses stateless JWT tokens without cookies,
-		// logout is largely a client-side responsibility.
-		// However, we provide this endpoint for completeness and
-		// to allow future token invalidation strategies.
+		const body = await request.json().catch(() => null);
+		const refreshToken = isObject(body) ? (body as any).refreshToken : null;
+
+		if (refreshToken && typeof refreshToken === 'string') {
+			try {
+				const repo = new AuthRepository(env.DB);
+				await new AuthService(repo).logout(refreshToken);
+			} catch (err) {
+				// Silently fail on logout if token is already gone or invalid
+			}
+		}
 		return Res.ok({ message: 'Logged out successfully' });
 	}
 }
@@ -157,8 +180,8 @@ async function handleOAuthCallback(
 		const userInfo = await fetchUser(accessToken);
 
 		const repo = new AuthRepository(env.DB);
-		const token = await new AuthService(repo).handleOAuthCallback(provider, userInfo, env.JWT_SECRET);
-		return Res.ok({ token });
+		const tokens = await new AuthService(repo).handleOAuthCallback(provider, userInfo, env.JWT_SECRET);
+		return Res.ok(tokens);
 	} catch (err) {
 		return json({ error: err instanceof Error ? err.message : `${provider} authentication failed` }, 502);
 	}

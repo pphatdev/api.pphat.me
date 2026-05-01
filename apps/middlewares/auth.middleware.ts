@@ -12,7 +12,7 @@ export async function authGuard(c: Context<any>, next: Next): Promise<Response |
 	if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
 	const token = authHeader.slice(7);
 	const payload = await verifyJwt(token, (c.env as Env).JWT_SECRET);
-	if (!payload) return json({ error: "Invalid or expired token" }, 401);
+	if (!payload || payload.type === 'refresh') return json({ error: "Invalid or expired token" }, 401);
 	c.set('user', payload as JwtPayload);
 	return next();
 }
@@ -26,7 +26,7 @@ export async function optionalAuth(c: Context<any>, next: Next): Promise<Respons
 	if (authHeader?.startsWith("Bearer ")) {
 		const token = authHeader.slice(7);
 		const payload = await verifyJwt(token, (c.env as Env).JWT_SECRET);
-		if (payload) c.set('user', payload as JwtPayload);
+		if (payload && payload.type !== 'refresh') c.set('user', payload as JwtPayload);
 	}
 	return next();
 }
