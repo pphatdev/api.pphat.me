@@ -25,6 +25,10 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
 	return JwtService.create({ secret }).verify<JwtPayload>(token);
 }
 
+export async function createJwt(payload: Record<string, any>, secret: string, expiresIn?: number): Promise<string> {
+	return JwtService.create({ secret }).generate(payload, expiresIn);
+}
+
 /**
  * OAuth state (CSRF protection)
  */
