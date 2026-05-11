@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { authRoutes }    from './modules/auth/auth.route';
 import { articleRoutes } from './modules/articles/articles.route';
 import { projectRoutes } from './modules/projects/projects.route';
@@ -15,6 +16,18 @@ import { trafficMiddleware } from './middlewares/traffic.middleware';
 import packageJson from '../package.json';
 
 const app = new Hono<{ Bindings: Env }>();
+
+app.use('*', cors({
+  origin: (origin) => {
+    if (!origin) return '*';
+    if (origin.endsWith('.vercel.app') || origin.startsWith('http://localhost') || origin === 'https://pphat.me') {
+      return origin;
+    }
+    return 'https://pphat.me';
+  },
+  allowHeaders: ['*'],
+  allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE', 'PATCH'],
+}));
 
 app.use('*', securityMiddleware);
 app.use('*', trafficMiddleware);
