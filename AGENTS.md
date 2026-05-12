@@ -38,9 +38,11 @@ Retrieve API references and limits from:
 ## Docs
 
 - ./.rules/database.md
+- ./.rules/testing.md
 - ./.rules/features/*.md
 - ./.rules/skills/*.md
 
 ## Rules
 
 1. Adhere to the architectural patterns and feature requirements defined in the `.rules` directory.
+2. You MUST create feature tests (located in `test/features/*.spec.ts`) for every new feature implemented.
