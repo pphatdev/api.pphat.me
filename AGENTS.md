@@ -32,3 +32,15 @@ https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 
 Retrieve API references and limits from:
 `/kv/` · `/r2/` · `/d1/` · `/durable-objects/` · `/queues/` · `/vectorize/` · `/workers-ai/` · `/agents/`
+
+# Project Feature
+
+## Docs
+
+- ./.rules/database.md
+- ./.rules/features/*.md
+- ./.rules/skills/*.md
+
+## Rules
+
+1. Adhere to the architectural patterns and feature requirements defined in the `.rules` directory.
