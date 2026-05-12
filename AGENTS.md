@@ -39,15 +39,17 @@ Stop!, Before running any command, check if it exists in the `scripts` section o
 
 ## Docs
 
-- ./skill.md
-- ./CONTRIBUTING.md
-- ./.rules/database.md
-- ./.rules/testing.md
-- ./.rules/features/*.md
-- ./.rules/skills/*.md
+- `./skill.md` - Core project skills overview.
+- `./CONTRIBUTING.md` - Contribution guidelines.
+- `./claude.md` - Detailed guide for Claude.
+- `./.rules/database.md` - D1 Database and SQL patterns.
+- `./.rules/testing.md` - Testing standards.
+- `./.rules/features/*.md` - Module-specific business rules.
+- `./.rules/skills/*.md` - Implementation patterns (e.g., Hono.js).
 
 ## Rules
 
 1. Adhere to the architectural patterns and feature requirements defined in the `.rules` directory.
 2. You MUST create feature tests (located in `test/features/*.spec.ts`) for every new feature implemented.
 3. Follow Hono.js best practices and modular routing as defined in `.rules/skills/hono.md`.
+4. **Data Safety**: You MUST NOT delete any production data, database records, or critical configuration files automatically. Always ask for explicit user permission before performing any destructive operations.
