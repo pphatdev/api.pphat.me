@@ -35,6 +35,8 @@ Retrieve API references and limits from:
 
 # Project Feature
 
+Stop!, Before running any command, check if it exists in the `scripts` section of `package.json`. If it does, use it. If not, you can create it.
+
 ## Docs
 
 - ./.rules/database.md
@@ -46,3 +48,4 @@ Retrieve API references and limits from:
 
 1. Adhere to the architectural patterns and feature requirements defined in the `.rules` directory.
 2. You MUST create feature tests (located in `test/features/*.spec.ts`) for every new feature implemented.
+3. Follow Hono.js best practices and modular routing as defined in `.rules/skills/hono.md`.
