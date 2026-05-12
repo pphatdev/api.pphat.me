@@ -40,6 +40,7 @@ Stop!, Before running any command, check if it exists in the `scripts` section o
 ## Docs
 
 - ./skill.md
+- ./CONTRIBUTING.md
 - ./.rules/database.md
 - ./.rules/testing.md
 - ./.rules/features/*.md
