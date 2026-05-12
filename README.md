@@ -536,3 +536,11 @@ Set the `baseUrl` variable to your local or production URL.
 | `405` | Method not allowed |
 | `409` | Slug already exists |
 | `422` | Validation error (missing required fields / invalid tag IDs) |
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+© 2026 PPhat Dev. All rights reserved.
