@@ -10,6 +10,10 @@ A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing
 
 We take security seriously. Please refer to our [Security Policy](SECURITY.md) for information on reporting vulnerabilities.
 
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) to get started.
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -536,3 +540,11 @@ Set the `baseUrl` variable to your local or production URL.
 | `405` | Method not allowed |
 | `409` | Slug already exists |
 | `422` | Validation error (missing required fields / invalid tag IDs) |
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+© 2026 [PPhat](https://pphat.me). All rights reserved.
