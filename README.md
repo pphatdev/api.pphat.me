@@ -1,4 +1,18 @@
+<a href="https://github.com/pphatdev">
+	<img align='middle' src="https://stats.pphat.top/stats?username=pphatdev&size=medium&avatar_mode=radar&data_border_style=frame&data_border_frame=out&hide_title=false" style="width:100%"/>
+</a>
+
+<br>
+<br>
+
+<div align="center">
+	
+![](https://stats.pphat.top/badges?username=pphatdev&repo=api.pphat.me&name=visitors,forks,contributors,pull-requests,size&theme=ocean,neon,inferno,matrix,galaxy&padding=10)
+</div>
+
 # API.PPHAT.ME
+
+	
 
 > Version 0.14.0
 
