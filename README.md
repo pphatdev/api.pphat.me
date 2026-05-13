@@ -12,7 +12,7 @@ We take security seriously. Please refer to our [Security Policy](SECURITY.md) f
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) to get started.
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md) to get started.
 
 ## Tech Stack
 
