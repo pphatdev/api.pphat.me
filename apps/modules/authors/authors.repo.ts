@@ -11,6 +11,11 @@ import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 export class AuthorRepository implements IAuthorRepository {
 	constructor(private readonly db: D1Database) {}
 
+	/**
+	 * @description Find all authors with pagination
+	 * @param { PaginationParams } params Pagination parameters
+	 * @returns { Promise<PaginatedResult<Author>> } Paginated authors
+	 */
 	async findAll({ page, limit, search, sort, order }: PaginationParams): Promise<PaginatedResult<Author>> {
 		const ALLOWED_SORT = ['id', 'name', 'profile', 'url'];
 		const safeSort = sort?.[0] && ALLOWED_SORT.includes(sort[0]) ? sort[0] : 'id';
@@ -58,6 +63,11 @@ export class AuthorRepository implements IAuthorRepository {
 		};
 	}
 
+	/**
+	 * @description Find an author by ID
+	 * @param { number } id The author ID
+	 * @returns { Promise<Author | null> } The author or null
+	 */
 	async findById(id: number): Promise<Author | null> {
 		const row = await this.db
 			.prepare("SELECT * FROM authors WHERE id = ?1")
@@ -68,6 +78,11 @@ export class AuthorRepository implements IAuthorRepository {
 		return this.hydrate(row);
 	}
 
+	/**
+	 * @description Create a new author record in the database
+	 * @param { CreateAuthorDto } dto Author data
+	 * @returns { Promise<Author> } The created author
+	 */
 	async create(dto: CreateAuthorDto): Promise<Author> {
 		const result = await this.db
 			.prepare("INSERT INTO authors (name, profile, url) VALUES (?1, ?2, ?3)")
@@ -100,6 +115,12 @@ export class AuthorRepository implements IAuthorRepository {
 		return this.hydrate(row!);
 	}
 
+	/**
+	 * @description Update an author record in the database
+	 * @param { number } id The author ID
+	 * @param { UpdateAuthorDto } dto Update data
+	 * @returns { Promise<Author | null> } The updated author or null
+	 */
 	async update(id: number, dto: UpdateAuthorDto): Promise<Author | null> {
 		const existing = await this.findById(id);
 		if (!existing) return null;
@@ -110,6 +131,12 @@ export class AuthorRepository implements IAuthorRepository {
 		return this.findById(id);
 	}
 
+	/**
+	 * @description Internal: update the main authors table
+	 * @param { number } id Author ID
+	 * @param { UpdateAuthorDto } dto Update data
+	 * @returns { Promise<void> }
+	 */
 	private async updateAuthorTable(id: number, dto: UpdateAuthorDto): Promise<void> {
 		const fields: string[] = [];
 		const values: unknown[] = [];
@@ -125,6 +152,12 @@ export class AuthorRepository implements IAuthorRepository {
 		}
 	}
 
+	/**
+	 * @description Internal: update the author_details table
+	 * @param { number } id Author ID
+	 * @param { UpdateAuthorDto } dto Update data
+	 * @returns { Promise<void> }
+	 */
 	private async updateDetailsTable(id: number, dto: UpdateAuthorDto): Promise<void> {
 		const fields: string[] = [];
 		const values: unknown[] = [];
@@ -142,6 +175,11 @@ export class AuthorRepository implements IAuthorRepository {
 		await this.db.prepare(`UPDATE author_details SET ${fields.join(", ")} WHERE author_id = ?${idx}`).bind(...values).run();
 	}
 
+	/**
+	 * @description Delete an author record from the database
+	 * @param { number } id Author ID
+	 * @returns { Promise<boolean> } True if changes occurred
+	 */
 	async delete(id: number): Promise<boolean> {
 		const result = await this.db
 			.prepare("DELETE FROM authors WHERE id = ?1")
@@ -150,6 +188,11 @@ export class AuthorRepository implements IAuthorRepository {
 		return result.meta.changes > 0;
 	}
 
+	/**
+	 * @description Internal: hydrate author record with details
+	 * @param { AuthorRow } row The main author row
+	 * @returns { Promise<Author> } The hydrated author
+	 */
 	private async hydrate(row: AuthorRow): Promise<Author> {
 		const detail = await this.db
 			.prepare("SELECT bio, avatar_url, social_links, status, created_at, updated_at FROM author_details WHERE author_id = ?1")
@@ -159,6 +202,12 @@ export class AuthorRepository implements IAuthorRepository {
 		return this.mapToAuthor(row, detail);
 	}
 
+	/**
+	 * @description Internal: map database rows to Author object
+	 * @param { AuthorRow } row The main author row
+	 * @param { AuthorDetailRow | null } detail The details row
+	 * @returns { Author } The mapped author
+	 */
 	private mapToAuthor(row: AuthorRow, detail: AuthorDetailRow | null): Author {
 		if (!detail) {
 			return {
@@ -180,6 +229,11 @@ export class AuthorRepository implements IAuthorRepository {
 		};
 	}
 
+	/**
+	 * @description Internal: parse social links JSON string
+	 * @param { string | undefined } links The JSON string
+	 * @returns { string[] } Parsed list of links
+	 */
 	private parseSocialLinks(links: string | undefined): string[] {
 		if (!links) return [];
 		try {

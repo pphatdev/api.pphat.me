@@ -1,5 +1,9 @@
 /**
- * Helper to get the next slug based on creation date.
+ * @description Helper to get the next slug based on creation date
+ * @param { D1Database } db Database binding
+ * @param { string } tableName The table to search in
+ * @param { string } currentSlug The slug of the current record
+ * @returns { Promise<string | null> } The next slug or null
  */
 export async function getNextSlug(db: D1Database, tableName: string, currentSlug: string): Promise<string | null> {
 	const row = await db
@@ -18,7 +22,11 @@ export async function getNextSlug(db: D1Database, tableName: string, currentSlug
 }
 
 /**
- * Helper to get the previous slug based on creation date.
+ * @description Helper to get the previous slug based on creation date
+ * @param { D1Database } db Database binding
+ * @param { string } tableName The table to search in
+ * @param { string } currentSlug The slug of the current record
+ * @returns { Promise<string | null> } The previous slug or null
  */
 export async function getPrevSlug(db: D1Database, tableName: string, currentSlug: string): Promise<string | null> {
 	const row = await db
@@ -37,7 +45,11 @@ export async function getPrevSlug(db: D1Database, tableName: string, currentSlug
 }
 
 /**
- * Builds dynamic update fields and values for D1 queries.
+ * @description Builds dynamic update fields and values for D1 queries
+ * @param { T } dto The data object containing updates
+ * @param { [keyof T, string, ((v: any) => any)?][] } mappings Map of keys to DB fields
+ * @param { number } [startIdx=1] Starting bind parameter index
+ * @returns { object } Object with fields array, values array, and nextIdx
  */
 export function buildUpdateFields<T>(dto: T, mappings: [keyof T, string, ((v: any) => any)?][], startIdx = 1): { fields: string[], values: unknown[], nextIdx: number } {
 	const fields: string[] = [];
@@ -57,7 +69,11 @@ export function buildUpdateFields<T>(dto: T, mappings: [keyof T, string, ((v: an
 }
 
 /**
- * Builds standard WHERE conditions and bindings for search/published filters.
+ * @description Builds standard WHERE conditions and bindings for search/published filters
+ * @param { string } [search] Search term
+ * @param { boolean } [onlyPublished] Whether to filter by published status
+ * @param { number } [startIdx=1] Starting bind parameter index
+ * @returns { object } Object with conditions array, bindings array, and nextIdx
  */
 export function buildListConditions(search?: string, onlyPublished?: boolean, startIdx = 1): { conditions: string[], bindings: unknown[], nextIdx: number } {
 	const conditions: string[] = ['1=1'];
@@ -79,7 +95,10 @@ export function buildListConditions(search?: string, onlyPublished?: boolean, st
 }
 
 /**
- * Common summary stats for collections (total, published, draft).
+ * @description Common summary stats for collections (total, published, draft)
+ * @param { D1Database } db Database binding
+ * @param { string } tableName The table to count
+ * @returns { Promise<{ total: number; published: number; draft: number }> }
  */
 export async function getStatsSummary(db: D1Database, tableName: string): Promise<{ total: number; published: number; draft: number }> {
 	const row = await db
@@ -100,7 +119,9 @@ export async function getStatsSummary(db: D1Database, tableName: string): Promis
 }
 
 /**
- * Maps database author rows to the Author interface.
+ * @description Maps database author rows to the Author interface
+ * @param { any } a The raw database row
+ * @returns { any } The mapped author object
  */
 export function mapAuthorRow(a: any): any {
 	return {

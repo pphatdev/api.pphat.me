@@ -2,14 +2,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import type { MiddlewareHandler } from 'hono';
 
 /**
- * Security middleware that applies standard security headers using Hono's secureHeaders.
- * It includes:
- * - X-Content-Type-Options: nosniff
- * - X-Frame-Options: DENY
- * - X-XSS-Protection: 1; mode=block
- * - Strict-Transport-Security (HSTS)
- * - Content-Security-Policy (CSP)
- * - Referrer-Policy
+ * @description Security middleware that applies standard security headers
  */
 export const securityMiddleware: MiddlewareHandler = secureHeaders({
     contentSecurityPolicy: {

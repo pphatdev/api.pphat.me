@@ -10,6 +10,12 @@ import type {
 export class ArticleCommentRepository implements IArticleCommentRepository {
 	constructor(private readonly db: D1Database) {}
 
+	/**
+	 * @description Find all comments for an article with pagination
+	 * @param { string } articleId The article ID
+	 * @param { PaginationParams } params Pagination parameters
+	 * @returns { Promise<PaginatedResult<ArticleComment>> } Paginated comments
+	 */
 	async findAllByArticleId(articleId: string, { page, limit }: PaginationParams): Promise<PaginatedResult<ArticleComment>> {
 		const offset = (page - 1) * limit;
 
@@ -37,6 +43,11 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 		};
 	}
 
+	/**
+	 * @description Find a comment by its ID
+	 * @param { number } id The comment ID
+	 * @returns { Promise<ArticleComment | null> } The comment or null
+	 */
 	async findById(id: number): Promise<ArticleComment | null> {
 		const row = await this.db
 			.prepare("SELECT * FROM article_comments WHERE id = ?1")
@@ -46,6 +57,12 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 		return this.mapRow(row);
 	}
 
+	/**
+	 * @description Create a new comment in the database
+	 * @param { string } articleId The article ID
+	 * @param { CreateCommentDto } dto Comment data
+	 * @returns { Promise<ArticleComment> } The created comment
+	 */
 	async create(articleId: string, dto: CreateCommentDto): Promise<ArticleComment> {
 		const now = new Date().toISOString();
 		const result = await this.db
@@ -62,6 +79,12 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 		return this.mapRow(row!);
 	}
 
+	/**
+	 * @description Update a comment in the database
+	 * @param { number } id The comment ID
+	 * @param { UpdateCommentDto } dto Update data
+	 * @returns { Promise<ArticleComment | null> } The updated comment or null
+	 */
 	async update(id: number, dto: UpdateCommentDto): Promise<ArticleComment | null> {
 		const existing = await this.db
 			.prepare("SELECT * FROM article_comments WHERE id = ?1")
@@ -81,6 +104,11 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 		return this.mapRow(row!);
 	}
 
+	/**
+	 * @description Delete a comment from the database
+	 * @param { number } id The comment ID
+	 * @returns { Promise<boolean> } True if changes occurred
+	 */
 	async delete(id: number): Promise<boolean> {
 		const result = await this.db
 			.prepare("DELETE FROM article_comments WHERE id = ?1")
@@ -89,6 +117,11 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 		return result.meta.changes > 0;
 	}
 
+	/**
+	 * @description Maps a database row to a comment object
+	 * @param { ArticleCommentRow } row The database row
+	 * @returns { ArticleComment } The mapped comment
+	 */
 	private mapRow(row: ArticleCommentRow): ArticleComment {
 		return {
 			id: row.id,

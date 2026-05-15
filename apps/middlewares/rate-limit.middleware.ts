@@ -22,6 +22,11 @@ const RATE_LIMITS: Record<ApiType, RateLimitPolicy> = {
 
 const counters = new Map<string, RateLimitCounter>();
 
+/**
+ * @description Check if the route is an engagement route
+ * @param { string } pathname The URL pathname
+ * @returns { boolean } True if engagement route
+ */
 function isEngagementRoute(pathname: string): boolean {
 	return (
 		pathname.includes('/comments') ||
@@ -30,6 +35,11 @@ function isEngagementRoute(pathname: string): boolean {
 	);
 }
 
+/**
+ * @description Determine the API type for rate limiting
+ * @param { Request } request The incoming request
+ * @returns { ApiType | null } The API type or null
+ */
 function getApiType(request: Request): ApiType | null {
 	const { pathname } = new URL(request.url);
 	if (!pathname.startsWith('/v1/api/')) return null;
@@ -39,6 +49,11 @@ function getApiType(request: Request): ApiType | null {
 	return isEngagementRoute(pathname) ? 'engagement' : 'write';
 }
 
+/**
+ * @description Get client identity (IP) from request
+ * @param { Request } request The incoming request
+ * @returns { string } The client identifier
+ */
 function getClientIdentity(request: Request): string {
 	const ip = request.headers.get('cf-connecting-ip');
 	if (ip) return ip;
@@ -47,6 +62,12 @@ function getClientIdentity(request: Request): string {
 	return 'unknown';
 }
 
+/**
+ * @description Hono middleware for rate limiting
+ * @param { Context } c The Hono context
+ * @param { Next } next The next middleware
+ * @returns { Promise<Response | void> }
+ */
 export async function rateLimitMiddleware(c: Context, next: Next): Promise<Response | void> {
 	const apiType = getApiType(c.req.raw);
 	if (!apiType) return next();

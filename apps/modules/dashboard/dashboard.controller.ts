@@ -9,7 +9,10 @@ import { AuthorRepository } from "../authors/authors.repo";
 
 export class DashboardController {
 	/**
-	 * Returns standard dashboard initialization data (JSON).
+	 * @description Returns standard dashboard initialization data
+	 * @method GET
+	 * @param { Context } c Hono context
+	 * @returns { Promise<Response> } Dashboard data
 	 */
 	static async getInitData(c: Context<{ Bindings: Env }>): Promise<Response> {
 		const db = c.env.DB;
@@ -26,7 +29,10 @@ export class DashboardController {
 	}
 
 	/**
-	 * Streams live traffic data using SSE (polling D1 every 5s)
+	 * @description Streams live traffic data using SSE
+	 * @method GET
+	 * @param { Context } c Hono context
+	 * @returns { Promise<Response> } SSE stream
 	 */
 	static async streamLiveTraffic(c: Context<{ Bindings: Env }>): Promise<Response> {
 		const db = c.env.DB;

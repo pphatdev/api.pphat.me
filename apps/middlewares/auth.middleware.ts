@@ -4,8 +4,10 @@ import type { JwtPayload } from "../modules/auth/auth.interface";
 import { json } from "../shared/helpers/json";
 
 /**
- * Hono middleware that enforces Bearer JWT authentication.
- * Sets `user` (JwtPayload) in context variables on success.
+ * @description Hono middleware that enforces Bearer JWT authentication
+ * @param { Context } c The Hono context
+ * @param { Next } next The next middleware
+ * @returns { Promise<Response | void> }
  */
 export async function authGuard(c: Context<any>, next: Next): Promise<Response | void> {
 	const authHeader = c.req.header("Authorization");
@@ -26,8 +28,10 @@ export async function authGuard(c: Context<any>, next: Next): Promise<Response |
 }
 
 /**
- * Hono middleware that optionally parses Bearer JWT.
- * Sets `user` in context if token is valid; proceeds without error if absent/invalid.
+ * @description Hono middleware that optionally parses Bearer JWT
+ * @param { Context } c The Hono context
+ * @param { Next } next The next middleware
+ * @returns { Promise<Response | void> }
  */
 export async function optionalAuth(c: Context<any>, next: Next): Promise<Response | void> {
 	const authHeader = c.req.header("Authorization");

@@ -9,7 +9,9 @@ export interface ListOptions {
 }
 
 /**
- * Parses common list query parameters from a URL string.
+ * @description Parses common list query parameters from a URL string
+ * @param { string } urlStr The full URL string
+ * @returns { ListOptions } Parsed options
  */
 export function parseListParams(urlStr: string): ListOptions {
 	const url = new URL(urlStr);

@@ -13,22 +13,42 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 
 export class ArticlesController {
 
+	/**
+	 * @description Extract and validate UUID ID from request parameters
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { string | null } Validated UUID or null
+	 */
 	private static getParamId(c: Context<AppEnv>): string | null {
 		const id = c.req.param('id') || '';
 		return UUID_RE.test(id) ? id : null;
 	}
 
+	/**
+	 * @description Retrieve the owner ID of an article
+	 * @param { string } id The article ID
+	 * @param { D1Database } db The database binding
+	 * @returns { Promise<{ owner_id: string | null } | null> } The owner record or null
+	 */
 	private static async getArticleOwner(id: string, db: D1Database): Promise<{ owner_id: string | null } | null> {
 		return db.prepare('SELECT owner_id FROM articles WHERE id = ?1').bind(id).first<{ owner_id: string | null }>();
 	}
 
+	/**
+	 * @description Check if a user can manage contributors for an article
+	 * @param { any } user The current user
+	 * @param { string | null } ownerId The article owner ID
+	 * @returns { boolean } True if allowed
+	 */
 	private static canManageContributors(user: any, ownerId: string | null): boolean {
 		if (!user) return false;
 		return user.role === 'admin' || user.sub === ownerId;
 	}
 
 	/**
-	 * Middleware: resolve a :slug param to an article ID (for sub-resource routes).
+	 * @description Middleware: resolve a :slug param to an article ID
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @param { Next } next Next middleware function
+	 * @returns { Promise<Response | void> }
 	 */
 	static resolveArticle = async (c: Context<AppEnv>, next: Next): Promise<Response | void> => {
 		const param = c.req.param('slug') ?? '';
@@ -54,8 +74,10 @@ export class ArticlesController {
 	};
 
 	/**
-	 * Middleware: resolve :id param and verify write access (owner | contributor | admin).
-	 * Used for PUT/PATCH routes.
+	 * @description Middleware: resolve :id param and verify write access (owner | contributor | admin)
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @param { Next } next Next middleware function
+	 * @returns { Promise<Response | void> }
 	 */
 	static requireWriteAccess = async (c: Context<AppEnv>, next: Next): Promise<Response | void> => {
 		const id = c.req.param('id') || '';
@@ -76,6 +98,14 @@ export class ArticlesController {
 		return next();
 	};
 
+	/**
+	 * @description Check if a user has access to an article
+	 * @param { string } id The article ID
+	 * @param { any } user The current user
+	 * @param { string | null } ownerId The article owner ID
+	 * @param { D1Database } db The database binding
+	 * @returns { Promise<boolean> } True if access is granted
+	 */
 	private static async checkAccess(id: string, user: any, ownerId: string | null, db: D1Database): Promise<boolean> {
 		if (!user) return false;
 		if (user.role === 'admin' || user.sub === ownerId) return true;
@@ -83,7 +113,10 @@ export class ArticlesController {
 	}
 
 	/**
-	 * Middleware: resolve :id param and verify delete access (owner | admin only).
+	 * @description Middleware: resolve :id param and verify delete access (owner | admin only)
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @param { Next } next Next middleware function
+	 * @returns { Promise<Response | void> }
 	 */
 	static requireDeleteAccess = async (c: Context<AppEnv>, next: Next): Promise<Response | void> => {
 		const id = ArticlesController.getParamId(c);
@@ -101,7 +134,10 @@ export class ArticlesController {
 	};
 
 	/**
-	 * Public: list all published articles
+	 * @description Public: list all published articles
+	 * @method GET
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { Promise<Response> } Paginated list of articles
 	 */
 	static async list(c: Context<AppEnv>): Promise<Response> {
 		const repository = new ArticleRepository(c.env.DB);
@@ -111,7 +147,10 @@ export class ArticlesController {
 	}
 
 	/**
-	 * Protected: list articles by authorId (includes drafts for owner/admin)
+	 * @description Protected: list articles by authorId (includes drafts for owner/admin)
+	 * @method GET
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { Promise<Response> } Paginated list of author articles
 	 */
 	static async listByAuthor(c: Context<AppEnv>): Promise<Response> {
 		const authorId = parseInt(c.req.param('authorId') ?? '', 10);
@@ -133,7 +172,10 @@ export class ArticlesController {
 	}
 
 	/**
-	 * Public: get by slug or UUID id
+	 * @description Public: get by slug or UUID id
+	 * @method GET
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { Promise<Response> } The article and navigation data
 	 */
 	static async getBySlugOrId(c: Context<AppEnv>): Promise<Response> {
 		const param = c.req.param('slug') ?? '';
@@ -163,7 +205,10 @@ export class ArticlesController {
 	}
 
 	/**
-	 * Authenticated: create article
+	 * @description Authenticated: create article
+	 * @method POST
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { Promise<Response> } The created article
 	 */
 	static async create(c: Context<AppEnv>): Promise<Response> {
 		try {
@@ -179,6 +224,11 @@ export class ArticlesController {
 		}
 	}
 
+	/**
+	 * @description Handles slug conflict errors
+	 * @param { unknown } err The error caught
+	 * @returns { Response } Conflict response or throws
+	 */
 	private static handleSlugConflict(err: unknown): Response {
 		if (err instanceof Error && err.message.includes("UNIQUE constraint failed: articles.slug")) {
 			return Res.conflict("An article with this slug already exists");
@@ -187,7 +237,10 @@ export class ArticlesController {
 	}
 
 	/**
-	 * Protected: update article (owner | contributor | admin)
+	 * @description Protected: update article (owner | contributor | admin)
+	 * @method PUT/PATCH
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { Promise<Response> } The updated article
 	 */
 	static async update(c: Context<AppEnv>): Promise<Response> {
 		const id = c.get('articleId'); // set by requireWriteAccess
@@ -203,7 +256,10 @@ export class ArticlesController {
 	}
 
 	/**
-	 * Protected: delete article (owner | admin)
+	 * @description Protected: delete article (owner | admin)
+	 * @method DELETE
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { Promise<Response> } No content response
 	 */
 	static async delete(c: Context<AppEnv>): Promise<Response> {
 		const id = c.get('articleId'); // set by requireDeleteAccess
@@ -213,7 +269,10 @@ export class ArticlesController {
 	}
 
 	/**
-	 * Protected: add contributor (owner | admin)
+	 * @description Protected: add contributor (owner | admin)
+	 * @method POST
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { Promise<Response> } Success message
 	 */
 	static async addContributor(c: Context<AppEnv>): Promise<Response> {
 		const id = ArticlesController.getParamId(c);
@@ -235,6 +294,11 @@ export class ArticlesController {
 		}
 	}
 
+	/**
+	 * @description Handles contributor addition errors
+	 * @param { unknown } err The error caught
+	 * @returns { Response } Conflict response or throws
+	 */
 	private static handleContributorError(err: unknown): Response {
 		if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
 			return Res.conflict("User is already a contributor");
@@ -243,7 +307,10 @@ export class ArticlesController {
 	}
 
 	/**
-	 * Authenticated: remove self as contributor
+	 * @description Authenticated: remove self as contributor
+	 * @method DELETE
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { Promise<Response> } No content response
 	 */
 	static async removeSelfAsContributor(c: Context<AppEnv>): Promise<Response> {
 		const id = c.req.param('id') ?? '';
@@ -256,7 +323,10 @@ export class ArticlesController {
 	}
 
 	/**
-	 * Public: get article tags (via resolved articleId)
+	 * @description Public: get article tags
+	 * @method GET
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { Promise<Response> } List of tags
 	 */
 	static async getTagsArticle(c: Context<AppEnv>): Promise<Response> {
 		const tags = await new TagService(new TagRepository(c.env.DB)).listByArticle(c.get('articleId'));

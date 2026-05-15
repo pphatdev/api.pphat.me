@@ -11,6 +11,11 @@ const ALLOWED_STATUS = ['in-progress', 'completed', 'archived'];
 export class ProjectDetailRepository implements IProjectDetailRepository {
 	constructor(private readonly db: D1Database) {}
 
+	/**
+	 * @description Find project details by project ID
+	 * @param { string } projectId The project UUID
+	 * @returns { Promise<ProjectDetail | null> } The details or null
+	 */
 	async findByProjectId(projectId: string): Promise<ProjectDetail | null> {
 		const row = await this.db
 			.prepare("SELECT * FROM project_details WHERE project_id = ?1")
@@ -20,6 +25,12 @@ export class ProjectDetailRepository implements IProjectDetailRepository {
 		return this.mapRow(row);
 	}
 
+	/**
+	 * @description Upsert project details in the database
+	 * @param { string } projectId The project UUID
+	 * @param { CreateProjectDetailDto | UpdateProjectDetailDto } dto Details data
+	 * @returns { Promise<ProjectDetail> } The upserted details
+	 */
 	async upsert(projectId: string, dto: CreateProjectDetailDto | UpdateProjectDetailDto): Promise<ProjectDetail> {
 		const existing = await this.findByProjectId(projectId);
 		const now = new Date().toISOString();
@@ -33,6 +44,13 @@ export class ProjectDetailRepository implements IProjectDetailRepository {
 		return (await this.findByProjectId(projectId))!;
 	}
 
+	/**
+	 * @description Internal: insert a new project details row
+	 * @param { string } projectId Project ID
+	 * @param { any } dto Details data
+	 * @param { string } now Timestamp
+	 * @returns { Promise<void> }
+	 */
 	private async insertRow(projectId: string, dto: any, now: string): Promise<void> {
 		const safeStatus = ALLOWED_STATUS.includes(dto.status ?? '') ? dto.status! : 'in-progress';
 		await this.db
@@ -47,6 +65,13 @@ export class ProjectDetailRepository implements IProjectDetailRepository {
 			.run();
 	}
 
+	/**
+	 * @description Internal: update an existing project details row
+	 * @param { string } projectId Project ID
+	 * @param { any } dto Details data
+	 * @param { string } now Timestamp
+	 * @returns { Promise<void> }
+	 */
 	private async updateRow(projectId: string, dto: any, now: string): Promise<void> {
 		const fields: string[] = [];
 		const values: unknown[] = [];
@@ -78,6 +103,11 @@ export class ProjectDetailRepository implements IProjectDetailRepository {
 		}
 	}
 
+	/**
+	 * @description Delete project details from the database
+	 * @param { string } projectId Project ID
+	 * @returns { Promise<boolean> } True if changes occurred
+	 */
 	async delete(projectId: string): Promise<boolean> {
 		const result = await this.db
 			.prepare("DELETE FROM project_details WHERE project_id = ?1")
@@ -86,6 +116,11 @@ export class ProjectDetailRepository implements IProjectDetailRepository {
 		return result.meta.changes > 0;
 	}
 
+	/**
+	 * @description Internal: map database row to ProjectDetail object
+	 * @param { ProjectDetailRow } row The database row
+	 * @returns { ProjectDetail } The mapped details
+	 */
 	private mapRow(row: ProjectDetailRow): ProjectDetail {
 		return {
 			id: row.id,

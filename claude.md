@@ -1,5 +1,11 @@
-@AGENTS.md
-@skills.md
+# Agents
+`@./AGENTS.md`
+
+# Skills
+`@./skills.md`
+
+# Projects
+`@./rules/*/projects.md`
 
 <!-- BEGIN:cloudflare-worker-project -->
 # This is NOT the Cloudflare Worker Project you know

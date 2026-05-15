@@ -8,6 +8,12 @@ import type { Project, ProjectRow, IProjectRepository, CreateProjectDto, UpdateP
 export class ProjectRepository implements IProjectRepository {
 	constructor(private readonly db: D1Database) { }
 
+	/**
+	 * @description Find all projects with pagination
+	 * @param { PaginationParams } params Pagination parameters
+	 * @param { boolean } [onlyPublished=true] Published filter
+	 * @returns { Promise<PaginatedResult<Project>> } Paginated projects
+	 */
 	async findAll({ page, limit, search, sort, order }: PaginationParams, onlyPublished = true): Promise<PaginatedResult<Project>> {
 		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
 		const safeSort = sort?.[0] && ALLOWED_SORT.includes(sort[0]) ? sort[0] : 'created_at';
@@ -37,6 +43,11 @@ export class ProjectRepository implements IProjectRepository {
 		};
 	}
 
+	/**
+	 * @description Find a project by its slug
+	 * @param { string } slug The project slug
+	 * @returns { Promise<Project | null> } The project or null
+	 */
 	async findBySlug(slug: string): Promise<Project | null> {
 		const row = await this.db
 			.prepare("SELECT * FROM projects WHERE slug = ?1")
@@ -66,14 +77,29 @@ export class ProjectRepository implements IProjectRepository {
 		return project;
 	}
 
+	/**
+	 * @description Get the slug of the next project
+	 * @param { string } currentSlug Current project slug
+	 * @returns { Promise<string | null> } Next slug or null
+	 */
 	async getNextSlug(currentSlug: string): Promise<string | null> {
 		return getNextSlug(this.db, 'projects', currentSlug);
 	}
 
+	/**
+	 * @description Get the slug of the previous project
+	 * @param { string } currentSlug Current project slug
+	 * @returns { Promise<string | null> } Previous slug or null
+	 */
 	async getPrevSlug(currentSlug: string): Promise<string | null> {
 		return getPrevSlug(this.db, 'projects', currentSlug);
 	}
 
+	/**
+	 * @description Create a new project record
+	 * @param { CreateProjectDto } dto Project data
+	 * @returns { Promise<Project> } The created project
+	 */
 	async create(dto: CreateProjectDto): Promise<Project> {
 		const id = crypto.randomUUID();
 		const now = new Date().toISOString();
@@ -107,6 +133,12 @@ export class ProjectRepository implements IProjectRepository {
 		return this.hydrateWithDetails(row!);
 	}
 
+	/**
+	 * @description Update an existing project record
+	 * @param { string } slug Current project slug
+	 * @param { UpdateProjectDto } dto Update data
+	 * @returns { Promise<Project | null> } The updated project or null
+	 */
 	async update(slug: string, dto: UpdateProjectDto): Promise<Project | null> {
 		const existing = await this.findBySlug(slug);
 		if (!existing) return null;
@@ -136,6 +168,12 @@ export class ProjectRepository implements IProjectRepository {
 		return this.findBySlug(dto.slug ?? slug);
 	}
 
+	/**
+	 * @description Internal: update project tags
+	 * @param { string } projectId Project ID
+	 * @param { { tag: string; description?: string }[] } tags List of tags
+	 * @returns { Promise<void> }
+	 */
 	private async updateTags(projectId: string, tags: { tag: string; description?: string }[]): Promise<void> {
 		await this.db.prepare("DELETE FROM tags WHERE project_id = ?1").bind(projectId).run();
 		if (tags.length > 0) {
@@ -147,6 +185,12 @@ export class ProjectRepository implements IProjectRepository {
 		}
 	}
 
+	/**
+	 * @description Internal: update project contributors
+	 * @param { string } projectId Project ID
+	 * @param { number[] } contributorIds List of author IDs
+	 * @returns { Promise<void> }
+	 */
 	private async updateContributors(projectId: string, contributorIds: number[]): Promise<void> {
 		await this.db.prepare("DELETE FROM project_contributors WHERE project_id = ?1").bind(projectId).run();
 		if (contributorIds.length > 0) {
@@ -158,6 +202,11 @@ export class ProjectRepository implements IProjectRepository {
 		}
 	}
 
+	/**
+	 * @description Delete a project record
+	 * @param { string } slug Project slug
+	 * @returns { Promise<boolean> } True if deleted
+	 */
 	async delete(slug: string): Promise<boolean> {
 		const result = await this.db
 			.prepare("DELETE FROM projects WHERE slug = ?1")
@@ -166,6 +215,11 @@ export class ProjectRepository implements IProjectRepository {
 		return result.meta.changes > 0;
 	}
 
+	/**
+	 * @description Increment the view count for a project
+	 * @param { string } projectId Project ID
+	 * @returns { Promise<void> }
+	 */
 	async incrementViews(projectId: string): Promise<void> {
 		await this.db
 			.prepare(
@@ -175,6 +229,11 @@ export class ProjectRepository implements IProjectRepository {
 			.run();
 	}
 
+	/**
+	 * @description Find top projects by view count
+	 * @param { number } limit Max records
+	 * @returns { Promise<Project[]> } List of top projects
+	 */
 	async findTop(limit: number): Promise<Project[]> {
 		const result = await this.db
 			.prepare(`
@@ -191,10 +250,21 @@ export class ProjectRepository implements IProjectRepository {
 		return Promise.all((result.results as ProjectRow[]).map(row => this.hydrate(row)));
 	}
 
+	/**
+	 * @description Get summary of project counts
+	 * @returns { Promise<{ total: number; published: number; draft: number }> }
+	 */
 	async getStatsSummary(): Promise<{ total: number; published: number; draft: number }> {
 		return getStatsSummary(this.db, 'projects');
 	}
 
+	/**
+	 * @description Internal: update or insert project details
+	 * @param { string } projectId Project ID
+	 * @param { object } dto Details data
+	 * @param { string } now Timestamp
+	 * @returns { Promise<void> }
+	 */
 	private async upsertDetails(projectId: string, dto: { content?: string; demoUrl?: string; repoUrl?: string; techStack?: string[]; status?: string }, now: string): Promise<void> {
 		const ALLOWED_STATUS = ['in-progress', 'completed', 'archived'];
 		const existing = await this.db
@@ -209,6 +279,14 @@ export class ProjectRepository implements IProjectRepository {
 		}
 	}
 
+	/**
+	 * @description Internal: insert project details record
+	 * @param { string } projectId Project ID
+	 * @param { any } dto Details data
+	 * @param { string } now Timestamp
+	 * @param { string[] } allowedStatus List of valid statuses
+	 * @returns { Promise<void> }
+	 */
 	private async insertDetails(projectId: string, dto: any, now: string, allowedStatus: string[]): Promise<void> {
 		const safeStatus = allowedStatus.includes(dto.status ?? '') ? dto.status! : 'in-progress';
 		await this.db
@@ -223,6 +301,14 @@ export class ProjectRepository implements IProjectRepository {
 			.run();
 	}
 
+	/**
+	 * @description Internal: update project details record
+	 * @param { string } projectId Project ID
+	 * @param { any } dto Details data
+	 * @param { string } now Timestamp
+	 * @param { string[] } allowedStatus List of valid statuses
+	 * @returns { Promise<void> }
+	 */
 	private async updateDetails(projectId: string, dto: any, now: string, allowedStatus: string[]): Promise<void> {
 		const mappings: [keyof UpdateProjectDto | 'demoUrl' | 'repoUrl' | 'techStack', string, ((v: any) => any)?][] = [
 			['content', 'content'],
@@ -242,6 +328,11 @@ export class ProjectRepository implements IProjectRepository {
 		}
 	}
 
+	/**
+	 * @description Internal: hydrate project record with all details
+	 * @param { ProjectRow } row Main project row
+	 * @returns { Promise<Project> } Hydrated project
+	 */
 	private async hydrateWithDetails(row: ProjectRow): Promise<Project> {
 		const project = await this.hydrate(row);
 		const detailsRow = await this.db
@@ -262,6 +353,11 @@ export class ProjectRepository implements IProjectRepository {
 		return project;
 	}
 
+	/**
+	 * @description Hydrate a project row with tags and contributors
+	 * @param { ProjectRow } row Main project row
+	 * @returns { Promise<Project> } Hydrated project
+	 */
 	public async hydrate(row: ProjectRow): Promise<Project> {
 		const [tagsResult, contributorsResult] = await Promise.all([
 			this.db

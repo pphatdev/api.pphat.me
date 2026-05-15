@@ -4,6 +4,11 @@ import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 export class TagRepository implements ITagRepository {
 	constructor(private readonly db: D1Database) {}
 
+	/**
+	 * @description Find all tags with pagination
+	 * @param { PaginationParams } params Pagination parameters
+	 * @returns { Promise<PaginatedResult<Tag>> } Paginated tags
+	 */
 	async findAll({ page, limit, search, sort, order }: PaginationParams): Promise<PaginatedResult<Tag>> {
 		const ALLOWED_SORT = ['id', 'tag', 'description'];
 		const safeSort = sort?.[0] && ALLOWED_SORT.includes(sort[0]) ? sort[0] : 'id';
@@ -50,6 +55,11 @@ export class TagRepository implements ITagRepository {
 		};
 	}
 
+	/**
+	 * @description Find a tag by ID
+	 * @param { number } id The tag ID
+	 * @returns { Promise<Tag | null> } The tag or null
+	 */
 	async findById(id: number): Promise<Tag | null> {
 		const row = await this.db
 			.prepare("SELECT * FROM tags WHERE id = ?1")
@@ -60,6 +70,11 @@ export class TagRepository implements ITagRepository {
 		return this.mapRow(row);
 	}
 
+	/**
+	 * @description Find tags by article ID
+	 * @param { string } articleId The article UUID
+	 * @returns { Promise<Tag[]> } List of tags
+	 */
 	async findByArticleId(articleId: string): Promise<Tag[]> {
 		const result = await this.db
 			.prepare("SELECT * FROM tags WHERE article_id = ?1 ORDER BY id ASC")
@@ -68,6 +83,11 @@ export class TagRepository implements ITagRepository {
 		return (result.results as TagRow[]).map(this.mapRow);
 	}
 
+	/**
+	 * @description Find tags by project ID
+	 * @param { string } projectId The project UUID
+	 * @returns { Promise<Tag[]> } List of tags
+	 */
 	async findByProjectId(projectId: string): Promise<Tag[]> {
 		const result = await this.db
 			.prepare("SELECT * FROM tags WHERE project_id = ?1 ORDER BY id ASC")
@@ -76,6 +96,11 @@ export class TagRepository implements ITagRepository {
 		return (result.results as TagRow[]).map(this.mapRow);
 	}
 
+	/**
+	 * @description Create a new tag in the database
+	 * @param { CreateTagDto } dto Tag data
+	 * @returns { Promise<Tag> } The created tag
+	 */
 	async create(dto: CreateTagDto): Promise<Tag> {
 		const result = await this.db
 			.prepare("INSERT INTO tags (tag, description, article_id, project_id) VALUES (?1, ?2, ?3, ?4)")
@@ -91,6 +116,12 @@ export class TagRepository implements ITagRepository {
 		return this.mapRow(row!);
 	}
 
+	/**
+	 * @description Update an existing tag in the database
+	 * @param { number } id The tag ID
+	 * @param { UpdateTagDto } dto Update data
+	 * @returns { Promise<Tag | null> } The updated tag or null
+	 */
 	async update(id: number, dto: UpdateTagDto): Promise<Tag | null> {
 		const existing = await this.db
 			.prepare("SELECT * FROM tags WHERE id = ?1")
@@ -124,6 +155,11 @@ export class TagRepository implements ITagRepository {
 		return this.mapRow(updated!);
 	}
 
+	/**
+	 * @description Delete a tag from the database
+	 * @param { number } id The tag ID
+	 * @returns { Promise<boolean> } True if changes occurred
+	 */
 	async delete(id: number): Promise<boolean> {
 		const result = await this.db
 			.prepare("DELETE FROM tags WHERE id = ?1")
@@ -132,6 +168,11 @@ export class TagRepository implements ITagRepository {
 		return result.meta.changes > 0;
 	}
 
+	/**
+	 * @description Internal: map a database row to a Tag object
+	 * @param { TagRow } row The database row
+	 * @returns { Tag } The mapped tag
+	 */
 	private mapRow(row: TagRow): Tag {
 		return {
 			id: row.id,

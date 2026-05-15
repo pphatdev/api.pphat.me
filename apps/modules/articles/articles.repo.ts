@@ -5,6 +5,11 @@ import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface
 import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow } from "../../shared/helpers/repo";
 import type { Article, IArticleRepository, ArticleRow, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
 
+/**
+ * @description Compute estimated reading time in minutes
+ * @param { string } content The article content
+ * @returns { number } Estimated minutes
+ */
 function computeReadingMins(content: string): number {
 	const words = content.trim().split(/\s+/).filter(Boolean).length;
 	return Math.max(1, Math.ceil(words / 200));
@@ -15,6 +20,12 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 export class ArticleRepository implements IArticleRepository {
 	constructor(private readonly db: D1Database) { }
 
+	/**
+	 * @description Find all articles with pagination
+	 * @param { PaginationParams } params Pagination parameters
+	 * @param { boolean } [onlyPublished=true] Whether to only list published articles
+	 * @returns { Promise<PaginatedResult<Article>> } Paginated articles
+	 */
 	async findAll(params: PaginationParams, onlyPublished = true): Promise<PaginatedResult<Article>> {
 		const { page, limit, sort, order } = params;
 		const offset = (page - 1) * limit;
@@ -42,6 +53,12 @@ export class ArticleRepository implements IArticleRepository {
 		};
 	}
 
+	/**
+	 * @description Build the ORDER BY clause for SQL
+	 * @param { string[] | undefined } sort Sort columns
+	 * @param { 'asc' | 'desc' | undefined } order Sort order
+	 * @returns { string } The SQL ORDER BY clause
+	 */
 	private buildOrderBy(sort: string[] | undefined, order: 'asc' | 'desc' | undefined): string {
 		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
 		const safeOrder = order === 'asc' ? 'ASC' : 'DESC';
@@ -51,6 +68,12 @@ export class ArticleRepository implements IArticleRepository {
 			.join(', ');
 	}
 
+	/**
+	 * @description Build SQL WHERE conditions and bindings
+	 * @param { PaginationParams } params Pagination parameters
+	 * @param { boolean } onlyPublished Published filter
+	 * @returns { object } Conditions, bindings, and next placeholder index
+	 */
 	private buildConditions(params: PaginationParams, onlyPublished: boolean) {
 		const { search, tags, authors } = params;
 		let { conditions, bindings, nextIdx } = buildListConditions(search, onlyPublished);
@@ -72,6 +95,13 @@ export class ArticleRepository implements IArticleRepository {
 		return { conditions, bindings, nextIdx };
 	}
 
+	/**
+	 * @description Find all articles by a specific author
+	 * @param { number } authorId The author ID
+	 * @param { PaginationParams } params Pagination parameters
+	 * @param { boolean } onlyPublished Published filter
+	 * @returns { Promise<PaginatedResult<Article>> } Paginated articles
+	 */
 	async findAllByAuthor(authorId: number, { page, limit, search, sort, order }: PaginationParams, onlyPublished: boolean): Promise<PaginatedResult<Article>> {
 		const ALLOWED_SORT_COLS = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
 		const safeOrder = order === 'asc' ? 'ASC' : 'DESC';
@@ -119,6 +149,11 @@ export class ArticleRepository implements IArticleRepository {
 		};
 	}
 
+	/**
+	 * @description Find an article by its slug
+	 * @param { string } slug The article slug
+	 * @returns { Promise<Article | null> } The article or null
+	 */
 	async findBySlug(slug: string): Promise<Article | null> {
 		const row = await this.db
 			.prepare("SELECT * FROM articles WHERE slug = ?1")
@@ -129,14 +164,29 @@ export class ArticleRepository implements IArticleRepository {
 		return this.hydrateWithStats(row);
 	}
 
+	/**
+	 * @description Get the slug of the next article
+	 * @param { string } currentSlug The current article slug
+	 * @returns { Promise<string | null> } The next slug or null
+	 */
 	async getNextSlug(currentSlug: string): Promise<string | null> {
 		return getNextSlug(this.db, 'articles', currentSlug);
 	}
 
+	/**
+	 * @description Get the slug of the previous article
+	 * @param { string } currentSlug The current article slug
+	 * @returns { Promise<string | null> } The previous slug or null
+	 */
 	async getPrevSlug(currentSlug: string): Promise<string | null> {
 		return getPrevSlug(this.db, 'articles', currentSlug);
 	}
 
+	/**
+	 * @description Find an article by its ID
+	 * @param { string } id The article ID
+	 * @returns { Promise<Article | null> } The article or null
+	 */
 	async findById(id: string): Promise<Article | null> {
 		if (!UUID_RE.test(id)) return null;
 		const row = await this.db
@@ -148,6 +198,11 @@ export class ArticleRepository implements IArticleRepository {
 		return this.hydrateWithStats(row);
 	}
 
+	/**
+	 * @description Create a new article in the database
+	 * @param { CreateArticleDto } dto Article data
+	 * @returns { Promise<Article> } The created article
+	 */
 	async create(dto: CreateArticleDto): Promise<Article> {
 		const id = crypto.randomUUID();
 		const now = new Date().toISOString();
@@ -162,6 +217,13 @@ export class ArticleRepository implements IArticleRepository {
 		return (await this.findById(id))!;
 	}
 
+	/**
+	 * @description Internal: insert article record
+	 * @param { string } id Article UUID
+	 * @param { CreateArticleDto } dto Article data
+	 * @param { string } now ISO timestamp
+	 * @returns { Promise<void> }
+	 */
 	private async insertArticle(id: string, dto: CreateArticleDto, now: string): Promise<void> {
 		await this.db
 			.prepare(
@@ -171,6 +233,12 @@ export class ArticleRepository implements IArticleRepository {
 			.run();
 	}
 
+	/**
+	 * @description Internal: initialize article stats
+	 * @param { string } id Article ID
+	 * @param { string } content Article content
+	 * @returns { Promise<void> }
+	 */
 	private async initStats(id: string, content: string): Promise<void> {
 		const readingMins = computeReadingMins(content);
 		await this.db
@@ -179,6 +247,12 @@ export class ArticleRepository implements IArticleRepository {
 			.run();
 	}
 
+	/**
+	 * @description Update an article in the database
+	 * @param { string } id Article ID
+	 * @param { UpdateArticleDto } dto Update data
+	 * @returns { Promise<Article | null> } The updated article or null
+	 */
 	async update(id: string, dto: UpdateArticleDto): Promise<Article | null> {
 		const existing = await this.findById(id);
 		if (!existing) return null;
@@ -209,6 +283,12 @@ export class ArticleRepository implements IArticleRepository {
 		return this.findById(id);
 	}
 
+	/**
+	 * @description Internal: update article authors
+	 * @param { string } articleId Article ID
+	 * @param { number[] } authorIds List of author IDs
+	 * @returns { Promise<void> }
+	 */
 	private async updateAuthors(articleId: string, authorIds: number[]): Promise<void> {
 		await this.db.prepare("DELETE FROM article_authors WHERE article_id = ?1").bind(articleId).run();
 		if (authorIds.length > 0) {
@@ -220,6 +300,12 @@ export class ArticleRepository implements IArticleRepository {
 		}
 	}
 
+	/**
+	 * @description Internal: update article tags
+	 * @param { string } articleId Article ID
+	 * @param { { tag: string; description?: string }[] } tags List of tags
+	 * @returns { Promise<void> }
+	 */
 	private async updateTags(articleId: string, tags: { tag: string; description?: string }[]): Promise<void> {
 		await this.db.prepare("DELETE FROM tags WHERE article_id = ?1").bind(articleId).run();
 		if (tags.length > 0) {
@@ -231,11 +317,22 @@ export class ArticleRepository implements IArticleRepository {
 		}
 	}
 
+	/**
+	 * @description Internal: update estimated reading time
+	 * @param { string } articleId Article ID
+	 * @param { string } content Article content
+	 * @returns { Promise<void> }
+	 */
 	private async updateReadingMins(articleId: string, content: string): Promise<void> {
 		const mins = computeReadingMins(content);
 		await this.db.prepare("UPDATE article_stats SET reading_mins = ?1 WHERE article_id = ?2").bind(mins, articleId).run();
 	}
 
+	/**
+	 * @description Delete an article from the database
+	 * @param { string } id Article ID
+	 * @returns { Promise<boolean> } True if changes occurred
+	 */
 	async delete(id: string): Promise<boolean> {
 		const result = await this.db
 			.prepare("DELETE FROM articles WHERE id = ?1")
@@ -244,6 +341,12 @@ export class ArticleRepository implements IArticleRepository {
 		return result.meta.changes > 0;
 	}
 
+	/**
+	 * @description Check if user is the article owner
+	 * @param { string } articleId Article ID
+	 * @param { string } userId User ID
+	 * @returns { Promise<boolean> } True if owner
+	 */
 	async isOwner(articleId: string, userId: string): Promise<boolean> {
 		const row = await this.db
 			.prepare("SELECT 1 FROM articles WHERE id = ?1 AND owner_id = ?2")
@@ -252,6 +355,12 @@ export class ArticleRepository implements IArticleRepository {
 		return row !== null;
 	}
 
+	/**
+	 * @description Check if user is a contributor
+	 * @param { string } articleId Article ID
+	 * @param { string } userId User ID
+	 * @returns { Promise<boolean> } True if contributor
+	 */
 	async isContributor(articleId: string, userId: string): Promise<boolean> {
 		const row = await this.db
 			.prepare("SELECT 1 FROM article_contributors WHERE article_id = ?1 AND user_id = ?2")
@@ -260,6 +369,12 @@ export class ArticleRepository implements IArticleRepository {
 		return row !== null;
 	}
 
+	/**
+	 * @description Add a contributor record
+	 * @param { string } articleId Article ID
+	 * @param { string } userId User ID
+	 * @returns { Promise<void> }
+	 */
 	async addContributor(articleId: string, userId: string): Promise<void> {
 		await this.db
 			.prepare("INSERT OR IGNORE INTO article_contributors (article_id, user_id) VALUES (?1, ?2)")
@@ -267,6 +382,12 @@ export class ArticleRepository implements IArticleRepository {
 			.run();
 	}
 
+	/**
+	 * @description Remove a contributor record
+	 * @param { string } articleId Article ID
+	 * @param { string } userId User ID
+	 * @returns { Promise<boolean> } True if deleted
+	 */
 	async removeContributor(articleId: string, userId: string): Promise<boolean> {
 		const result = await this.db
 			.prepare("DELETE FROM article_contributors WHERE article_id = ?1 AND user_id = ?2")
@@ -275,6 +396,11 @@ export class ArticleRepository implements IArticleRepository {
 		return result.meta.changes > 0;
 	}
 
+	/**
+	 * @description Find top articles by views
+	 * @param { number } limit Max records
+	 * @returns { Promise<Article[]> } List of top articles
+	 */
 	async findTop(limit: number): Promise<Article[]> {
 		const result = await this.db
 			.prepare(`
@@ -291,10 +417,19 @@ export class ArticleRepository implements IArticleRepository {
 		return Promise.all((result.results as ArticleRow[]).map(row => this.hydrate(row, { includeContent: false })));
 	}
 
+	/**
+	 * @description Get summary of article counts
+	 * @returns { Promise<{ total: number; published: number; draft: number }> }
+	 */
 	async getStatsSummary(): Promise<{ total: number; published: number; draft: number }> {
 		return getStatsSummary(this.db, 'articles');
 	}
 
+	/**
+	 * @description Internal: hydrate article with stats and reactions
+	 * @param { ArticleRow } row The database row
+	 * @returns { Promise<Article> }
+	 */
 	private async hydrateWithStats(row: ArticleRow): Promise<Article> {
 		const [article, statsRow, reactionsResult] = await Promise.all([
 			this.hydrate(row),
@@ -319,6 +454,12 @@ export class ArticleRepository implements IArticleRepository {
 		return article;
 	}
 
+	/**
+	 * @description Hydrate an article row with authors and tags
+	 * @param { ArticleRow } row The database row
+	 * @param { object } [options] Hydration options
+	 * @returns { Promise<Article> }
+	 */
 	public async hydrate(row: ArticleRow, options: { includeContent?: boolean } = { includeContent: true }): Promise<Article> {
 		const [authorsResult, tagsResult] = await Promise.all([
 			this.db
