@@ -25,7 +25,7 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'release'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: 🏷️ Get Version Info
         id: get_version
