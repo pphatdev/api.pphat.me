@@ -22,7 +22,7 @@
         "wrangler": "^4.84.0"
     },
     "dependencies": {
-        "hono": "^4.12.21",
+        "hono": "^4.12.25",
         "nodemailer": "^9.0.1"
     }
 }
