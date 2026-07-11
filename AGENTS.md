@@ -75,9 +75,7 @@ You are an AI coding assistant for the `api.pphat.me` project. You must adhere t
 
 ## 📚 Project Documentation & Standards
 Always refer to the following local documents for context:
-- `./skill.md` - Core project skills overview.
 - `./.rules/*.md` - All rules and guidelines.
-- `./claude.md` - Detailed guide for Claude.
 - `./.rules/database.md` - D1 Database and SQL patterns.
 - `./.rules/testing.md` - Testing standards.
 - `./.rules/features/*.md` - Module-specific business rules.
