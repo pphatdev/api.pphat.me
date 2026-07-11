@@ -13,7 +13,7 @@ jobs:
   test:
     strategy:
       matrix:
-        node-version: ["20", "22", "24"]
+        node-version: ["22", "24", "26"]
     uses: ./.github/workflows/test-jobs.yaml
     with:
       node-version: ${{ matrix.node-version }}
@@ -25,7 +25,7 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'release'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: 🏷️ Get Version Info
         id: get_version
@@ -48,7 +48,7 @@ jobs:
           subject-path: 'api-pphat-me-*.zip'
 
       - name: 🚀 Create / Update Release
-        uses: softprops/action-gh-release@v3.0.0
+        uses: softprops/action-gh-release@v3.0.1
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           files: api-pphat-me-*.zip
