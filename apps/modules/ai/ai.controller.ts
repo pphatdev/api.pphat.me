@@ -9,7 +9,9 @@ const ALLOWED_MODES: GenerateMode[] = ['description', 'content', 'both'];
 
 
 /**
- * Normalizes the generation mode to a valid value
+ * @description Normalizes the generation mode to a valid value
+ * @param { unknown } value The mode value to normalize
+ * @returns { GenerateMode } A valid GenerateMode
  */
 function normalizeMode(value: unknown): GenerateMode {
 	if (typeof value !== 'string') return 'both';
@@ -17,7 +19,11 @@ function normalizeMode(value: unknown): GenerateMode {
 }
 
 /**
- * Builds the system prompt for the AI model
+ * @description Builds the system prompt for the AI model
+ * @param { GenerateMode } mode The generation mode
+ * @param { string } language Target language
+ * @param { string } tone Desired tone
+ * @returns { string } The formatted system prompt
  */
 function getSystemPrompt(mode: GenerateMode, language: string, tone: string): string {
 	const rules = [
@@ -42,7 +48,9 @@ function getSystemPrompt(mode: GenerateMode, language: string, tone: string): st
 }
 
 /**
- * Builds the user prompt with provided data
+ * @description Builds the user prompt with provided data
+ * @param { GeneratePayload } payload The generation payload
+ * @returns { string } The formatted user prompt
  */
 function getUserPrompt(payload: GeneratePayload): string {
 	const parts = [`Title: ${payload.title.trim()}`];
@@ -53,7 +61,10 @@ function getUserPrompt(payload: GeneratePayload): string {
 }
 
 /**
- * Handles fallback parsing for non-JSON or partial responses
+ * @description Handles fallback parsing for non-JSON or partial responses
+ * @param { string } rawText The raw text from AI
+ * @param { GenerateMode } mode The generation mode
+ * @returns { { description?: string; content?: string } } Parsed or fallback content
  */
 function handleParseFallback(rawText: string, mode: GenerateMode): { description?: string; content?: string } {
 	if (mode === 'description') return { description: rawText };
@@ -62,14 +73,18 @@ function handleParseFallback(rawText: string, mode: GenerateMode): { description
 }
 
 /**
- * Extracts raw data from AI result
+ * @description Extracts raw data from AI result
+ * @param { any } result The raw AI result
+ * @returns { any } Extracted data
  */
 function extractData(result: any): any {
 	return result?.response || result?.result || result;
 }
 
 /**
- * Normalizes a field value from AI output
+ * @description Normalizes a field value from AI output
+ * @param { unknown } val The value to normalize
+ * @returns { string | undefined } Trimmed string or undefined
  */
 function normalizeField(val: unknown): string | undefined {
 	if (typeof val !== 'string') return undefined;
@@ -77,7 +92,10 @@ function normalizeField(val: unknown): string | undefined {
 }
 
 /**
- * Parses the AI output safely
+ * @description Parses the AI output safely
+ * @param { any } result The raw AI result
+ * @param { GenerateMode } mode The generation mode
+ * @returns { { description?: string; content?: string } } Parsed content
  */
 function parseOutput(result: any, mode: GenerateMode): { description?: string; content?: string } {
 	const data = extractData(result);
@@ -106,7 +124,9 @@ function parseOutput(result: any, mode: GenerateMode): { description?: string; c
 }
 
 /**
- * Helper to get JSON schema based on mode
+ * @description Helper to get JSON schema based on mode
+ * @param { GenerateMode } mode The generation mode
+ * @returns { object } The JSON schema
  */
 function getJsonSchema(mode: GenerateMode) {
 	const properties: any = {};
@@ -136,7 +156,9 @@ function getJsonSchema(mode: GenerateMode) {
 }
 
 /**
- * Validates the generation payload
+ * @description Validates the generation payload
+ * @param { GeneratePayload } payload The payload to validate
+ * @returns { Response | null } Error response or null if valid
  */
 function validatePayload(payload: GeneratePayload): Response | null {
 	const title = payload.title?.trim() || '';
@@ -154,7 +176,9 @@ function validatePayload(payload: GeneratePayload): Response | null {
 }
 
 /**
- * Gets the max tokens based on mode
+ * @description Gets the max tokens based on mode
+ * @param { GenerateMode } mode The generation mode
+ * @returns { number } Maximum token count
  */
 function getMaxTokens(mode: GenerateMode): number {
 	if (mode === 'description') return 400;
@@ -163,7 +187,12 @@ function getMaxTokens(mode: GenerateMode): number {
 }
 
 /**
- * Runs the AI generation using Cloudflare Workers AI
+ * @description Runs the AI generation using Cloudflare Workers AI
+ * @param { Env } env Environment bindings
+ * @param { string } model Model identifier
+ * @param { GenerateMode } mode Generation mode
+ * @param { any } body Request body
+ * @returns { Promise<any> } AI result
  */
 async function runAiGeneration(env: Env, model: string, mode: GenerateMode, body: any) {
 	return env.AI.run(model as any, {
@@ -179,7 +208,11 @@ async function runAiGeneration(env: Env, model: string, mode: GenerateMode, body
 
 export class AiController {
 	/**
-	 * Main generation endpoint
+	 * @description Main generation endpoint
+	 * @method POST
+	 * @param { Request } request The Hono request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } The AI generation response
 	 */
 	static async generate(request: Request, env: Env): Promise<Response> {
 		try {

@@ -1,5 +1,11 @@
 import { Context, Next } from 'hono';
 
+/**
+ * @description Hono middleware to track visitor traffic
+ * @param { Context } c The Hono context
+ * @param { Next } next The next middleware
+ * @returns { Promise<Response | void> }
+ */
 export async function trafficMiddleware(c: Context<{ Bindings: Env }>, next: Next): Promise<Response | void> {
 	// Only log GET requests to public pages or API calls to track traffic
 	if (c.req.method !== 'GET') return next();

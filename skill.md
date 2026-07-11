@@ -1,6 +1,9 @@
 # Project Skills & Guidelines
 
-This document outlines the core skills and architectural patterns required for contributing to this project. Detailed guidelines for each module are located in the [/.rules/skills](.rules/skills) directory.
+This document outlines the core skills and architectural patterns required for contributing to this project. You must read all the docs in `.rules/` to understand the project. Detailed guidelines for each module are located in the [/.rules/skills](.rules/skills) directory.
+
+## 🛠️ Project Commands
+- **Check Scripts**: Before running any command, check the `scripts` section of `package.json`. Use existing scripts if available.
 
 ## Core Technical Skills
 

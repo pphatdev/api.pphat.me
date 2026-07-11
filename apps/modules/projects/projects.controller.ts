@@ -9,6 +9,12 @@ import { ProjectService } from "./projects.service";
 
 export class ProjectsController {
 
+	/**
+	 * @description Middleware to resolve project ID from slug
+	 * @param { Context } c The Hono context
+	 * @param { Next } next The next middleware
+	 * @returns { Promise<Response | void> }
+	 */
 	static resolveProject = async (c: Context<AppEnv>, next: Next): Promise<Response | void> => {
 		const project = await c.env.DB
 			.prepare('SELECT id FROM projects WHERE slug = ?1')
@@ -19,6 +25,13 @@ export class ProjectsController {
 		return next();
 	};
 
+	/**
+	 * @description List all projects
+	 * @method GET
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } Paginated list of projects
+	 */
 	static async list(request: Request, env: Env): Promise<Response> {
 		const repository = new ProjectRepository(env.DB);
 		const options = parseListParams(request.url);
@@ -26,6 +39,13 @@ export class ProjectsController {
 		return Res.ok(result);
 	}
 
+	/**
+	 * @description Create a new project
+	 * @method POST
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } The created project
+	 */
 	static async create(request: Request, env: Env): Promise<Response> {
 		const repository = new ProjectRepository(env.DB);
 		const body = await request.json().catch(() => null);
@@ -47,6 +67,12 @@ export class ProjectsController {
 		}
 	}
 
+	/**
+	 * @description Get a project by its slug
+	 * @method GET
+	 * @param { Context } c The Hono context
+	 * @returns { Promise<Response> } The project details
+	 */
 	static async getBySlug(c: Context<AppEnv>): Promise<Response> {
 		const slug = c.req.param('slug')!;
 		const repository = new ProjectRepository(c.env.DB);
@@ -75,6 +101,14 @@ export class ProjectsController {
 		return Res.ok(response);
 	}
 
+	/**
+	 * @description Update an existing project
+	 * @method PUT
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @param { string } slug The project slug
+	 * @returns { Promise<Response> } The updated project
+	 */
 	static async update(request: Request, env: Env, slug: string): Promise<Response> {
 		const repository = new ProjectRepository(env.DB);
 		const body = await request.json().catch(() => null);
@@ -92,6 +126,14 @@ export class ProjectsController {
 		}
 	}
 
+	/**
+	 * @description Delete a project
+	 * @method DELETE
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @param { string } slug The project slug
+	 * @returns { Promise<Response> } Success message
+	 */
 	static async delete(request: Request, env: Env, slug: string): Promise<Response> {
 		const repository = new ProjectRepository(env.DB);
 		const deleted = await new ProjectService(repository).delete(slug);
@@ -99,6 +141,12 @@ export class ProjectsController {
 		return Res.ok({ message: "Deleted successfully" });
 	}
 
+	/**
+	 * @description Get tags associated with a project
+	 * @method GET
+	 * @param { Context } c The Hono context
+	 * @returns { Promise<Response> } List of tags
+	 */
 	static getTagProject = async (c: Context<AppEnv>) => {
 		const tags = await new TagService(new TagRepository(c.env.DB)).listByProject(c.get('projectId'));
 		return c.json(tags);

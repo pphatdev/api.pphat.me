@@ -9,15 +9,21 @@ export interface ListOptions {
 }
 
 /**
- * Parses common list query parameters from a URL string.
+ * @description Parses common list query parameters from a URL string
+ * @param { string } urlStr The full URL string
+ * @returns { ListOptions } Parsed options
  */
 export function parseListParams(urlStr: string): ListOptions {
 	const url = new URL(urlStr);
 	const sp = url.searchParams;
 
+	const limitInput = parseInt(sp.get("limit") || '', 10);
+	const limit = limitInput === -1 ? -1 : parseNumber(sp.get("limit"), 10, 1, 100);
+	const page = limit === -1 ? 1 : parseNumber(sp.get("page"), 1, 1, Infinity);
+
 	return {
-		page: parseNumber(sp.get("page"), 1, 1, Infinity),
-		limit: parseNumber(sp.get("limit"), 10, 1, 100),
+		page,
+		limit,
 		search: sp.get("search")?.trim() || undefined,
 		sort: parseArray(sp.get("sort")),
 		order: parseOrder(sp.get("order")),

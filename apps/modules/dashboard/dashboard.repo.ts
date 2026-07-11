@@ -11,6 +11,10 @@ export class DashboardRepository implements IDashboardRepository {
 		private readonly authorRepo: IAuthorRepository
 	) {}
 
+	/**
+	 * @description Get all dashboard metrics and recent data
+	 * @returns { Promise<DashboardData> } Consolidated dashboard data
+	 */
 	async getDashboardData(): Promise<DashboardData> {
 		const [
 			blogStats,
@@ -44,6 +48,10 @@ export class DashboardRepository implements IDashboardRepository {
 		};
 	}
 
+	/**
+	 * @description Get number of active visitors in the last 5 minutes
+	 * @returns { Promise<number> } Active visitor count
+	 */
 	public async getLiveTraffic(): Promise<number> {
 		// Active visitors in the last 5 minutes from DB
 		const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();

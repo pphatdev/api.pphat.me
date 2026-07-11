@@ -4,7 +4,9 @@ export const PROJECT_SLUG = "test-project-slug";
 const TEST_USER_ID = "test-user-id";
 
 /**
- * Generate a valid Bearer token header for auth-guarded routes.
+ * @description Generate a valid Bearer token header for auth-guarded routes
+ * @param { string } jwtSecret The JWT secret to use for signing
+ * @returns { Promise<Record<string, string>> } Headers object
  */
 export async function getAuthHeaders(jwtSecret: string): Promise<Record<string, string>> {
 	const { createJwt } = await import("../../modules/auth/auth.service");
@@ -16,7 +18,9 @@ export async function getAuthHeaders(jwtSecret: string): Promise<Record<string, 
 }
 
 /**
- * Generate a valid Admin Bearer token header for admin-only routes.
+ * @description Generate a valid Admin Bearer token header for admin-only routes
+ * @param { string } jwtSecret The JWT secret to use for signing
+ * @returns { Promise<Record<string, string>> } Headers object
  */
 export async function getAdminHeaders(jwtSecret: string): Promise<Record<string, string>> {
 	const { createJwt } = await import("../../modules/auth/auth.service");
@@ -28,8 +32,9 @@ export async function getAdminHeaders(jwtSecret: string): Promise<Record<string,
 }
 
 /**
- * Creates all required tables and inserts seed data into the given D1 database.
- * Call this inside a `beforeAll` in each spec file.
+ * @description Creates all required tables and inserts seed data into the database
+ * @param { D1Database } db Database binding
+ * @returns { Promise<void> }
  */
 export async function seedDatabase(db: D1Database): Promise<void> {
 	// Load and execute Migrations
@@ -42,7 +47,10 @@ export async function seedDatabase(db: D1Database): Promise<void> {
 }
 
 /**
- * Helper to execute a glob of SQL files.
+ * @description Helper to execute a glob of SQL files
+ * @param { D1Database } db Database binding
+ * @param { Record<string, any> } glob Glob of SQL content
+ * @returns { Promise<void> }
  */
 async function executeSqlGlob(db: D1Database, glob: Record<string, any>): Promise<void> {
 	const sortedKeys = Object.keys(glob).sort();

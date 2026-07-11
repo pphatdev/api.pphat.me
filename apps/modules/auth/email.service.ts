@@ -8,6 +8,13 @@ export interface SmtpConfig {
 	from: string;
 }
 
+/**
+ * @description Send an OTP verification email
+ * @param { string } to Recipient email
+ * @param { string } code The verification code
+ * @param { SmtpConfig } config SMTP configuration
+ * @returns { Promise<void> }
+ */
 export async function sendOtpEmail(to: string, code: string, config: SmtpConfig): Promise<void> {
 	const transporter = nodemailer.createTransport({
 		host: config.host,
@@ -39,6 +46,12 @@ export async function sendOtpEmail(to: string, code: string, config: SmtpConfig)
 	});
 }
 
+/**
+ * @description Send a contact form message to the site owner
+ * @param { object } data Contact form data
+ * @param { SmtpConfig } config SMTP configuration
+ * @returns { Promise<void> }
+ */
 export async function sendContactEmail(
 	data: { name: string; email: string; subject: string; message: string },
 	config: SmtpConfig

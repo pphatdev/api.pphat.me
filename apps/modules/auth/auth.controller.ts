@@ -15,6 +15,13 @@ import { sendOtpEmail } from './email.service';
 
 export class AuthController {
 
+	/**
+	 * @description Redirect to GitHub OAuth
+	 * @method GET
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } Redirect response
+	 */
 	static async github(request: Request, env: Env): Promise<Response> {
 		const state = await generateOAuthState(env.JWT_SECRET);
 		const params = new URLSearchParams({
@@ -26,10 +33,24 @@ export class AuthController {
 		return Response.redirect(`https://github.com/login/oauth/authorize?${params}`, 302);
 	}
 
+	/**
+	 * @description Handle GitHub OAuth callback
+	 * @method GET
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } Auth tokens
+	 */
 	static async githubCallback(request: Request, env: Env): Promise<Response> {
 		return handleOAuthCallback(request, env, 'github', exchangeGitHubCode, fetchGitHubUser);
 	}
 
+	/**
+	 * @description Redirect to Google OAuth
+	 * @method GET
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } Redirect response
+	 */
 	static async google(request: Request, env: Env): Promise<Response> {
 		const state = await generateOAuthState(env.JWT_SECRET);
 		const params = new URLSearchParams({
@@ -42,10 +63,24 @@ export class AuthController {
 		return Response.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`, 302);
 	}
 
+	/**
+	 * @description Handle Google OAuth callback
+	 * @method GET
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } Auth tokens
+	 */
 	static async googleCallback(request: Request, env: Env): Promise<Response> {
 		return handleOAuthCallback(request, env, 'google', exchangeGoogleCode, fetchGoogleUser);
 	}
 
+	/**
+	 * @description Get current authenticated user details
+	 * @method GET
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } User details
+	 */
 	static async me(request: Request, env: Env): Promise<Response> {
 		const repo = new AuthRepository(env.DB);
 		const authHeader = request.headers.get('Authorization');
@@ -58,6 +93,13 @@ export class AuthController {
 		return Res.ok(user);
 	}
 
+	/**
+	 * @description Register a new user with email/password
+	 * @method POST
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } Success message
+	 */
 	static async emailRegister(request: Request, env: Env): Promise<Response> {
 		const body = await request.json().catch(() => null);
 		if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
@@ -76,6 +118,13 @@ export class AuthController {
 		}
 	}
 
+	/**
+	 * @description Login with email and password
+	 * @method POST
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } Auth tokens
+	 */
 	static async emailLogin(request: Request, env: Env): Promise<Response> {
 		const body = await request.json().catch(() => null);
 		if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
@@ -93,6 +142,13 @@ export class AuthController {
 		}
 	}
 
+	/**
+	 * @description Verify email OTP and activate account
+	 * @method POST
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } Auth tokens
+	 */
 	static async emailVerify(request: Request, env: Env): Promise<Response> {
 		const body = await request.json().catch(() => null);
 		if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
@@ -110,6 +166,13 @@ export class AuthController {
 		}
 	}
 
+	/**
+	 * @description Refresh auth tokens
+	 * @method POST
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } New auth tokens
+	 */
 	static async tokenRefresh(request: Request, env: Env): Promise<Response> {
 		const body = await request.json().catch(() => null);
 		if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
@@ -126,6 +189,13 @@ export class AuthController {
 		}
 	}
 
+	/**
+	 * @description Logout user and revoke refresh token
+	 * @method POST
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @returns { Promise<Response> } Success message
+	 */
 	static async logout(request: Request, env: Env): Promise<Response> {
 		const body = await request.json().catch(() => null);
 		const refreshToken = isObject(body) ? (body as any).refreshToken : null;
@@ -142,6 +212,11 @@ export class AuthController {
 	}
 }
 
+/**
+ * @description Validates the registration request body
+ * @param { any } body The request body
+ * @returns { Response | null } Error response or null if valid
+ */
 function validateRegisterBody(body: any): Response | null {
 	const { email, name, password } = body;
 	if (!email || typeof email !== 'string') return Res.unprocessable('email is required');
@@ -154,6 +229,15 @@ function validateRegisterBody(body: any): Response | null {
 
 /**
  * Generic OAuth callback handler to reduce duplication
+ */
+/**
+ * @description Generic OAuth callback handler to reduce duplication
+ * @param { Request } request The incoming request
+ * @param { Env } env Environment bindings
+ * @param { 'github' | 'google' } provider OAuth provider
+ * @param { Function } exchangeCode Function to exchange code for token
+ * @param { Function } fetchUser Function to fetch user info
+ * @returns { Promise<Response> } Auth tokens
  */
 async function handleOAuthCallback(
 	request: Request,
@@ -190,6 +274,11 @@ async function handleOAuthCallback(
 /**
  * Handles authentication errors uniformly
  */
+/**
+ * @description Handles authentication errors uniformly
+ * @param { unknown } err The error caught
+ * @returns { Response } Error response
+ */
 function handleAuthError(err: unknown): Response {
 	const e = err as Error & { status?: number };
 	return json({ error: e.message }, e.status ?? 500);
@@ -197,6 +286,13 @@ function handleAuthError(err: unknown): Response {
 
 /**
  * Sends OTP email with fallback
+ */
+/**
+ * @description Sends OTP email with fallback
+ * @param { string } email Recipient email
+ * @param { string } otp The code to send
+ * @param { Env } env Environment bindings
+ * @returns { Promise<void> }
  */
 async function sendOtpEmailSafely(email: string, otp: string, env: Env): Promise<void> {
 	try {

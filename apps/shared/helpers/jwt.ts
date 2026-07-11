@@ -24,6 +24,12 @@ export class JwtService {
 		this.aud = options.aud;
 	}
 
+	/**
+	 * @description Generates a JWT token
+	 * @param { Record<string, any> } payload The payload to sign
+	 * @param { number } [customExpiresIn] Optional custom expiration in seconds
+	 * @returns { Promise<string> } The signed token
+	 */
 	async generate(payload: Record<string, any>, customExpiresIn?: number): Promise<string> {
 		const now = Math.floor(Date.now() / 1000);
 		const exp = now + (customExpiresIn ?? this.expiresIn);
@@ -41,7 +47,11 @@ export class JwtService {
 	}
 
 	/**
-	 * Generates a pair of tokens: Access and Refresh
+	 * @description Generates a pair of tokens: Access and Refresh
+	 * @param { Record<string, any> } payload The payload for the access token
+	 * @param { number } [accessExpiresIn] Access token expiration
+	 * @param { number } [refreshExpiresIn] Refresh token expiration
+	 * @returns { Promise<{ accessToken: string; refreshToken: string }> } Token pair
 	 */
 	async generatePair(
 		payload: Record<string, any>,
@@ -58,6 +68,11 @@ export class JwtService {
 		return { accessToken, refreshToken };
 	}
 
+	/**
+	 * @description Verifies a JWT token
+	 * @param { string } token The token to verify
+	 * @returns { Promise<T | null> } The decoded payload or null if invalid
+	 */
 	async verify<T = any>(token: string): Promise<T | null> {
 		try {
 			const payload = await verify(token, this.secret, this.alg);
@@ -68,7 +83,9 @@ export class JwtService {
 	}
 
 	/**
-	 * Decodes token without verification
+	 * @description Decodes token without verification
+	 * @param { string } token The token to decode
+	 * @returns { T | null } The decoded payload or null
 	 */
 	decode<T = any>(token: string): T | null {
 		try {
@@ -80,7 +97,9 @@ export class JwtService {
 	}
 
 	/**
-	 * Creates a dynamic instance with a different secret or algorithm if needed
+	 * @description Creates a dynamic instance with a different secret or algorithm
+	 * @param { JwtOptions } options JWT configuration
+	 * @returns { JwtService } New instance
 	 */
 	static create(options: JwtOptions): JwtService {
 		return new JwtService(options);

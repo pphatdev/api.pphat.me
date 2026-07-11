@@ -7,7 +7,8 @@ import skillsData from './skills.json';
 const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 
 /**
- * Builds the system prompt for the Portfolio Chatbot
+ * @description Builds the system prompt for the Portfolio Chatbot
+ * @returns { string } The formatted system prompt
  */
 function getSystemPrompt(): string {
 	const skills = skillsData.skills.map(s => {
@@ -35,14 +36,19 @@ Guidelines:
 }
 
 /**
- * Extracts AI response from the result
+ * @description Extracts AI response from the result
+ * @param { any } response The raw AI result
+ * @returns { string } Extracted text
  */
 function getAiResponse(response: any): string {
 	return response.response || response.result?.response || 'I am sorry, I could not process your request.';
 }
 
 /**
- * Prepares the message list for the AI model
+ * @description Prepares the message list for the AI model
+ * @param { string } userMessage Current user message
+ * @param { ChatMessage[] } history Chat history
+ * @returns { ChatMessage[] } Full message list
  */
 function prepareChatMessages(userMessage: string, history: ChatMessage[]): ChatMessage[] {
 	return [
@@ -53,7 +59,12 @@ function prepareChatMessages(userMessage: string, history: ChatMessage[]): ChatM
 }
 
 /**
- * Saves chat history to the database
+ * @description Saves chat history to the database
+ * @param { D1Database | undefined } db Database binding
+ * @param { string | undefined } userId User ID
+ * @param { string } userMessage User's message
+ * @param { string } aiResponse AI's response
+ * @returns { Promise<void> }
  */
 async function saveChatHistory(db: D1Database | undefined, userId: string | undefined, userMessage: string, aiResponse: string) {
 	if (!userId || !db) return;
@@ -71,7 +82,10 @@ async function saveChatHistory(db: D1Database | undefined, userId: string | unde
 
 export class ChatController {
 	/**
-	 * Main chat endpoint
+	 * @description Main chat endpoint
+	 * @method POST
+	 * @param { Context } c The Hono context
+	 * @returns { Promise<Response> } The AI chat response
 	 */
 	static async chat(c: Context): Promise<Response> {
 		try {
@@ -111,7 +125,10 @@ export class ChatController {
 	}
 
 	/**
-	 * Retrieve chat history for the logged-in user
+	 * @description Retrieve chat history for the logged-in user
+	 * @method GET
+	 * @param { Context } c The Hono context
+	 * @returns { Promise<Response> } The user's chat history
 	 */
 	static async getHistory(c: Context): Promise<Response> {
 		try {

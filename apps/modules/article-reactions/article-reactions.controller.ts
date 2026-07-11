@@ -6,6 +6,11 @@ const ALLOWED_TYPES = new Set(["like", "heart", "fire", "clap", "wow"]);
 
 export class ArticleReactionsController {
 
+	/**
+	 * @description Validates that the reaction type is allowed
+	 * @param { string } type The reaction type to validate
+	 * @returns { Response | null } Error response or null if valid
+	 */
 	private static validateType(type: string): Response | null {
 		if (!ALLOWED_TYPES.has(type)) {
 			return Res.unprocessable(`Invalid reaction type. Allowed: ${[...ALLOWED_TYPES].join(", ")}`);
@@ -13,12 +18,28 @@ export class ArticleReactionsController {
 		return null;
 	}
 
+	/**
+	 * @description List reactions for an article
+	 * @method GET
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @param { string } articleId The article ID
+	 * @returns { Promise<Response> } List of reactions
+	 */
 	static async list(request: Request, env: Env, articleId: string): Promise<Response> {
 		const repo = new ArticleReactionRepository(env.DB);
 		const reactions = await new ArticleReactionService(repo).list(articleId);
 		return Res.ok(reactions);
 	}
 
+	/**
+	 * @description Create (increment) a reaction for an article
+	 * @method POST
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @param { string } articleId The article ID
+	 * @returns { Promise<Response> } The updated reaction
+	 */
 	static async create(request: Request, env: Env, articleId: string): Promise<Response> {
 		const repo = new ArticleReactionRepository(env.DB);
 		const body = await request.json().catch(() => null);
@@ -31,6 +52,15 @@ export class ArticleReactionsController {
 		return Res.ok(reaction);
 	}
 
+	/**
+	 * @description Increment a specific reaction type
+	 * @method PATCH
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @param { string } articleId The article ID
+	 * @param { string } type The reaction type
+	 * @returns { Promise<Response> } The updated reaction
+	 */
 	static async incrementByType(request: Request, env: Env, articleId: string, type: string): Promise<Response> {
 		const invalid = ArticleReactionsController.validateType(type);
 		if (invalid) return invalid;
@@ -39,6 +69,15 @@ export class ArticleReactionsController {
 		return Res.ok(reaction);
 	}
 
+	/**
+	 * @description Decrement a specific reaction type
+	 * @method DELETE
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @param { string } articleId The article ID
+	 * @param { string } type The reaction type
+	 * @returns { Promise<Response> } The updated reaction or removal status
+	 */
 	static async decrementByType(request: Request, env: Env, articleId: string, type: string): Promise<Response> {
 		const invalid = ArticleReactionsController.validateType(type);
 		if (invalid) return invalid;

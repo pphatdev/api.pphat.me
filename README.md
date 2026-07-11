@@ -12,9 +12,8 @@
 
 # API.PPHAT.ME
 
-	
 
-> Version 0.14.0
+> Version 0.14.1
 
 A RESTful API built with **Cloudflare Workers** and **D1 (SQLite)** for managing articles, projects, authors, and tags.
 
@@ -45,12 +44,16 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 ## Project Structure
 
 ```
+.rules/                             # Project-specific AI & coding rules
 apps/
 ├── app.ts                           # Worker entry point (Hono app)
 ├── middlewares/
-│   ├── auth.middleware.ts           # JWT auth guard (requireAuth + authGuard)
-│   └── rate-limit.middleware.ts     # Per-API-type rate limiting
+│   ├── auth.middleware.ts           # JWT auth guard
+│   ├── rate-limit.middleware.ts     # Per-API-type rate limiting
+│   ├── security.middleware.ts       # Standard security headers
+│   └── traffic.middleware.ts       # Visitor traffic logging
 ├── modules/
+│   ├── ai/                          # AI Content Generator (Llama 3.1)
 │   ├── articles/                    # Article CRUD
 │   ├── article-stats/               # View counter & reading time
 │   ├── article-reactions/           # Emoji reactions per article
@@ -59,12 +62,14 @@ apps/
 │   ├── project-details/             # Extended project details
 │   ├── authors/                     # Author management
 │   ├── tags/                        # Tag management
-│   ├── auth/                        # Authentication (email-based)
-│   └── chat/                        # Portfolio Chatbot API
+│   ├── auth/                        # Authentication (OAuth & Email)
+│   ├── chat/                        # Portfolio Chatbot API
+│   ├── contact/                     # Contact message management
+│   └── dashboard/                   # Admin dashboard & analytics
 └── shared/                          # Utility helpers and common interfaces
 migrations/                          # D1 SQL migrations
-doc/collections/                     # Postman collection
-test/                                # Vitest integration tests
+doc/collections/                     # Postman collections
+test/                                # Integration & feature tests
 ```
 
 ---

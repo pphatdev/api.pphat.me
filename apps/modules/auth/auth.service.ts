@@ -5,6 +5,15 @@ import { JwtService } from '../../shared/helpers/jwt';
  * JWT helpers (Delegated to JwtService)
  */
 
+/**
+ * @description Internal: generates access and refresh tokens
+ * @param { Omit<JwtPayload, 'iat' | 'exp'> } payload JWT payload
+ * @param { IAuthRepository } repo Auth repository
+ * @param { string } secret JWT secret
+ * @param { number } [accessTTL=3600] Access token TTL in seconds
+ * @param { number } [refreshTTL=2592000] Refresh token TTL in seconds
+ * @returns { Promise<{ accessToken: string; refreshToken: string }> } Token pair
+ */
 async function generateTokens(
 	payload: Omit<JwtPayload, 'iat' | 'exp'>,
 	repo: IAuthRepository,
@@ -21,10 +30,23 @@ async function generateTokens(
 	return { accessToken, refreshToken };
 }
 
+/**
+ * @description Verify a JWT token
+ * @param { string } token The token to verify
+ * @param { string } secret JWT secret
+ * @returns { Promise<JwtPayload | null> } Decoded payload or null
+ */
 export async function verifyJwt(token: string, secret: string): Promise<JwtPayload | null> {
 	return JwtService.create({ secret }).verify<JwtPayload>(token);
 }
 
+/**
+ * @description Create a new JWT token
+ * @param { Record<string, any> } payload Data to encode
+ * @param { string } secret JWT secret
+ * @param { number } [expiresIn] TTL in seconds
+ * @returns { Promise<string> } Encoded token
+ */
 export async function createJwt(payload: Record<string, any>, secret: string, expiresIn?: number): Promise<string> {
 	return JwtService.create({ secret }).generate(payload, expiresIn);
 }
@@ -32,10 +54,21 @@ export async function createJwt(payload: Record<string, any>, secret: string, ex
 /**
  * OAuth state (CSRF protection)
  */
+/**
+ * @description Generate OAuth state for CSRF protection
+ * @param { string } secret JWT secret
+ * @returns { Promise<string> } Encoded state
+ */
 export async function generateOAuthState(secret: string): Promise<string> {
 	return JwtService.create({ secret, expiresIn: 600 }).generate({ ts: Date.now() });
 }
 
+/**
+ * @description Verify OAuth state
+ * @param { string } state The state to verify
+ * @param { string } secret JWT secret
+ * @returns { Promise<boolean> } True if valid
+ */
 export async function verifyOAuthState(state: string, secret: string): Promise<boolean> {
 	const payload = await JwtService.create({ secret }).verify(state);
 	return !!payload;
@@ -43,6 +76,14 @@ export async function verifyOAuthState(state: string, secret: string): Promise<b
 
 /**
  * GitHub OAuth
+ */
+/**
+ * @description Exchange GitHub auth code for access token
+ * @param { string } code Auth code
+ * @param { string } clientId GitHub client ID
+ * @param { string } clientSecret GitHub client secret
+ * @param { string } redirectUri GitHub redirect URI
+ * @returns { Promise<string> } Access token
  */
 export async function exchangeGitHubCode(
 	code: string,
@@ -60,6 +101,11 @@ export async function exchangeGitHubCode(
 	return data.access_token;
 }
 
+/**
+ * @description Fetch user info from GitHub
+ * @param { string } accessToken GitHub access token
+ * @returns { Promise<{ providerId: string; email: string | null; name: string | null; avatar: string | null }> } User profile
+ */
 export async function fetchGitHubUser(
 	accessToken: string,
 ): Promise<{ providerId: string; email: string | null; name: string | null; avatar: string | null }> {
@@ -85,6 +131,14 @@ export async function fetchGitHubUser(
 /**
  * Google OAuth
  */
+/**
+ * @description Exchange Google auth code for access token
+ * @param { string } code Auth code
+ * @param { string } clientId Google client ID
+ * @param { string } clientSecret Google client secret
+ * @param { string } redirectUri Google redirect URI
+ * @returns { Promise<string> } Access token
+ */
 export async function exchangeGoogleCode(
 	code: string,
 	clientId: string,
@@ -107,6 +161,11 @@ export async function exchangeGoogleCode(
 	return data.access_token;
 }
 
+/**
+ * @description Fetch user info from Google
+ * @param { string } accessToken Google access token
+ * @returns { Promise<{ providerId: string; email: string | null; name: string | null; avatar: string | null }> } User profile
+ */
 export async function fetchGoogleUser(
 	accessToken: string,
 ): Promise<{ providerId: string; email: string | null; name: string | null; avatar: string | null }> {
@@ -125,6 +184,10 @@ export async function fetchGoogleUser(
 /**
  * Email OTP helpers
  */
+/**
+ * @description Generate a 6-digit OTP
+ * @returns { string } The OTP
+ */
 function generateOtp(): string {
 	const bytes = new Uint8Array(3);
 	crypto.getRandomValues(bytes);
@@ -132,12 +195,22 @@ function generateOtp(): string {
 	return String(num).padStart(6, '0');
 }
 
+/**
+ * @description Calculate OTP expiry timestamp
+ * @param { number } [ttlMinutes=10] TTL in minutes
+ * @returns { string } ISO-like timestamp
+ */
 function otpExpiresAt(ttlMinutes = 10): string {
 	return new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
 }
 
 /**
  * Password helpers (PBKDF2 via Web Crypto)
+ */
+/**
+ * @description Hash a password using PBKDF2
+ * @param { string } password Raw password
+ * @returns { Promise<string> } Salted hash string
  */
 async function hashPassword(password: string): Promise<string> {
 	const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -158,6 +231,12 @@ async function hashPassword(password: string): Promise<string> {
 	return `${saltHex}:${hashHex}`;
 }
 
+/**
+ * @description Verify a password against a stored hash
+ * @param { string } password Raw password
+ * @param { string } stored Stored hash string
+ * @returns { Promise<boolean> } True if matches
+ */
 async function verifyPassword(password: string, stored: string): Promise<boolean> {
 	const [saltHex, hashHex] = stored.split(':');
 	if (!saltHex || !hashHex) return false;
@@ -184,6 +263,13 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
 export class AuthService {
 	constructor(private readonly repo: IAuthRepository) { }
 
+	/**
+	 * @description Handle OAuth callback data and generate tokens
+	 * @param { 'github' | 'google' } provider OAuth provider
+	 * @param { object } userInfo User profile from provider
+	 * @param { string } jwtSecret JWT secret
+	 * @returns { Promise<{ accessToken: string; refreshToken: string }> } Token pair
+	 */
 	async handleOAuthCallback(
 		provider: 'github' | 'google',
 		userInfo: { providerId: string; email: string | null; name: string | null; avatar: string | null },
@@ -201,10 +287,22 @@ export class AuthService {
 		);
 	}
 
+	/**
+	 * @description Get user details by ID
+	 * @param { string } id User ID
+	 * @returns { Promise<User | null> } User details or null
+	 */
 	getCurrentUser(id: string): Promise<User | null> {
 		return this.repo.findUserById(id);
 	}
 
+	/**
+	 * @description Register a new email-based user
+	 * @param { string } email User email
+	 * @param { string } name User name
+	 * @param { string } password Raw password
+	 * @returns { Promise<{ otp: string }> } Verification OTP
+	 */
 	async registerEmailUser(email: string, name: string, password: string): Promise<{ otp: string }> {
 		const existing = await this.repo.findEmailUser(email);
 		if (existing) {
@@ -221,6 +319,13 @@ export class AuthService {
 		return { otp };
 	}
 
+	/**
+	 * @description Authenticate user with email and password
+	 * @param { string } email User email
+	 * @param { string } password Raw password
+	 * @param { string } jwtSecret JWT secret
+	 * @returns { Promise<{ accessToken: string; refreshToken: string }> } Token pair
+	 */
 	async loginWithPassword(email: string, password: string, jwtSecret: string): Promise<{ accessToken: string; refreshToken: string }> {
 		const user = await this.repo.findEmailUser(email);
 		if (!user) throw Object.assign(new Error('Invalid email or password'), { status: 401 });
@@ -235,6 +340,13 @@ export class AuthService {
 		);
 	}
 
+	/**
+	 * @description Verify email OTP and generate tokens
+	 * @param { string } email User email
+	 * @param { string } code The OTP
+	 * @param { string } jwtSecret JWT secret
+	 * @returns { Promise<{ accessToken: string; refreshToken: string }> } Token pair
+	 */
 	async verifyEmailOtp(email: string, code: string, jwtSecret: string): Promise<{ accessToken: string; refreshToken: string }> {
 		const valid = await this.repo.verifyAndConsumeOtp(email, code);
 		if (!valid) throw Object.assign(new Error('Invalid or expired verification code'), { status: 400 });
@@ -248,6 +360,12 @@ export class AuthService {
 		);
 	}
 
+	/**
+	 * @description Refresh auth tokens using a refresh token
+	 * @param { string } refreshToken The refresh token
+	 * @param { string } jwtSecret JWT secret
+	 * @returns { Promise<{ accessToken: string; refreshToken: string }> } New token pair
+	 */
 	async refresh(refreshToken: string, jwtSecret: string): Promise<{ accessToken: string; refreshToken: string }> {
 		const payload = await verifyJwt(refreshToken, jwtSecret);
 		if (!payload || (payload as any).type !== 'refresh') {
@@ -270,6 +388,11 @@ export class AuthService {
 		);
 	}
 
+	/**
+	 * @description Revoke a refresh token (logout)
+	 * @param { string } refreshToken The refresh token to revoke
+	 * @returns { Promise<void> }
+	 */
 	async logout(refreshToken: string): Promise<void> {
 		await this.repo.deleteRefreshToken(refreshToken);
 	}

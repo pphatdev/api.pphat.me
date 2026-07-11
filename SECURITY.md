@@ -6,6 +6,7 @@ The following versions of the API are currently being supported with security up
 
 | Version | Supported          |
 | ------- | ------------------ |
+| v0.14.x | :white_check_mark: |
 | v0.9.x  | :white_check_mark: |
 | < v0.9  | :x:                |
 

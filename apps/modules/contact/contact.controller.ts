@@ -5,6 +5,12 @@ import { Res } from "../../shared/helpers/response";
 import { parseListParams } from "../../shared/helpers/query";
 
 export class ContactController {
+    /**
+     * @description List all contact messages
+     * @method GET
+     * @param { Context } c The Hono context
+     * @returns { Promise<Response> } Paginated list of messages
+     */
     static async list(c: Context) {
         const user = c.get('user');
         if (user?.role !== 'admin') return Res.forbidden();
@@ -14,6 +20,12 @@ export class ContactController {
         return Res.ok(result);
     }
 
+    /**
+     * @description Get a contact message by ID
+     * @method GET
+     * @param { Context } c The Hono context
+     * @returns { Promise<Response> } The message details
+     */
     static async getById(c: Context) {
         const user = c.get('user');
         if (user?.role !== 'admin') return Res.forbidden();
@@ -27,6 +39,12 @@ export class ContactController {
         return Res.ok(message);
     }
 
+    /**
+     * @description Submit a new contact message
+     * @method POST
+     * @param { Context } c The Hono context
+     * @returns { Promise<Response> } Success message
+     */
     static async submit(c: Context) {
         try {
             const body = await c.req.json<CreateContactDto>();
