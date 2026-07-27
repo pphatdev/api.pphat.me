@@ -4,7 +4,57 @@ import { sendContactEmail, SmtpConfig } from '../auth/email.service';
 
 export class ContactService {
     /**
-     * @description Process and save a contact message submission
+     * @description Persist the contact message to D1. Fast path — no network I/O.
+     * The email notification is a separate call (`notifyEmail`) so the caller can
+     * dispatch it via `ctx.waitUntil()` without blocking the HTTP response.
+     * @param { D1Database } db Database binding
+     * @param { CreateContactDto } dto Message data
+     * @param { object } meta Client metadata (IP, UA)
+     * @returns { Promise<void> }
+     */
+    static async saveMessage(
+        db: D1Database,
+        dto: CreateContactDto,
+        meta: { ip: string; ua: string },
+    ): Promise<void> {
+        const message: ContactMessage = {
+            id: crypto.randomUUID(),
+            ...dto,
+            ip_address: meta.ip,
+            user_agent: meta.ua,
+            created_at: new Date().toISOString()
+        };
+        await ContactRepo.create(db, message);
+    }
+
+    /**
+     * @description Send the operator notification email for a contact submission.
+     * Meant to be dispatched via `ctx.waitUntil()` — swallows errors so a broken
+     * SMTP config doesn't surface to the submitter.
+     * @param { CreateContactDto } dto Message data
+     * @param { SmtpConfig } smtp SMTP configuration
+     * @returns { Promise<void> }
+     */
+    static async notifyEmail(dto: CreateContactDto, smtp: SmtpConfig): Promise<void> {
+        try {
+            await sendContactEmail(
+                {
+                    name: dto.name,
+                    email: dto.email,
+                    subject: dto.subject || 'New Contact Message',
+                    message: dto.message,
+                },
+                smtp,
+            );
+        } catch (error) {
+            console.error('Failed to send contact email:', error);
+        }
+    }
+
+    /**
+     * @description Convenience wrapper — persist then send email inline. Retained for
+     * callers that don't have access to an ExecutionContext. Prefer saveMessage +
+     * ctx.waitUntil(notifyEmail(...)) in Worker handlers.
      * @param { D1Database } db Database binding
      * @param { CreateContactDto } dto Message data
      * @param { object } meta Client metadata (IP, UA)
@@ -15,33 +65,10 @@ export class ContactService {
         db: D1Database,
         dto: CreateContactDto,
         meta: { ip: string; ua: string },
-        smtp: SmtpConfig
+        smtp: SmtpConfig,
     ): Promise<void> {
-        const message: ContactMessage = {
-            id: crypto.randomUUID(),
-            ...dto,
-            ip_address: meta.ip,
-            user_agent: meta.ua,
-            created_at: new Date().toISOString()
-        };
-
-        await ContactRepo.create(db, message);
-
-        try {
-            await sendContactEmail(
-                {
-                    name: dto.name,
-                    email: dto.email,
-                    subject: dto.subject || 'New Contact Message',
-                    message: dto.message
-                },
-                smtp
-            );
-        } catch (error) {
-            console.error('Failed to send contact email:', error);
-            // We don't throw here to avoid failing the request if DB save was successful
-            // but email failed (though ideally we'd have a retry mechanism)
-        }
+        await ContactService.saveMessage(db, dto, meta);
+        await ContactService.notifyEmail(dto, smtp);
     }
 
     /**

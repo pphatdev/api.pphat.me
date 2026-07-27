@@ -73,5 +73,15 @@
 	],
 	"ai": {
 		"binding": "AI"
+	},
+	/**
+	 * Scheduled (Cron) Triggers
+	 * https://developers.cloudflare.com/workers/configuration/cron-triggers/
+	 *
+	 * Every 5 minutes: promote articles whose `publish_at` (UTC, converted from
+	 * Asia/Phnom_Penh) has elapsed. Handler exported as `scheduled` in apps/app.ts.
+	 */
+	"triggers": {
+		"crons": ["*/5 * * * *"]
 	}
 }

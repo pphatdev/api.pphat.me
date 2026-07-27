@@ -8,6 +8,7 @@ import { ArticleService } from "./articles.service";
 import { TagRepository } from "../tags/tags.repo";
 import { TagService } from "../tags/tags.service";
 import { getValidBody, validateRequired } from "../../shared/helpers/request";
+import { parsePhnomPenhToUtc } from "../../shared/helpers/tz";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -134,15 +135,24 @@ export class ArticlesController {
 	};
 
 	/**
-	 * @description Public: list all published articles
+	 * @description Authenticated: list articles.
+	 *  - Non-admin: only `published=1 AND is_public=1`. `?status=` is ignored.
+	 *  - Admin: sees all statuses. Filter with `?status=public,draft,queue,private` (comma-separated).
 	 * @method GET
 	 * @param { Context<AppEnv> } c The Hono context
 	 * @returns { Promise<Response> } Paginated list of articles
 	 */
 	static async list(c: Context<AppEnv>): Promise<Response> {
 		const repository = new ArticleRepository(c.env.DB);
+		// Lazy self-heal: promote any scheduled rows whose publish_at has elapsed. The
+		// Cloudflare cron does this every 5 min in production, but doesn't fire under
+		// `wrangler dev` — this keeps the `is_public` flag in sync so admin queries and
+		// dashboards see a consistent state without waiting on the cron.
+		await repository.promoteScheduled().catch(() => { /* non-fatal — list still works */ });
 		const options = parseListParams(c.req.url);
-		const result = await new ArticleService(repository).list(options, true);
+		const user = c.get('user');
+		const isAdmin = user?.role === 'admin';
+		const result = await new ArticleService(repository).list(options, true, { admin: isAdmin });
 		return Res.ok(result);
 	}
 
@@ -205,6 +215,35 @@ export class ArticlesController {
 	}
 
 	/**
+	 * @description Convert incoming Asia/Phnom_Penh timestamps on a DTO to UTC ISO for storage.
+	 * Normalises `publishAt` → `publish_at` and validates:
+	 *   - `publishAt`/`publish_at`: parseable + not in the past (unless `is_public` is explicitly set).
+	 *   - `isPublic`/`is_public`: boolean.
+	 * @param { any } body The raw request body
+	 * @returns { Response | null } Error response if invalid, null otherwise (mutates body in place)
+	 */
+	private static normalizeSchedulingFields(body: any): Response | null {
+		const rawPublishAt = body.publishAt ?? body.publish_at;
+		if (rawPublishAt !== undefined && rawPublishAt !== null && rawPublishAt !== '') {
+			const utc = parsePhnomPenhToUtc(String(rawPublishAt));
+			if (!utc) return Res.unprocessable('publishAt must be a valid ISO or `YYYY-MM-DD HH:mm` Phnom_Penh timestamp');
+			body.publish_at = utc;
+		} else if (rawPublishAt === null || rawPublishAt === '') {
+			body.publish_at = null;
+		}
+		delete body.publishAt;
+
+		const rawIsPublic = body.isPublic ?? body.is_public;
+		if (rawIsPublic !== undefined) {
+			if (typeof rawIsPublic !== 'boolean') return Res.unprocessable('isPublic must be boolean');
+			body.is_public = rawIsPublic;
+		}
+		delete body.isPublic;
+
+		return null;
+	}
+
+	/**
 	 * @description Authenticated: create article
 	 * @method POST
 	 * @param { Context<AppEnv> } c The Hono context
@@ -214,6 +253,9 @@ export class ArticlesController {
 		try {
 			const body = await getValidBody<any>(c);
 			validateRequired(body, ['title', 'slug', 'description']);
+
+			const invalid = ArticlesController.normalizeSchedulingFields(body);
+			if (invalid) return invalid;
 
 			const repo = new ArticleRepository(c.env.DB);
 			const article = await repo.create({ ...body, owner_id: c.get('user')?.sub } as any);
@@ -225,13 +267,17 @@ export class ArticlesController {
 	}
 
 	/**
-	 * @description Handles slug conflict errors
+	 * @description Handles slug conflict and validation errors thrown by the repo
 	 * @param { unknown } err The error caught
-	 * @returns { Response } Conflict response or throws
+	 * @returns { Response } Appropriate error response or re-throws
 	 */
 	private static handleSlugConflict(err: unknown): Response {
-		if (err instanceof Error && err.message.includes("UNIQUE constraint failed: articles.slug")) {
-			return Res.conflict("An article with this slug already exists");
+		if (err instanceof Error) {
+			const status = (err as any).status;
+			if (status === 422) return Res.unprocessable(err.message);
+			if (err.message.includes("UNIQUE constraint failed: articles.slug")) {
+				return Res.conflict("An article with this slug already exists");
+			}
 		}
 		throw err;
 	}
@@ -246,6 +292,8 @@ export class ArticlesController {
 		const id = c.get('articleId'); // set by requireWriteAccess
 		try {
 			const body = await getValidBody<any>(c);
+			const invalid = ArticlesController.normalizeSchedulingFields(body);
+			if (invalid) return invalid;
 			const article = await new ArticleService(new ArticleRepository(c.env.DB)).update(id, body as never);
 			if (!article) return Res.notFound();
 			return Res.ok(article);

@@ -30,12 +30,42 @@
   "content": "Full article content.",
   "file_path": "",
   "published": false,
+  "isPublic": false,
+  "publishAt": "2026-08-15 09:00",
   "author_ids": [1],
   "tag_ids": []
 }
 ```
 
 > `tag_ids` is optional. If provided, all IDs must exist in the `tags` table — otherwise a `422` error is returned.
+
+### Publish scheduling (Asia/Phnom_Penh)
+
+- `isPublic` (boolean) — direct control of the public-list visibility. Defaults to `false`.
+- `publishAt` (string, optional) — when the article should become public. Two accepted formats, both interpreted in **Asia/Phnom_Penh (+07:00, no DST)**:
+  - Bare local: `YYYY-MM-DD HH:mm` or `YYYY-MM-DDTHH:mm:ss` (no offset)
+  - Full ISO with any offset: `2026-08-15T02:00:00Z`, `2026-08-15T09:00:00+07:00`
+
+Persisted internally as UTC ISO. On the way out, `publishAt` is always formatted with the `+07:00` offset.
+
+**Auto-promote flow**
+1. `POST /v1/api/articles` with `published: true` + `publishAt` in the future → article is stored with `is_public = 0` and stays out of the public list.
+2. A Cloudflare Cron Trigger (`*/5 * * * *`, see `wrangler.jsonc → triggers.crons`) invokes `scheduled()` in `apps/app.ts`, which calls `ArticleRepository.promoteScheduled()`. Any row where `published = 1 AND is_public = 0 AND publish_at <= now()` flips to `is_public = 1`.
+3. A `publishAt` in the past on create is auto-promoted immediately (no wait for cron).
+
+**Filtering**
+- Public list endpoint (`GET /v1/api/articles`) requires `authGuard`. Non-admin callers see only `published=1 AND is_public=1`; admin callers see every article regardless of status.
+- Every article response now exposes a derived `status` field: `"public" | "draft" | "queue" | "private"` (see mapping below). Admins can filter by passing `?status=public,draft,queue,private` (comma-separated). Non-admin callers get their `?status` param silently ignored.
+- Direct-by-slug/id reads (`GET /v1/api/articles/:slug`) always return the article (no `is_public` filter), so owners can preview scheduled content.
+
+**Status derivation**
+
+| status    | published | is_public | publish_at    |
+|-----------|-----------|-----------|---------------|
+| `public`  | 1         | 1         | any           |
+| `queue`   | 1         | 0         | NOT NULL      |
+| `private` | 1         | 0         | NULL          |
+| `draft`   | 0         | any       | any           |
 
 ---
 

@@ -1,3 +1,7 @@
+import type { ArticleStatus } from "../interfaces";
+
+const VALID_STATUSES: readonly ArticleStatus[] = ['public', 'draft', 'queue', 'private'];
+
 export interface ListOptions {
 	page: number;
 	limit: number;
@@ -6,6 +10,7 @@ export interface ListOptions {
 	order?: 'asc' | 'desc';
 	tags?: string[];
 	authors?: string[];
+	status?: ArticleStatus[];
 }
 
 /**
@@ -29,7 +34,15 @@ export function parseListParams(urlStr: string): ListOptions {
 		order: parseOrder(sp.get("order")),
 		tags: parseArray(sp.get("tags")),
 		authors: parseArray(sp.get("authors")),
+		status: parseStatus(sp.get("status")),
 	};
+}
+
+function parseStatus(val: string | null): ArticleStatus[] | undefined {
+	const items = parseArray(val);
+	if (!items) return undefined;
+	const filtered = items.filter((s): s is ArticleStatus => (VALID_STATUSES as readonly string[]).includes(s));
+	return filtered.length > 0 ? filtered : undefined;
 }
 
 function parseNumber(val: string | null, def: number, min: number, max: number): number {

@@ -1,8 +1,9 @@
-import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
+import { ArticleStatus, PaginatedResult, PaginationParams } from "../../shared/interfaces";
 import { Tag } from "../tags/tags.interface";
 import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface";
 
 import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow } from "../../shared/helpers/repo";
+import { formatUtcAsPhnomPenh } from "../../shared/helpers/tz";
 import type { Article, IArticleRepository, ArticleRow, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
 
 /**
@@ -21,15 +22,21 @@ export class ArticleRepository implements IArticleRepository {
 	constructor(private readonly db: D1Database) { }
 
 	/**
-	 * @description Find all articles with pagination
-	 * @param { PaginationParams } params Pagination parameters
-	 * @param { boolean } [onlyPublished=true] Whether to only list published articles
+	 * @description Find all articles with pagination.
+	 *  - Non-admin (`opts.admin` false or omitted) and `onlyPublished` true: the standard
+	 *    public list — only `published=1 AND is_public=1`.
+	 *  - Admin: sees every article regardless of `published`/`is_public`. May pass
+	 *    `params.status` (subset of 'public'|'draft'|'queue'|'private') to filter.
+	 * @param { PaginationParams } params Pagination parameters (includes optional `status`)
+	 * @param { boolean } [onlyPublished=true] Public-visibility gate for non-admin callers
+	 * @param { object } [opts] Auth context
+	 * @param { boolean } [opts.admin] When true, unlock the full-list + status-filter behavior
 	 * @returns { Promise<PaginatedResult<Article>> } Paginated articles
 	 */
-	async findAll(params: PaginationParams, onlyPublished = true): Promise<PaginatedResult<Article>> {
+	async findAll(params: PaginationParams, onlyPublished = true, opts?: { admin?: boolean }): Promise<PaginatedResult<Article>> {
 		const { page, limit, sort, order } = params;
 		const offset = (page - 1) * limit;
-		const { conditions, bindings, nextIdx } = this.buildConditions(params, onlyPublished);
+		const { conditions, bindings, nextIdx } = this.buildConditions(params, onlyPublished && !opts?.admin, opts?.admin ? params.status : undefined);
 		const orderBy = this.buildOrderBy(sort, order);
 		const where = conditions.join(' AND ');
 
@@ -74,9 +81,14 @@ export class ArticleRepository implements IArticleRepository {
 	 * @param { boolean } onlyPublished Published filter
 	 * @returns { object } Conditions, bindings, and next placeholder index
 	 */
-	private buildConditions(params: PaginationParams, onlyPublished: boolean) {
+	private buildConditions(params: PaginationParams, onlyPublished: boolean, statusFilter?: ArticleStatus[]) {
 		const { search, tags, authors } = params;
-		let { conditions, bindings, nextIdx } = buildListConditions(search, onlyPublished);
+		let { conditions, bindings, nextIdx } = buildListConditions(search, onlyPublished, 1, { onlyPublic: onlyPublished });
+
+		if (statusFilter?.length) {
+			const statusClauses = statusFilter.map((s) => this.statusToSql(s));
+			conditions.push(`(${statusClauses.join(' OR ')})`);
+		}
 
 		if (tags?.length) {
 			const placeholders = tags.map((_, i) => `?${nextIdx + i}`).join(', ');
@@ -96,6 +108,38 @@ export class ArticleRepository implements IArticleRepository {
 	}
 
 	/**
+	 * @description Map an ArticleStatus enum value to a SQL predicate against the underlying columns.
+	 * @param { ArticleStatus } s The status label
+	 * @returns { string } SQL fragment (no bound parameters — literals only)
+	 */
+	private statusToSql(s: ArticleStatus): string {
+		switch (s) {
+			case 'public':  return '(published = 1 AND is_public = 1)';
+			case 'queue':   return '(published = 1 AND is_public = 0 AND publish_at IS NOT NULL)';
+			case 'private': return '(published = 1 AND is_public = 0 AND publish_at IS NULL)';
+			case 'draft':   return '(published = 0)';
+		}
+	}
+
+	/**
+	 * @description Compute the derived status field from a raw row.
+	 * Treat a queued row whose `publish_at` has elapsed as `public` — the row is already
+	 * visible in the list even if the cron hasn't run yet to flip `is_public`.
+	 * @param { ArticleRow } row The DB row
+	 * @returns { ArticleStatus } Public | queue | private | draft
+	 */
+	private computeStatus(row: ArticleRow): ArticleStatus {
+		if (row.published !== 1) return 'draft';
+		if (row.is_public === 1) return 'public';
+		if (row.publish_at) {
+			const due = new Date(row.publish_at).getTime();
+			if (!Number.isNaN(due) && due <= Date.now()) return 'public';
+			return 'queue';
+		}
+		return 'private';
+	}
+
+	/**
 	 * @description Find all articles by a specific author
 	 * @param { number } authorId The author ID
 	 * @param { PaginationParams } params Pagination parameters
@@ -110,7 +154,9 @@ export class ArticleRepository implements IArticleRepository {
 			.map(col => `a.${ALLOWED_SORT_COLS.includes(col) ? col : 'created_at'} ${safeOrder}`)
 			.join(', ');
 		const offset = (page - 1) * limit;
-		const publishedFilter = onlyPublished ? 'AND a.published = 1' : '';
+		const publishedFilter = onlyPublished
+			? "AND a.published = 1 AND (a.is_public = 1 OR (a.publish_at IS NOT NULL AND datetime(a.publish_at) <= datetime('now')))"
+			: '';
 
 		let dataResult: Awaited<ReturnType<D1PreparedStatement['all']>>;
 		let countRow: { count: number } | null;
@@ -204,6 +250,8 @@ export class ArticleRepository implements IArticleRepository {
 	 * @returns { Promise<Article> } The created article
 	 */
 	async create(dto: CreateArticleDto): Promise<Article> {
+		if (dto.author_ids?.length) await this.assertAuthorsExist(dto.author_ids);
+
 		const id = crypto.randomUUID();
 		const now = new Date().toISOString();
 
@@ -218,6 +266,29 @@ export class ArticleRepository implements IArticleRepository {
 	}
 
 	/**
+	 * @description Ensure every author_id exists in the authors table before we insert
+	 * article_authors rows. Throws a 422-flagged error listing the missing IDs so the
+	 * controller can convert it into a clean HTTP response instead of a mid-transaction
+	 * FOREIGN KEY crash.
+	 * @param { number[] } authorIds The author IDs from the DTO
+	 * @throws { Error & { status: 422 } } When any ID is missing
+	 */
+	private async assertAuthorsExist(authorIds: number[]): Promise<void> {
+		const unique = Array.from(new Set(authorIds));
+		if (unique.length === 0) return;
+		const placeholders = unique.map((_, i) => `?${i + 1}`).join(', ');
+		const { results } = await this.db
+			.prepare(`SELECT id FROM authors WHERE id IN (${placeholders})`)
+			.bind(...unique)
+			.all<{ id: number }>();
+		const found = new Set((results ?? []).map((r) => r.id));
+		const missing = unique.filter((id) => !found.has(id));
+		if (missing.length > 0) {
+			throw Object.assign(new Error(`author_ids not found: ${missing.join(', ')}`), { status: 422 });
+		}
+	}
+
+	/**
 	 * @description Internal: insert article record
 	 * @param { string } id Article UUID
 	 * @param { CreateArticleDto } dto Article data
@@ -225,11 +296,17 @@ export class ArticleRepository implements IArticleRepository {
 	 * @returns { Promise<void> }
 	 */
 	private async insertArticle(id: string, dto: CreateArticleDto, now: string): Promise<void> {
+		// If publish_at is already in the past, treat as immediately public so the record isn't
+		// stuck waiting on the next cron tick.
+		const publishAt = dto.publish_at ?? null;
+		const publishAtIsPast = publishAt !== null && new Date(publishAt).getTime() <= Date.now();
+		const isPublic = dto.is_public === true || publishAtIsPast ? 1 : 0;
+
 		await this.db
 			.prepare(
-				"INSERT INTO articles (id, title, slug, description, thumbnail, content, file_path, published, owner_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
+				"INSERT INTO articles (id, title, slug, description, thumbnail, content, file_path, published, is_public, publish_at, owner_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)"
 			)
-			.bind(id, dto.title, dto.slug, dto.description, dto.thumbnail ?? "", dto.content ?? "", dto.file_path ?? "", dto.published ? 1 : 0, dto.owner_id ?? null, now, now)
+			.bind(id, dto.title, dto.slug, dto.description, dto.thumbnail ?? "", dto.content ?? "", dto.file_path ?? "", dto.published ? 1 : 0, isPublic, publishAt, dto.owner_id ?? null, now, now)
 			.run();
 	}
 
@@ -257,6 +334,8 @@ export class ArticleRepository implements IArticleRepository {
 		const existing = await this.findById(id);
 		if (!existing) return null;
 
+		if (dto.author_ids?.length) await this.assertAuthorsExist(dto.author_ids);
+
 		const mappings: [keyof UpdateArticleDto, string, ((v: any) => any)?][] = [
 			['title', 'title'],
 			['slug', 'slug'],
@@ -265,6 +344,8 @@ export class ArticleRepository implements IArticleRepository {
 			['content', 'content'],
 			['file_path', 'file_path'],
 			['published', 'published', (v) => (v ? 1 : 0)],
+			['is_public', 'is_public', (v) => (v ? 1 : 0)],
+			['publish_at', 'publish_at', (v) => v ?? null],
 		];
 
 		const { fields, values, nextIdx } = buildUpdateFields(dto, mappings);
@@ -426,6 +507,24 @@ export class ArticleRepository implements IArticleRepository {
 	}
 
 	/**
+	 * @description Promote scheduled articles whose publish_at has elapsed.
+	 * Called by the Cloudflare Cron Trigger (see apps/app.ts `scheduled`).
+	 * Only flips `is_public` for rows that are also `published = 1`, so authors can still
+	 * schedule then park a draft without it going live.
+	 * @returns { Promise<number> } Number of rows promoted this tick
+	 */
+	async promoteScheduled(): Promise<number> {
+		// Wrap both sides in datetime() so ISO input ("2026-07-27T05:10:49.123Z") normalizes
+		// to SQLite's "YYYY-MM-DD HH:MM:SS" format and compares lexicographically as expected.
+		const res = await this.db
+			.prepare(
+				"UPDATE articles SET is_public = 1, updated_at = datetime('now') WHERE is_public = 0 AND published = 1 AND publish_at IS NOT NULL AND datetime(publish_at) <= datetime('now')",
+			)
+			.run();
+		return res.meta?.changes ?? 0;
+	}
+
+	/**
 	 * @description Internal: hydrate article with stats and reactions
 	 * @param { ArticleRow } row The database row
 	 * @returns { Promise<Article> }
@@ -487,6 +586,9 @@ export class ArticleRepository implements IArticleRepository {
 			authors,
 			thumbnail: row.thumbnail,
 			published: row.published === 1,
+			isPublic: row.is_public === 1,
+			publishAt: formatUtcAsPhnomPenh(row.publish_at),
+			status: this.computeStatus(row),
 			ownerId: row.owner_id,
 			createdAt: row.created_at,
 			updatedAt: row.updated_at,

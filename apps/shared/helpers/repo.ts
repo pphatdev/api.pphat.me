@@ -73,15 +73,29 @@ export function buildUpdateFields<T>(dto: T, mappings: [keyof T, string, ((v: an
  * @param { string } [search] Search term
  * @param { boolean } [onlyPublished] Whether to filter by published status
  * @param { number } [startIdx=1] Starting bind parameter index
+ * @param { object } [opts] Extra filters
+ * @param { boolean } [opts.onlyPublic] When true, additionally require `is_public = 1`
  * @returns { object } Object with conditions array, bindings array, and nextIdx
  */
-export function buildListConditions(search?: string, onlyPublished?: boolean, startIdx = 1): { conditions: string[], bindings: unknown[], nextIdx: number } {
+export function buildListConditions(
+	search?: string,
+	onlyPublished?: boolean,
+	startIdx = 1,
+	opts?: { onlyPublic?: boolean },
+): { conditions: string[], bindings: unknown[], nextIdx: number } {
 	const conditions: string[] = ['1=1'];
 	const bindings: unknown[] = [];
 	let idx = startIdx;
 
 	if (onlyPublished) {
 		conditions.push('published = 1');
+	}
+
+	if (opts?.onlyPublic) {
+		// An article is publicly visible if either the cron already flipped is_public,
+		// or the scheduled publish_at has elapsed (so we surface it immediately even
+		// before the next cron tick). The Cloudflare cron reconciles the flag over time.
+		conditions.push("(is_public = 1 OR (publish_at IS NOT NULL AND datetime(publish_at) <= datetime('now')))");
 	}
 
 	if (search) {

@@ -77,7 +77,11 @@ export class ContactController {
                 from: c.env.SMTP_FROM
             };
 
-            await ContactService.submit(c.env.DB, body, meta, smtp);
+            // Persist inline; dispatch the email out-of-band so a slow/broken SMTP
+            // never blocks the HTTP response (the reason the contact test was
+            // timing out at 5s waiting on a DNS lookup to Gmail).
+            await ContactService.saveMessage(c.env.DB, body, meta);
+            c.executionCtx.waitUntil(ContactService.notifyEmail(body, smtp));
 
             return Res.created({ message: 'Message sent successfully' });
         } catch (error: any) {
