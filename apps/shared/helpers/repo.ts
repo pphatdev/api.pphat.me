@@ -73,15 +73,26 @@ export function buildUpdateFields<T>(dto: T, mappings: [keyof T, string, ((v: an
  * @param { string } [search] Search term
  * @param { boolean } [onlyPublished] Whether to filter by published status
  * @param { number } [startIdx=1] Starting bind parameter index
+ * @param { object } [opts] Extra filters
+ * @param { boolean } [opts.onlyPublic] When true, additionally require `is_public = 1`
  * @returns { object } Object with conditions array, bindings array, and nextIdx
  */
-export function buildListConditions(search?: string, onlyPublished?: boolean, startIdx = 1): { conditions: string[], bindings: unknown[], nextIdx: number } {
+export function buildListConditions(
+	search?: string,
+	onlyPublished?: boolean,
+	startIdx = 1,
+	opts?: { onlyPublic?: boolean },
+): { conditions: string[], bindings: unknown[], nextIdx: number } {
 	const conditions: string[] = ['1=1'];
 	const bindings: unknown[] = [];
 	let idx = startIdx;
 
 	if (onlyPublished) {
 		conditions.push('published = 1');
+	}
+
+	if (opts?.onlyPublic) {
+		conditions.push('is_public = 1');
 	}
 
 	if (search) {

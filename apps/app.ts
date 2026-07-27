@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { ArticleRepository } from './modules/articles/articles.repo';
 import { authRoutes } from './modules/auth/auth.route';
 import { articleRoutes } from './modules/articles/articles.route';
 import { projectRoutes } from './modules/projects/projects.route';
@@ -44,4 +45,24 @@ app.route('/', chatRoutes);
 app.route('/', contactRoutes);
 app.route('/', dashboardRoutes);
 
-export default app;
+/**
+ * Cloudflare Cron Trigger entry point.
+ * Configured in wrangler.jsonc as `*​/5 * * * *` — every 5 minutes.
+ * Promotes scheduled articles whose `publish_at` (UTC) has elapsed, so they
+ * become visible via the public list endpoint. Called by Workers runtime.
+ */
+async function scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil((async () => {
+        try {
+            const promoted = await new ArticleRepository(env.DB).promoteScheduled();
+            if (promoted > 0) console.log(`[cron:articles] promoted ${promoted} scheduled article(s) to public`);
+        } catch (err) {
+            console.error('[cron:articles] promoteScheduled failed', err);
+        }
+    })());
+}
+
+export default {
+    fetch: app.fetch,
+    scheduled,
+} satisfies ExportedHandler<Env>;

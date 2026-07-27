@@ -425,4 +425,109 @@ describe("Articles API", () => {
 			expect(Array.isArray(body)).toBe(true);
 		});
 	});
+
+	/**
+	 * Scheduling (publishAt / isPublic)
+	 */
+	describe("Scheduling", () => {
+		it("with publishAt in the future creates a hidden article (is_public=false)", async () => {
+			const future = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // +1h UTC
+			const slug = `scheduled-future-${Date.now()}`;
+			const createRes = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "Scheduled Future",
+					slug,
+					description: "Not yet public.",
+					published: true,
+					publishAt: future,
+				}),
+			});
+			expect(createRes.status).toBe(201);
+			const created = await createRes.json() as any;
+			expect(created.isPublic).toBe(false);
+			expect(created.publishAt).toMatch(/\+07:00$/);
+
+			const listRes = await SELF.fetch("http://example.com/v1/api/articles?limit=100", { headers: authHeaders });
+			const list = await listRes.json() as { data: any[] };
+			expect(list.data.find((a) => a.slug === slug)).toBeUndefined();
+		});
+
+		it("with publishAt in the past auto-promotes to public", async () => {
+			const past = new Date(Date.now() - 60 * 1000).toISOString(); // 1 min ago
+			const slug = `scheduled-past-${Date.now()}`;
+			const res = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "Scheduled Past",
+					slug,
+					description: "Already visible.",
+					published: true,
+					publishAt: past,
+				}),
+			});
+			expect(res.status).toBe(201);
+			const body = await res.json() as any;
+			expect(body.isPublic).toBe(true);
+		});
+
+		it("accepts a bare Phnom_Penh local timestamp (YYYY-MM-DD HH:mm)", async () => {
+			const y = new Date().getUTCFullYear() + 1;
+			const slug = `scheduled-local-${Date.now()}`;
+			const res = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "Scheduled Local",
+					slug,
+					description: "Local time input.",
+					published: true,
+					publishAt: `${y}-06-15 09:30`,
+				}),
+			});
+			expect(res.status).toBe(201);
+			const body = await res.json() as any;
+			expect(body.publishAt).toMatch(new RegExp(`^${y}-06-15T09:30:00\\+07:00$`));
+		});
+
+		it("rejects a malformed publishAt with 422", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "Bad TS",
+					slug: `bad-ts-${Date.now()}`,
+					description: "Bad timestamp.",
+					published: true,
+					publishAt: "not-a-date",
+				}),
+			});
+			expect(res.status).toBe(422);
+		});
+
+		it("promotes scheduled articles when publish_at has elapsed (repo.promoteScheduled)", async () => {
+			// Insert a scheduled article whose publish_at is already in the past.
+			const past = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+			const slug = `promote-${Date.now()}`;
+			await env.DB.prepare(
+				`INSERT INTO articles (id, title, slug, description, thumbnail, content, file_path, published, is_public, publish_at, owner_id, created_at, updated_at)
+				 VALUES (?1, ?2, ?3, ?4, '', '', '', 1, 0, ?5, 'test-user-id', datetime('now'), datetime('now'))`
+			).bind(
+				'00000000-0000-4000-8000-00000000abcd',
+				'Promote Me',
+				slug,
+				'Ready to be promoted.',
+				past,
+			).run();
+
+			const { ArticleRepository } = await import('../../apps/modules/articles/articles.repo');
+			const promoted = await new ArticleRepository(env.DB).promoteScheduled();
+			expect(promoted).toBeGreaterThan(0);
+
+			const row = await env.DB.prepare('SELECT is_public FROM articles WHERE slug = ?1').bind(slug).first<{ is_public: number }>();
+			expect(row?.is_public).toBe(1);
+		});
+	});
 });

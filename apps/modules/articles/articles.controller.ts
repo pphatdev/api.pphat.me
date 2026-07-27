@@ -8,6 +8,7 @@ import { ArticleService } from "./articles.service";
 import { TagRepository } from "../tags/tags.repo";
 import { TagService } from "../tags/tags.service";
 import { getValidBody, validateRequired } from "../../shared/helpers/request";
+import { parsePhnomPenhToUtc } from "../../shared/helpers/tz";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -205,6 +206,35 @@ export class ArticlesController {
 	}
 
 	/**
+	 * @description Convert incoming Asia/Phnom_Penh timestamps on a DTO to UTC ISO for storage.
+	 * Normalises `publishAt` → `publish_at` and validates:
+	 *   - `publishAt`/`publish_at`: parseable + not in the past (unless `is_public` is explicitly set).
+	 *   - `isPublic`/`is_public`: boolean.
+	 * @param { any } body The raw request body
+	 * @returns { Response | null } Error response if invalid, null otherwise (mutates body in place)
+	 */
+	private static normalizeSchedulingFields(body: any): Response | null {
+		const rawPublishAt = body.publishAt ?? body.publish_at;
+		if (rawPublishAt !== undefined && rawPublishAt !== null && rawPublishAt !== '') {
+			const utc = parsePhnomPenhToUtc(String(rawPublishAt));
+			if (!utc) return Res.unprocessable('publishAt must be a valid ISO or `YYYY-MM-DD HH:mm` Phnom_Penh timestamp');
+			body.publish_at = utc;
+		} else if (rawPublishAt === null || rawPublishAt === '') {
+			body.publish_at = null;
+		}
+		delete body.publishAt;
+
+		const rawIsPublic = body.isPublic ?? body.is_public;
+		if (rawIsPublic !== undefined) {
+			if (typeof rawIsPublic !== 'boolean') return Res.unprocessable('isPublic must be boolean');
+			body.is_public = rawIsPublic;
+		}
+		delete body.isPublic;
+
+		return null;
+	}
+
+	/**
 	 * @description Authenticated: create article
 	 * @method POST
 	 * @param { Context<AppEnv> } c The Hono context
@@ -214,6 +244,9 @@ export class ArticlesController {
 		try {
 			const body = await getValidBody<any>(c);
 			validateRequired(body, ['title', 'slug', 'description']);
+
+			const invalid = ArticlesController.normalizeSchedulingFields(body);
+			if (invalid) return invalid;
 
 			const repo = new ArticleRepository(c.env.DB);
 			const article = await repo.create({ ...body, owner_id: c.get('user')?.sub } as any);
@@ -246,6 +279,8 @@ export class ArticlesController {
 		const id = c.get('articleId'); // set by requireWriteAccess
 		try {
 			const body = await getValidBody<any>(c);
+			const invalid = ArticlesController.normalizeSchedulingFields(body);
+			if (invalid) return invalid;
 			const article = await new ArticleService(new ArticleRepository(c.env.DB)).update(id, body as never);
 			if (!article) return Res.notFound();
 			return Res.ok(article);

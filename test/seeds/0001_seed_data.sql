@@ -3,8 +3,8 @@ INSERT OR IGNORE INTO users (id, provider, provider_id, email, name, role)
 VALUES ('test-user-id', 'email', 'test-user-id', 'test@example.com', 'Test User', 'admin');
 
 -- Seed articles
-INSERT OR IGNORE INTO articles (id, title, slug, description, thumbnail, published, content, file_path, owner_id, created_at, updated_at) 
-VALUES ('00000000-0000-4000-8000-000000000001', 'Test Article', 'test-article-slug', 'A test article description.', 'https://example.com/thumb.png', 1, '# Hello World', '', 'test-user-id', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
+INSERT OR IGNORE INTO articles (id, title, slug, description, thumbnail, published, is_public, content, file_path, owner_id, created_at, updated_at)
+VALUES ('00000000-0000-4000-8000-000000000001', 'Test Article', 'test-article-slug', 'A test article description.', 'https://example.com/thumb.png', 1, 1, '# Hello World', '', 'test-user-id', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
 
 -- Seed authors
 INSERT OR IGNORE INTO authors (id, name, profile, url) 

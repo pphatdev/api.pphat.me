@@ -3,6 +3,7 @@ import { Tag } from "../tags/tags.interface";
 import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface";
 
 import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow } from "../../shared/helpers/repo";
+import { formatUtcAsPhnomPenh } from "../../shared/helpers/tz";
 import type { Article, IArticleRepository, ArticleRow, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
 
 /**
@@ -21,9 +22,11 @@ export class ArticleRepository implements IArticleRepository {
 	constructor(private readonly db: D1Database) { }
 
 	/**
-	 * @description Find all articles with pagination
+	 * @description Find all articles with pagination. When `onlyPublished` is true (default),
+	 * the query additionally requires `is_public = 1` so scheduled-but-not-yet-live posts
+	 * stay hidden from the public list until the cron promotes them.
 	 * @param { PaginationParams } params Pagination parameters
-	 * @param { boolean } [onlyPublished=true] Whether to only list published articles
+	 * @param { boolean } [onlyPublished=true] Whether to only list published + public articles
 	 * @returns { Promise<PaginatedResult<Article>> } Paginated articles
 	 */
 	async findAll(params: PaginationParams, onlyPublished = true): Promise<PaginatedResult<Article>> {
@@ -76,7 +79,7 @@ export class ArticleRepository implements IArticleRepository {
 	 */
 	private buildConditions(params: PaginationParams, onlyPublished: boolean) {
 		const { search, tags, authors } = params;
-		let { conditions, bindings, nextIdx } = buildListConditions(search, onlyPublished);
+		let { conditions, bindings, nextIdx } = buildListConditions(search, onlyPublished, 1, { onlyPublic: onlyPublished });
 
 		if (tags?.length) {
 			const placeholders = tags.map((_, i) => `?${nextIdx + i}`).join(', ');
@@ -110,7 +113,7 @@ export class ArticleRepository implements IArticleRepository {
 			.map(col => `a.${ALLOWED_SORT_COLS.includes(col) ? col : 'created_at'} ${safeOrder}`)
 			.join(', ');
 		const offset = (page - 1) * limit;
-		const publishedFilter = onlyPublished ? 'AND a.published = 1' : '';
+		const publishedFilter = onlyPublished ? 'AND a.published = 1 AND a.is_public = 1' : '';
 
 		let dataResult: Awaited<ReturnType<D1PreparedStatement['all']>>;
 		let countRow: { count: number } | null;
@@ -225,11 +228,17 @@ export class ArticleRepository implements IArticleRepository {
 	 * @returns { Promise<void> }
 	 */
 	private async insertArticle(id: string, dto: CreateArticleDto, now: string): Promise<void> {
+		// If publish_at is already in the past, treat as immediately public so the record isn't
+		// stuck waiting on the next cron tick.
+		const publishAt = dto.publish_at ?? null;
+		const publishAtIsPast = publishAt !== null && new Date(publishAt).getTime() <= Date.now();
+		const isPublic = dto.is_public === true || publishAtIsPast ? 1 : 0;
+
 		await this.db
 			.prepare(
-				"INSERT INTO articles (id, title, slug, description, thumbnail, content, file_path, published, owner_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
+				"INSERT INTO articles (id, title, slug, description, thumbnail, content, file_path, published, is_public, publish_at, owner_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)"
 			)
-			.bind(id, dto.title, dto.slug, dto.description, dto.thumbnail ?? "", dto.content ?? "", dto.file_path ?? "", dto.published ? 1 : 0, dto.owner_id ?? null, now, now)
+			.bind(id, dto.title, dto.slug, dto.description, dto.thumbnail ?? "", dto.content ?? "", dto.file_path ?? "", dto.published ? 1 : 0, isPublic, publishAt, dto.owner_id ?? null, now, now)
 			.run();
 	}
 
@@ -265,6 +274,8 @@ export class ArticleRepository implements IArticleRepository {
 			['content', 'content'],
 			['file_path', 'file_path'],
 			['published', 'published', (v) => (v ? 1 : 0)],
+			['is_public', 'is_public', (v) => (v ? 1 : 0)],
+			['publish_at', 'publish_at', (v) => v ?? null],
 		];
 
 		const { fields, values, nextIdx } = buildUpdateFields(dto, mappings);
@@ -426,6 +437,24 @@ export class ArticleRepository implements IArticleRepository {
 	}
 
 	/**
+	 * @description Promote scheduled articles whose publish_at has elapsed.
+	 * Called by the Cloudflare Cron Trigger (see apps/app.ts `scheduled`).
+	 * Only flips `is_public` for rows that are also `published = 1`, so authors can still
+	 * schedule then park a draft without it going live.
+	 * @returns { Promise<number> } Number of rows promoted this tick
+	 */
+	async promoteScheduled(): Promise<number> {
+		// Wrap both sides in datetime() so ISO input ("2026-07-27T05:10:49.123Z") normalizes
+		// to SQLite's "YYYY-MM-DD HH:MM:SS" format and compares lexicographically as expected.
+		const res = await this.db
+			.prepare(
+				"UPDATE articles SET is_public = 1, updated_at = datetime('now') WHERE is_public = 0 AND published = 1 AND publish_at IS NOT NULL AND datetime(publish_at) <= datetime('now')",
+			)
+			.run();
+		return res.meta?.changes ?? 0;
+	}
+
+	/**
 	 * @description Internal: hydrate article with stats and reactions
 	 * @param { ArticleRow } row The database row
 	 * @returns { Promise<Article> }
@@ -487,6 +516,8 @@ export class ArticleRepository implements IArticleRepository {
 			authors,
 			thumbnail: row.thumbnail,
 			published: row.published === 1,
+			isPublic: row.is_public === 1,
+			publishAt: formatUtcAsPhnomPenh(row.publish_at),
 			ownerId: row.owner_id,
 			createdAt: row.created_at,
 			updatedAt: row.updated_at,
