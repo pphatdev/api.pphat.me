@@ -34,5 +34,10 @@
     "dependencies": {
         "hono": "^4.12.31",
         "nodemailer": "^9.0.3"
+    },
+    "overrides": {
+        "@esbuild-kit/core-utils": {
+            "esbuild": "^0.25.12"
+        }
     }
 }
