@@ -14,7 +14,7 @@ const app = new Hono<{ Bindings: Env }>();
  * @param { String } sort - The field to sort by
  * @param { String } order - The sort order (asc or desc)
 */
-app.get('/v1/api/tags', (c) => TagsController.list(c.req.raw, c.env));
+app.get('/v1/api/tags', authGuard, (c) => TagsController.list(c.req.raw, c.env));
 
 /**
  * @description Create Tag

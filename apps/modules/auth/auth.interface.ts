@@ -44,6 +44,24 @@ export interface GoogleUser {
 	picture: string;
 }
 
+export interface ApiKeyRecord {
+	id: string;
+	user_id: string;
+	name: string;
+	prefix: string;
+	last_used_at: string | null;
+	expires_at: string | null;
+	revoked_at: string | null;
+	created_at: string;
+}
+
+export interface ApiKeyLookup {
+	id: string;
+	user_id: string;
+	expires_at: string | null;
+	revoked_at: string | null;
+}
+
 export interface IAuthRepository {
 	findOrCreateUser(
 		provider: string,
@@ -63,4 +81,11 @@ export interface IAuthRepository {
 	findRefreshToken(token: string): Promise<{ user_id: string; expires_at: string } | null>;
 	deleteRefreshToken(token: string): Promise<void>;
 	deleteUserRefreshTokens(userId: string): Promise<void>;
+
+	// API Keys (SSO)
+	createApiKey(id: string, userId: string, name: string, prefix: string, keyHash: string, expiresAt: string | null): Promise<ApiKeyRecord>;
+	listApiKeysByUser(userId: string): Promise<ApiKeyRecord[]>;
+	findApiKeyByHash(keyHash: string): Promise<ApiKeyLookup | null>;
+	revokeApiKey(id: string, userId: string): Promise<boolean>;
+	touchApiKeyLastUsed(id: string): Promise<void>;
 }

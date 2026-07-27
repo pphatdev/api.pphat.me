@@ -12,8 +12,13 @@ beforeAll(async () => {
 
 describe("Projects API", () => {
 	describe("Core", () => {
-		it("GET /v1/api/projects returns paginated list", async () => {
+		it("GET /v1/api/projects without auth returns 401", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/projects?page=1&limit=10");
+			expect(res.status).toBe(401);
+		});
+
+		it("GET /v1/api/projects returns paginated list", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/projects?page=1&limit=10", { headers: authHeaders });
 			expect(res.status).toBe(200);
 			const body = await res.json() as Record<string, unknown>;
 			expect(body).toHaveProperty("data");
@@ -36,9 +41,9 @@ describe("Projects API", () => {
 			});
 
 			// Fetch the list
-			const res = await SELF.fetch("http://example.com/v1/api/projects?limit=100");
+			const res = await SELF.fetch("http://example.com/v1/api/projects?limit=100", { headers: authHeaders });
 			const body = await res.json() as { data: { slug: string; published: boolean }[] };
-			
+
 			// Verify it's not in the list
 			const found = body.data.find(p => p.slug === slug);
 			expect(found).toBeUndefined();

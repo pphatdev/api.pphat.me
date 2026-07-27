@@ -1,10 +1,9 @@
 {
 	"info": {
-		"_postman_id": "ba6c4771-329e-4ef1-a576-9cbe8b16d125",
+		"_postman_id": "5a1c7bca-27a3-43d9-aa72-441c5bd273b8",
 		"name": "api-pphat-me",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "16827919",
-		"_collection_link": "https://go.postman.co/collection/16827919-ba6c4771-329e-4ef1-a576-9cbe8b16d125?source=collection_link"
+		"_exporter_id": "16827919"
 	},
 	"item": [
 		{
@@ -270,7 +269,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"password\": \"mypassword123\"\n}",
+									"raw": "{\n  \"email\": \"info.sophat@gmail.com\",\n  \"password\": \"Improve#168\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -356,7 +355,7 @@
 										}
 									],
 									"cookie": [],
-									"body": "{\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+									"body": "{\n    \"accessToken\": \"<ACCESS_TOKEN>\",\n    \"refreshToken\": \"<REFRESH_TOKEN>\"\n}"
 								}
 							]
 						},
@@ -471,9 +470,291 @@
 										}
 									],
 									"cookie": [],
-									"body": "{\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+									"body": "{\n    \"accessToken\": \"<ACCESS_TOKEN>\",\n    \"refreshToken\": \"<REFRESH_TOKEN>\"\n}"
 								}
 							]
+						}
+					]
+				},
+				{
+					"name": "SSO API Keys",
+					"item": [
+						{
+							"name": "Create API Key",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {\r",
+											"    const body = pm.response.json();\r",
+											"    if (body.key) {\r",
+											"        pm.collectionVariables.set(\"apiKey\", body.key);\r",
+											"    }\r",
+											"    if (body.id) {\r",
+											"        pm.collectionVariables.set(\"ssoKeyId\", body.id);\r",
+											"    }\r",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-API-Key",
+										"value": "{{apiKey}}",
+										"description": "JWT access token"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"CI Bot\",\n  \"expiresInDays\": 30\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/auth/sso/keys",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"auth",
+										"sso",
+										"keys"
+									]
+								},
+								"description": "Issues a new SSO API key for the authenticated user. The plaintext `key` is returned only once — store it securely. Use it as `Authorization: ApiKey <key>` or `X-API-Key: <key>` on any endpoint that accepts authentication.\n\n`expiresInDays` is optional; omit or set null for keys that never expire."
+							},
+							"response": [
+								{
+									"name": "Create API Key",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}",
+												"description": "JWT access token"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"name\": \"CI Bot\",\n  \"expiresInDays\": 30\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/auth/sso/keys",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"auth",
+												"sso",
+												"keys"
+											]
+										}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"id\": \"e2d1a4fa-6b2c-4a9c-9b3d-1f0e8c7a5d21\",\n    \"name\": \"CI Bot\",\n    \"prefix\": \"ppk_9f3c1a2b\",\n    \"expires_at\": \"2026-08-26T04:12:33.911Z\",\n    \"created_at\": \"2026-07-27T04:12:33.911Z\",\n    \"key\": \"ppk_9f3c1a2b7d5e6f10112233445566778899aabbccddeeff00\",\n    \"warning\": \"Store this key securely. It will not be shown again.\"\n}"
+								}
+							]
+						},
+						{
+							"name": "List API Keys",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-API-Key",
+										"value": "{{apiKey}}",
+										"description": "JWT access token",
+										"disabled": true
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/auth/sso/keys",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"auth",
+										"sso",
+										"keys"
+									]
+								},
+								"description": "Returns metadata for all API keys owned by the authenticated user. The plaintext key is never included."
+							},
+							"response": [
+								{
+									"name": "List API Keys",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}",
+												"description": "JWT access token"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/auth/sso/keys",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"auth",
+												"sso",
+												"keys"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"keys\": [\n        {\n            \"id\": \"e2d1a4fa-6b2c-4a9c-9b3d-1f0e8c7a5d21\",\n            \"user_id\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n            \"name\": \"CI Bot\",\n            \"prefix\": \"ppk_9f3c1a2b\",\n            \"last_used_at\": \"2026-07-27T05:03:11\",\n            \"expires_at\": \"2026-08-26T04:12:33.911Z\",\n            \"revoked_at\": null,\n            \"created_at\": \"2026-07-27 04:12:33\"\n        }\n    ]\n}"
+								}
+							]
+						},
+						{
+							"name": "Revoke API Key",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT access token"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/auth/sso/keys/{{ssoKeyId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"auth",
+										"sso",
+										"keys",
+										"{{ssoKeyId}}"
+									]
+								},
+								"description": "Revokes the specified API key. Subsequent requests using that key will return 401."
+							},
+							"response": [
+								{
+									"name": "Revoke Success",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}",
+												"description": "JWT access token"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/v1/api/auth/sso/keys/{{ssoKeyId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"api",
+												"auth",
+												"sso",
+												"keys",
+												"{{ssoKeyId}}"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"API key revoked\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Authorize with API Key (example)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "ApiKey {{apiKey}}",
+										"description": "SSO API key issued from POST /v1/api/auth/sso/keys. Alternatively use header `X-API-Key: {{apiKey}}`."
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/api/tags",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"api",
+										"tags"
+									]
+								},
+								"description": "Demonstrates using an SSO API key on any authenticated endpoint. `Authorization: ApiKey <key>` is accepted anywhere a JWT Bearer token is."
+							},
+							"response": []
 						}
 					]
 				},
@@ -686,7 +967,13 @@
 							"name": "List Articles",
 							"request": {
 								"method": "GET",
-								"header": [],
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT access token or an SSO API key via `ApiKey {{apiKey}}`"
+									}
+								],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/articles?page=1&limit=10",
 									"host": [
@@ -740,14 +1027,20 @@
 										}
 									]
 								},
-								"description": "Returns all published articles. Public — no auth required.\n\nSupports filtering by tags (`?tags=tag1,tag2`) and authors (`?authors=author1,author2`), multi-column sort (`?sort=title,created_at`), and a single order direction applied to all columns (`?order=asc`)."
+								"description": "Returns published articles. Requires authentication (Bearer JWT or `ApiKey <key>`).\n\nSupports filtering by tags (`?tags=tag1,tag2`) and authors (`?authors=author1,author2`), multi-column sort (`?sort=title,created_at`), and a single order direction applied to all columns (`?order=asc`)."
 							},
 							"response": [
 								{
 									"name": "List Articles",
 									"originalRequest": {
 										"method": "GET",
-										"header": [],
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}",
+												"description": "JWT access token or an SSO API key via `ApiKey {{apiKey}}`"
+											}
+										],
 										"url": {
 											"raw": "{{baseUrl}}/v1/api/articles?page=1&limit=10",
 											"host": [
@@ -2201,7 +2494,13 @@
 					"name": "List Authors",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "JWT access token or an SSO API key via `ApiKey {{apiKey}}`"
+							}
+						],
 						"url": {
 							"raw": "{{baseUrl}}/v1/api/authors?page=1&limit=10",
 							"host": [
@@ -2249,7 +2548,13 @@
 							"name": "List Authors",
 							"originalRequest": {
 								"method": "GET",
-								"header": [],
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT access token or an SSO API key via `ApiKey {{apiKey}}`"
+									}
+								],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/authors?page=1&limit=10",
 									"host": [
@@ -2557,7 +2862,13 @@
 					"name": "List Tags",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"description": "JWT access token or an SSO API key via `ApiKey {{apiKey}}`"
+							}
+						],
 						"url": {
 							"raw": "{{baseUrl}}/v1/api/tags?page=1&limit=10",
 							"host": [
@@ -2721,7 +3032,13 @@
 							"name": "List Projects",
 							"request": {
 								"method": "GET",
-								"header": [],
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"description": "JWT access token or an SSO API key via `ApiKey {{apiKey}}`"
+									}
+								],
 								"url": {
 									"raw": "{{baseUrl}}/v1/api/projects?page=1&limit=10",
 									"host": [
@@ -3132,7 +3449,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/v1/api/dashboard",
+							"raw": "{{baseUrl}}/v1/api/dashboard/init",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -3415,16 +3732,6 @@
 			]
 		}
 	],
-	"auth": {
-		"type": "bearer",
-		"bearer": [
-			{
-				"key": "token",
-				"value": "{{token}}",
-				"type": "string"
-			}
-		]
-	},
 	"event": [
 		{
 			"listen": "prerequest",
@@ -3492,6 +3799,16 @@
 		{
 			"key": "refreshToken",
 			"value": ""
+		},
+		{
+			"key": "apiKey",
+			"value": "",
+			"description": "Plaintext SSO API key captured after POST /v1/api/auth/sso/keys"
+		},
+		{
+			"key": "ssoKeyId",
+			"value": "",
+			"description": "UUID of the most recently created SSO API key — used for revoke"
 		}
 	]
 }

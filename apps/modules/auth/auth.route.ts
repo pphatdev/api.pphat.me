@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { AuthController } from './auth.controller';
+import { authGuard } from '../../middlewares/auth.middleware';
+import type { JwtPayload } from './auth.interface';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -85,5 +87,41 @@ app.post('/v1/api/auth/refresh', (c) => AuthController.tokenRefresh(c.req.raw, c
  * ---------------------------------------
 */
 app.post('/v1/api/auth/logout', (c) => AuthController.logout(c.req.raw, c.env));
+
+/**
+ * @description Issue a new SSO API key for the authenticated user
+ * @method POST
+ * ---------------------------------------
+ * @header { String } Authorization - Bearer JWT access token
+ * @param { String } name - Human-readable label
+ * @param { Number } [expiresInDays] - Optional TTL in days
+*/
+app.post('/v1/api/auth/sso/keys', authGuard, (c) => {
+	const user = c.get('user' as never) as JwtPayload;
+	return AuthController.createApiKey(c.req.raw, c.env, user.sub);
+});
+
+/**
+ * @description List SSO API keys for the authenticated user (metadata only)
+ * @method GET
+ * ---------------------------------------
+ * @header { String } Authorization - Bearer JWT access token
+*/
+app.get('/v1/api/auth/sso/keys', authGuard, (c) => {
+	const user = c.get('user' as never) as JwtPayload;
+	return AuthController.listApiKeys(c.req.raw, c.env, user.sub);
+});
+
+/**
+ * @description Revoke an SSO API key
+ * @method DELETE
+ * ---------------------------------------
+ * @header { String } Authorization - Bearer JWT access token
+ * @param { String } id - Key ID
+*/
+app.delete('/v1/api/auth/sso/keys/:id', authGuard, (c) => {
+	const user = c.get('user' as never) as JwtPayload;
+	return AuthController.revokeApiKey(c.req.raw, c.env, user.sub, c.req.param('id')!);
+});
 
 export { app as authRoutes };

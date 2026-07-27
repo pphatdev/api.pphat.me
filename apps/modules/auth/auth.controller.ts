@@ -190,6 +190,85 @@ export class AuthController {
 	}
 
 	/**
+	 * @description Issue a new SSO API key for the authenticated user
+	 * @method POST
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @param { string } userId The authenticated user's ID (from authGuard)
+	 * @returns { Promise<Response> } Newly created key metadata + one-time plaintext key
+	 */
+	static async createApiKey(request: Request, env: Env, userId: string): Promise<Response> {
+		const body = await request.json().catch(() => null);
+		if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
+
+		const { name, expiresInDays } = body as any;
+		if (!name || typeof name !== 'string' || name.trim().length === 0) {
+			return Res.unprocessable('name is required');
+		}
+		if (expiresInDays !== undefined && expiresInDays !== null && (typeof expiresInDays !== 'number' || expiresInDays <= 0)) {
+			return Res.unprocessable('expiresInDays must be a positive number');
+		}
+
+		try {
+			const repo = new AuthRepository(env.DB);
+			const { record, plaintext } = await new AuthService(repo).createApiKey(
+				userId,
+				name.trim(),
+				typeof expiresInDays === 'number' ? expiresInDays : null,
+			);
+			return Res.created({
+				id: record.id,
+				name: record.name,
+				prefix: record.prefix,
+				expires_at: record.expires_at,
+				created_at: record.created_at,
+				key: plaintext,
+				warning: 'Store this key securely. It will not be shown again.',
+			});
+		} catch (err) {
+			return handleAuthError(err);
+		}
+	}
+
+	/**
+	 * @description List SSO API keys for the authenticated user (metadata only)
+	 * @method GET
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @param { string } userId The authenticated user's ID (from authGuard)
+	 * @returns { Promise<Response> } Array of key metadata
+	 */
+	static async listApiKeys(request: Request, env: Env, userId: string): Promise<Response> {
+		try {
+			const repo = new AuthRepository(env.DB);
+			const keys = await new AuthService(repo).listApiKeys(userId);
+			return Res.ok({ keys });
+		} catch (err) {
+			return handleAuthError(err);
+		}
+	}
+
+	/**
+	 * @description Revoke an SSO API key owned by the authenticated user
+	 * @method DELETE
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @param { string } userId The authenticated user's ID (from authGuard)
+	 * @param { string } keyId Key ID to revoke
+	 * @returns { Promise<Response> } Success message or 404
+	 */
+	static async revokeApiKey(request: Request, env: Env, userId: string, keyId: string): Promise<Response> {
+		try {
+			const repo = new AuthRepository(env.DB);
+			const revoked = await new AuthService(repo).revokeApiKey(keyId, userId);
+			if (!revoked) return Res.notFound('API key not found');
+			return Res.ok({ message: 'API key revoked' });
+		} catch (err) {
+			return handleAuthError(err);
+		}
+	}
+
+	/**
 	 * @description Logout user and revoke refresh token
 	 * @method POST
 	 * @param { Request } request The incoming request

@@ -1,6 +1,6 @@
 {
     "name": "api-pphat-me",
-    "version": "0.14.1",
+    "version": "0.15.0",
     "private": true,
     "scripts": {
         "dev": "wrangler dev",
@@ -10,13 +10,23 @@
         "cf-typegen": "wrangler types",
         "migrate": "npx wrangler d1 migrations apply api --remote",
         "migrate:local": "npx wrangler d1 migrations apply api --local",
+        "db:setup": "npm run migrate:local && npm run dev",
+        "db:reset": "node -e \"require('fs').rmSync('.wrangler/state/v3/d1', { recursive: true, force: true })\" && npm run migrate:local",
+        "db:tables": "npx wrangler d1 execute api --local --command \"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name\"",
+        "db:query": "npx wrangler d1 execute api --local --command",
+        "db:studio": "node scripts/db-studio.js",
+        "db:create-admin": "node scripts/create-admin.js",
+        "db:pull-remote": "node scripts/db-pull-remote.js",
         "test:dev": "vitest watch",
         "test": "vitest run"
     },
     "devDependencies": {
         "@cloudflare/vitest-pool-workers": "^0.18.0",
+        "@libsql/client": "^0.17.4",
         "@types/node": "^26.1.0",
         "@types/nodemailer": "^8.0.1",
+        "drizzle-kit": "^0.31.10",
+        "drizzle-orm": "^0.45.2",
         "typescript": "^6.0.3",
         "vitest": "^4.1.9",
         "wrangler": "^4.84.0"

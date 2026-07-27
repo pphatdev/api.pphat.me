@@ -18,8 +18,13 @@ describe("Articles API", () => {
 	 * GET /v1/api/articles
 	 */
 	describe("GET /v1/api/articles", () => {
-		it("returns paginated list", async () => {
+		it("without auth returns 401", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/articles?page=1&limit=10");
+			expect(res.status).toBe(401);
+		});
+
+		it("returns paginated list", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles?page=1&limit=10", { headers: authHeaders });
 			expect(res.status).toBe(200);
 			const body = await res.json() as Record<string, unknown>;
 			expect(body).toHaveProperty("data");
@@ -28,14 +33,14 @@ describe("Articles API", () => {
 		});
 
 		it("with search param filters results", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/articles?search=Test&page=1&limit=10");
+			const res = await SELF.fetch("http://example.com/v1/api/articles?search=Test&page=1&limit=10", { headers: authHeaders });
 			expect(res.status).toBe(200);
 			const body = await res.json() as Record<string, unknown>;
 			expect(body).toHaveProperty("data");
 		});
 
 		it("excludes content field from list results", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/articles?page=1&limit=10");
+			const res = await SELF.fetch("http://example.com/v1/api/articles?page=1&limit=10", { headers: authHeaders });
 			expect(res.status).toBe(200);
 			const body = await res.json() as { data: any[] };
 			expect(body.data.length).toBeGreaterThan(0);

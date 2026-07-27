@@ -11,8 +11,13 @@ beforeAll(async () => {
 });
 
 describe("Authors API", () => {
-	it("GET /v1/api/authors returns list of authors", async () => {
+	it("GET /v1/api/authors without auth returns 401", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/authors");
+		expect(res.status).toBe(401);
+	});
+
+	it("GET /v1/api/authors returns list of authors", async () => {
+		const res = await SELF.fetch("http://example.com/v1/api/authors", { headers: authHeaders });
 		expect(res.status).toBe(200);
 		const body = await res.json() as { data: unknown[]; pagination: { page: number; limit: number; total: number; totalPages: number } };
 		expect(Array.isArray(body.data)).toBe(true);

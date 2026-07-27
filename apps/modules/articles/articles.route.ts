@@ -9,7 +9,7 @@ import type { AppEnv } from './articles.interface';
 const app = new Hono<AppEnv>();
 
 /**
- * @description Get Article List (public — published only)
+ * @description Get Article List (authenticated — admin-facing)
  * @method GET
  * @param { Number } page               Current Page    page=1
  * @param { Number } limit              Items per Page  limit=10
@@ -23,6 +23,7 @@ const app = new Hono<AppEnv>();
  */
 app.get(
     '/v1/api/articles',
+    authGuard,
     ArticlesController.list
 );
 

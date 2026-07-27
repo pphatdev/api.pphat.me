@@ -7,7 +7,7 @@
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/api/authors` | List authors (paginated) |
+| `GET` | `/v1/api/authors` | List authors (paginated) — **requires auth** (Bearer JWT or SSO API key) |
 | `GET` | `/v1/api/authors/:id` | Get author by ID |
 | `POST` | `/v1/api/authors` | Create author |
 | `PATCH` | `/v1/api/authors/:id` | Update author |

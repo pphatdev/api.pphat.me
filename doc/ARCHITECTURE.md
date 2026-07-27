@@ -51,8 +51,8 @@ flowchart TD
 | Layer | Files | Responsibility |
 |-------|-------|----------------|
 | **Entry Point** | `apps/app.ts` | Mounts global `rateLimitMiddleware`, registers five Hono sub-routers, exports `default app` |
-| **Route** | `*.route.ts` / `*.routes.ts` | Typed Hono sub-app — method-specific handlers, `resolveArticle`/`resolveProject` middleware, `authGuard` on write routes |
-| **Middleware** | `middlewares/auth.middleware.ts` | `requireAuth` (raw Request) + `authGuard` (Hono) — validates `Authorization: Bearer <JWT>`, returns `401` on failure |
+| **Route** | `*.route.ts` / `*.routes.ts` | Typed Hono sub-app — method-specific handlers, `resolveArticle`/`resolveProject` middleware, `authGuard` on write routes and top-level list endpoints |
+| **Middleware** | `middlewares/auth.middleware.ts` | `authGuard` + `optionalAuth` (Hono) — accepts `Authorization: Bearer <JWT>`, `Authorization: ApiKey <ppk_...>`, or `X-API-Key`; returns `401` on failure |
 | **Middleware** | `middlewares/rate-limit.middleware.ts` | `rateLimitMiddleware` (Hono) — per-API-type sliding-window limit; attaches `X-RateLimit-*` headers; returns `429` when exceeded |
 | **Controller** | `*.controller.ts` | HTTP method dispatch, request body parsing, calls service/use-case |
 | **Service** | `*.service.ts` | Business logic, use-case classes, crypto helpers |
