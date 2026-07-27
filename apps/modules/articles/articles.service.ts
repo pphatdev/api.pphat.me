@@ -6,12 +6,13 @@ export class ArticleService {
 
 	/**
 	 * @description List all articles
-	 * @param { PaginationParams } params Pagination parameters
+	 * @param { PaginationParams } params Pagination parameters (includes optional `status`)
 	 * @param { boolean } [onlyPublished=true] Whether to only list published articles
+	 * @param { object } [opts] Auth context (admin unlocks full-list + status filter)
 	 * @returns { Promise<PaginatedResult<Article>> } Paginated articles
 	 */
-	list(params: PaginationParams, onlyPublished = true): Promise<PaginatedResult<Article>> {
-		return this.repo.findAll(params, onlyPublished);
+	list(params: PaginationParams, onlyPublished = true, opts?: { admin?: boolean }): Promise<PaginatedResult<Article>> {
+		return this.repo.findAll(params, onlyPublished, opts);
 	}
 
 	/**

@@ -1,4 +1,4 @@
-import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
+import { ArticleStatus, PaginatedResult, PaginationParams } from "../../shared/interfaces";
 import { Tag } from "../tags/tags.interface";
 import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface";
 
@@ -22,17 +22,21 @@ export class ArticleRepository implements IArticleRepository {
 	constructor(private readonly db: D1Database) { }
 
 	/**
-	 * @description Find all articles with pagination. When `onlyPublished` is true (default),
-	 * the query additionally requires `is_public = 1` so scheduled-but-not-yet-live posts
-	 * stay hidden from the public list until the cron promotes them.
-	 * @param { PaginationParams } params Pagination parameters
-	 * @param { boolean } [onlyPublished=true] Whether to only list published + public articles
+	 * @description Find all articles with pagination.
+	 *  - Non-admin (`opts.admin` false or omitted) and `onlyPublished` true: the standard
+	 *    public list — only `published=1 AND is_public=1`.
+	 *  - Admin: sees every article regardless of `published`/`is_public`. May pass
+	 *    `params.status` (subset of 'public'|'draft'|'queue'|'private') to filter.
+	 * @param { PaginationParams } params Pagination parameters (includes optional `status`)
+	 * @param { boolean } [onlyPublished=true] Public-visibility gate for non-admin callers
+	 * @param { object } [opts] Auth context
+	 * @param { boolean } [opts.admin] When true, unlock the full-list + status-filter behavior
 	 * @returns { Promise<PaginatedResult<Article>> } Paginated articles
 	 */
-	async findAll(params: PaginationParams, onlyPublished = true): Promise<PaginatedResult<Article>> {
+	async findAll(params: PaginationParams, onlyPublished = true, opts?: { admin?: boolean }): Promise<PaginatedResult<Article>> {
 		const { page, limit, sort, order } = params;
 		const offset = (page - 1) * limit;
-		const { conditions, bindings, nextIdx } = this.buildConditions(params, onlyPublished);
+		const { conditions, bindings, nextIdx } = this.buildConditions(params, onlyPublished && !opts?.admin, opts?.admin ? params.status : undefined);
 		const orderBy = this.buildOrderBy(sort, order);
 		const where = conditions.join(' AND ');
 
@@ -77,9 +81,14 @@ export class ArticleRepository implements IArticleRepository {
 	 * @param { boolean } onlyPublished Published filter
 	 * @returns { object } Conditions, bindings, and next placeholder index
 	 */
-	private buildConditions(params: PaginationParams, onlyPublished: boolean) {
+	private buildConditions(params: PaginationParams, onlyPublished: boolean, statusFilter?: ArticleStatus[]) {
 		const { search, tags, authors } = params;
 		let { conditions, bindings, nextIdx } = buildListConditions(search, onlyPublished, 1, { onlyPublic: onlyPublished });
+
+		if (statusFilter?.length) {
+			const statusClauses = statusFilter.map((s) => this.statusToSql(s));
+			conditions.push(`(${statusClauses.join(' OR ')})`);
+		}
 
 		if (tags?.length) {
 			const placeholders = tags.map((_, i) => `?${nextIdx + i}`).join(', ');
@@ -99,6 +108,38 @@ export class ArticleRepository implements IArticleRepository {
 	}
 
 	/**
+	 * @description Map an ArticleStatus enum value to a SQL predicate against the underlying columns.
+	 * @param { ArticleStatus } s The status label
+	 * @returns { string } SQL fragment (no bound parameters — literals only)
+	 */
+	private statusToSql(s: ArticleStatus): string {
+		switch (s) {
+			case 'public':  return '(published = 1 AND is_public = 1)';
+			case 'queue':   return '(published = 1 AND is_public = 0 AND publish_at IS NOT NULL)';
+			case 'private': return '(published = 1 AND is_public = 0 AND publish_at IS NULL)';
+			case 'draft':   return '(published = 0)';
+		}
+	}
+
+	/**
+	 * @description Compute the derived status field from a raw row.
+	 * Treat a queued row whose `publish_at` has elapsed as `public` — the row is already
+	 * visible in the list even if the cron hasn't run yet to flip `is_public`.
+	 * @param { ArticleRow } row The DB row
+	 * @returns { ArticleStatus } Public | queue | private | draft
+	 */
+	private computeStatus(row: ArticleRow): ArticleStatus {
+		if (row.published !== 1) return 'draft';
+		if (row.is_public === 1) return 'public';
+		if (row.publish_at) {
+			const due = new Date(row.publish_at).getTime();
+			if (!Number.isNaN(due) && due <= Date.now()) return 'public';
+			return 'queue';
+		}
+		return 'private';
+	}
+
+	/**
 	 * @description Find all articles by a specific author
 	 * @param { number } authorId The author ID
 	 * @param { PaginationParams } params Pagination parameters
@@ -113,7 +154,9 @@ export class ArticleRepository implements IArticleRepository {
 			.map(col => `a.${ALLOWED_SORT_COLS.includes(col) ? col : 'created_at'} ${safeOrder}`)
 			.join(', ');
 		const offset = (page - 1) * limit;
-		const publishedFilter = onlyPublished ? 'AND a.published = 1 AND a.is_public = 1' : '';
+		const publishedFilter = onlyPublished
+			? "AND a.published = 1 AND (a.is_public = 1 OR (a.publish_at IS NOT NULL AND datetime(a.publish_at) <= datetime('now')))"
+			: '';
 
 		let dataResult: Awaited<ReturnType<D1PreparedStatement['all']>>;
 		let countRow: { count: number } | null;
@@ -545,6 +588,7 @@ export class ArticleRepository implements IArticleRepository {
 			published: row.published === 1,
 			isPublic: row.is_public === 1,
 			publishAt: formatUtcAsPhnomPenh(row.publish_at),
+			status: this.computeStatus(row),
 			ownerId: row.owner_id,
 			createdAt: row.created_at,
 			updatedAt: row.updated_at,

@@ -1,4 +1,4 @@
-import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
+import { ArticleStatus, PaginatedResult, PaginationParams } from "../../shared/interfaces";
 import { Tag } from "../tags/tags.interface";
 import { Author } from "../authors/authors.interface";
 
@@ -15,6 +15,8 @@ export interface Article {
 	isPublic: boolean;
 	/** Scheduled publication time, formatted as Asia/Phnom_Penh (+07:00) — null when not scheduled */
 	publishAt: string | null;
+	/** Derived from (published, is_public, publish_at). See ArticleStatus. */
+	status: ArticleStatus;
 	ownerId: string | null;
 	createdAt: string;
 	updatedAt: string;
@@ -81,7 +83,7 @@ export type AppEnv = {
 };
 
 export interface IArticleRepository {
-	findAll(params: PaginationParams, onlyPublished?: boolean): Promise<PaginatedResult<Article>>;
+	findAll(params: PaginationParams, onlyPublished?: boolean, opts?: { admin?: boolean }): Promise<PaginatedResult<Article>>;
 	findAllByAuthor(authorId: number, params: PaginationParams, onlyPublished: boolean): Promise<PaginatedResult<Article>>;
 	findBySlug(slug: string): Promise<Article | null>;
 	findById(id: string): Promise<Article | null>;

@@ -1,4 +1,6 @@
 
+export type ArticleStatus = 'public' | 'draft' | 'queue' | 'private';
+
 export interface PaginationParams {
 	page: number;
 	limit: number;
@@ -7,6 +9,8 @@ export interface PaginationParams {
 	order?: 'asc' | 'desc';
 	tags?: string[];
 	authors?: string[];
+	/** Filter articles by derived status. Ignored for non-admins. */
+	status?: ArticleStatus[];
 }
 
 export interface PaginatedResult<T> {

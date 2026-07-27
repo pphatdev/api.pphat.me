@@ -135,15 +135,24 @@ export class ArticlesController {
 	};
 
 	/**
-	 * @description Public: list all published articles
+	 * @description Authenticated: list articles.
+	 *  - Non-admin: only `published=1 AND is_public=1`. `?status=` is ignored.
+	 *  - Admin: sees all statuses. Filter with `?status=public,draft,queue,private` (comma-separated).
 	 * @method GET
 	 * @param { Context<AppEnv> } c The Hono context
 	 * @returns { Promise<Response> } Paginated list of articles
 	 */
 	static async list(c: Context<AppEnv>): Promise<Response> {
 		const repository = new ArticleRepository(c.env.DB);
+		// Lazy self-heal: promote any scheduled rows whose publish_at has elapsed. The
+		// Cloudflare cron does this every 5 min in production, but doesn't fire under
+		// `wrangler dev` — this keeps the `is_public` flag in sync so admin queries and
+		// dashboards see a consistent state without waiting on the cron.
+		await repository.promoteScheduled().catch(() => { /* non-fatal — list still works */ });
 		const options = parseListParams(c.req.url);
-		const result = await new ArticleService(repository).list(options, true);
+		const user = c.get('user');
+		const isAdmin = user?.role === 'admin';
+		const result = await new ArticleService(repository).list(options, true, { admin: isAdmin });
 		return Res.ok(result);
 	}
 

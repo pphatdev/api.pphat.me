@@ -1,15 +1,17 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { seedDatabase, ARTICLE_SLUG, ARTICLE_ID, getAuthHeaders } from "../../apps/shared/helpers/test-cases";
+import { seedDatabase, ARTICLE_SLUG, ARTICLE_ID, getAuthHeaders, getAdminHeaders } from "../../apps/shared/helpers/test-cases";
 
 const NONEXISTENT_UUID = "00000000-0000-4000-8000-000000000099";
 
 const SELF = exports.default;
 let authHeaders: Record<string, string>;
+let adminHeaders: Record<string, string>;
 
 beforeAll(async () => {
 	await seedDatabase(env.DB);
 	authHeaders = await getAuthHeaders(env.JWT_SECRET);
+	adminHeaders = await getAdminHeaders(env.JWT_SECRET);
 });
 
 describe("Articles API", () => {
@@ -430,7 +432,7 @@ describe("Articles API", () => {
 	 * Scheduling (publishAt / isPublic)
 	 */
 	describe("Scheduling", () => {
-		it("with publishAt in the future creates a hidden article (is_public=false)", async () => {
+		it("with publishAt in the future creates a queued article (status=queue) hidden from non-admin list", async () => {
 			const future = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // +1h UTC
 			const slug = `scheduled-future-${Date.now()}`;
 			const createRes = await SELF.fetch("http://example.com/v1/api/articles", {
@@ -448,7 +450,9 @@ describe("Articles API", () => {
 			const created = await createRes.json() as any;
 			expect(created.isPublic).toBe(false);
 			expect(created.publishAt).toMatch(/\+07:00$/);
+			expect(created.status).toBe('queue');
 
+			// Non-admin only sees public articles.
 			const listRes = await SELF.fetch("http://example.com/v1/api/articles?limit=100", { headers: authHeaders });
 			const list = await listRes.json() as { data: any[] };
 			expect(list.data.find((a) => a.slug === slug)).toBeUndefined();
@@ -505,6 +509,56 @@ describe("Articles API", () => {
 				}),
 			});
 			expect(res.status).toBe(422);
+		});
+
+		it("admin sees the queued article; ?status=public still hides it", async () => {
+			const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+			const slug = `admin-queue-${Date.now()}`;
+			const createRes = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "Admin Queue View",
+					slug,
+					description: "Queued for admin.",
+					published: true,
+					publishAt: future,
+				}),
+			});
+			expect(createRes.status).toBe(201);
+
+			// Admin, no filter → sees all including queued.
+			const listAll = await (await SELF.fetch("http://example.com/v1/api/articles?limit=100", { headers: adminHeaders })).json() as { data: any[] };
+			expect(listAll.data.find((a) => a.slug === slug)).toBeDefined();
+
+			// Admin with ?status=public → queued article is hidden.
+			const listPublic = await (await SELF.fetch("http://example.com/v1/api/articles?limit=100&status=public", { headers: adminHeaders })).json() as { data: any[] };
+			expect(listPublic.data.find((a) => a.slug === slug)).toBeUndefined();
+
+			// Admin with ?status=queue → queued article is visible.
+			const listQueue = await (await SELF.fetch("http://example.com/v1/api/articles?limit=100&status=queue", { headers: adminHeaders })).json() as { data: any[] };
+			const queueRow = listQueue.data.find((a) => a.slug === slug);
+			expect(queueRow).toBeDefined();
+			expect(queueRow!.status).toBe('queue');
+		});
+
+		it("admin ?status=draft returns only drafts (status=draft on each row)", async () => {
+			const slug = `admin-draft-${Date.now()}`;
+			await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({ title: "Draft Doc", slug, description: "Draft only.", published: false }),
+			});
+
+			const list = await (await SELF.fetch("http://example.com/v1/api/articles?limit=100&status=draft", { headers: adminHeaders })).json() as { data: any[] };
+			expect(list.data.length).toBeGreaterThan(0);
+			list.data.forEach((a) => expect(a.status).toBe('draft'));
+			expect(list.data.find((a) => a.slug === slug)).toBeDefined();
+		});
+
+		it("non-admin passing ?status=draft is ignored (still only public rows)", async () => {
+			const list = await (await SELF.fetch("http://example.com/v1/api/articles?limit=100&status=draft", { headers: authHeaders })).json() as { data: any[] };
+			list.data.forEach((a) => expect(a.status).toBe('public'));
 		});
 
 		it("promotes scheduled articles when publish_at has elapsed (repo.promoteScheduled)", async () => {

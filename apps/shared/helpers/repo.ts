@@ -92,7 +92,10 @@ export function buildListConditions(
 	}
 
 	if (opts?.onlyPublic) {
-		conditions.push('is_public = 1');
+		// An article is publicly visible if either the cron already flipped is_public,
+		// or the scheduled publish_at has elapsed (so we surface it immediately even
+		// before the next cron tick). The Cloudflare cron reconciles the flag over time.
+		conditions.push("(is_public = 1 OR (publish_at IS NOT NULL AND datetime(publish_at) <= datetime('now')))");
 	}
 
 	if (search) {

@@ -54,8 +54,18 @@ Persisted internally as UTC ISO. On the way out, `publishAt` is always formatted
 3. A `publishAt` in the past on create is auto-promoted immediately (no wait for cron).
 
 **Filtering**
-- Public list endpoint (`GET /v1/api/articles`) requires `authGuard` (unchanged) and additionally filters `is_public = 1 AND published = 1`.
-- Direct-by-slug/id reads (`GET /v1/api/articles/:slug`) bypass the `is_public` filter so owners and admins can preview scheduled content.
+- Public list endpoint (`GET /v1/api/articles`) requires `authGuard`. Non-admin callers see only `published=1 AND is_public=1`; admin callers see every article regardless of status.
+- Every article response now exposes a derived `status` field: `"public" | "draft" | "queue" | "private"` (see mapping below). Admins can filter by passing `?status=public,draft,queue,private` (comma-separated). Non-admin callers get their `?status` param silently ignored.
+- Direct-by-slug/id reads (`GET /v1/api/articles/:slug`) always return the article (no `is_public` filter), so owners can preview scheduled content.
+
+**Status derivation**
+
+| status    | published | is_public | publish_at    |
+|-----------|-----------|-----------|---------------|
+| `public`  | 1         | 1         | any           |
+| `queue`   | 1         | 0         | NOT NULL      |
+| `private` | 1         | 0         | NULL          |
+| `draft`   | 0         | any       | any           |
 
 ---
 
