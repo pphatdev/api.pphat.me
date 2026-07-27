@@ -1276,7 +1276,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"content\": \"Full article content goes here.\",\n    \"file_path\": \"\",\n    \"published\": false,\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ]\n}",
+									"raw": "{\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"content\": \"Full article content goes here.\",\n    \"file_path\": \"\",\n    \"published\": true,\n    \"isPublic\": false,\n    \"publishAt\": \"2026-08-15 09:00\",\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ]\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -1294,7 +1294,7 @@
 										"articles"
 									]
 								},
-								"description": "Creates a new article. The authenticated user becomes the owner (owner_id). Returns 201 with the created article."
+								"description": "Creates a new article. The authenticated user becomes the owner (owner_id). Returns 201 with the created article.\n\n**Publish scheduling (Asia/Phnom_Penh, +07:00):**\n- `published: true, isPublic: false, publishAt: '2026-08-15 09:00'` → hidden until the cron promotes it at that Phnom_Penh local time.\n- `published: true, isPublic: true` → visible immediately.\n- `publishAt` accepts either bare `YYYY-MM-DD HH:mm` (interpreted as Phnom_Penh local) or a full ISO with any offset. Past times auto-promote on create."
 							},
 							"response": [
 								{
@@ -1314,7 +1314,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"content\": \"Full article content goes here.\",\n    \"file_path\": \"\",\n    \"published\": false,\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ]\n}",
+											"raw": "{\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"content\": \"Full article content goes here.\",\n    \"file_path\": \"\",\n    \"published\": true,\n    \"isPublic\": false,\n    \"publishAt\": \"2026-08-15 09:00\",\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ]\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -1363,7 +1363,7 @@
 										}
 									],
 									"cookie": [],
-									"body": "{\n    \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"tags\": [\n        {\n            \"id\": 1,\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ],\n    \"authors\": [\n        {\n            \"name\": \"PPhat Dev\",\n            \"profile\": \"Front-End Developer\",\n            \"url\": \"https://pphat.me\"\n        }\n    ],\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"published\": false,\n    \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n    \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n    \"updatedAt\": \"2026-04-27T03:45:51.505Z\",\n    \"content\": \"Full article content goes here.\",\n    \"filePath\": \"\"\n}"
+									"body": "{\n    \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"tags\": [\n        {\n            \"id\": 1,\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ],\n    \"authors\": [\n        {\n            \"name\": \"PPhat Dev\",\n            \"profile\": \"Front-End Developer\",\n            \"url\": \"https://pphat.me\"\n        }\n    ],\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"published\": true,\n    \"isPublic\": false,\n    \"publishAt\": \"2026-08-15T09:00:00+07:00\",\n    \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n    \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n    \"updatedAt\": \"2026-04-27T03:45:51.505Z\",\n    \"content\": \"Full article content goes here.\",\n    \"filePath\": \"\"\n}"
 								}
 							]
 						},
@@ -1384,7 +1384,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"Updated Title\",\n    \"description\": \"Updated description.\",\n    \"thumbnail\": \"https://example.com/new-thumbnail.png\",\n    \"content\": \"Updated content.\",\n    \"published\": true,\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\"\n        }\n    ]\n}",
+									"raw": "{\n    \"title\": \"Updated Title\",\n    \"description\": \"Updated description.\",\n    \"thumbnail\": \"https://example.com/new-thumbnail.png\",\n    \"content\": \"Updated content.\",\n    \"published\": true,\n    \"isPublic\": true,\n    \"publishAt\": null,\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\"\n        }\n    ]\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -1403,7 +1403,7 @@
 										"{{articleId}}"
 									]
 								},
-								"description": "Updates an article by UUID. Requires owner, contributor, or admin. The :id parameter must be a UUID (not a slug)."
+								"description": "Updates an article by UUID. Requires owner, contributor, or admin. The :id parameter must be a UUID (not a slug).\n\nSet `isPublic: true, publishAt: null` to release a scheduled draft immediately. Set `publishAt: '<Phnom_Penh timestamp>'` to reschedule; the cron will re-evaluate on the next tick."
 							},
 							"response": [
 								{
@@ -1423,7 +1423,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"title\": \"Updated Title\",\n    \"description\": \"Updated description.\",\n    \"thumbnail\": \"https://example.com/new-thumbnail.png\",\n    \"content\": \"Updated content.\",\n    \"published\": true,\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\"\n        }\n    ]\n}",
+											"raw": "{\n    \"title\": \"Updated Title\",\n    \"description\": \"Updated description.\",\n    \"thumbnail\": \"https://example.com/new-thumbnail.png\",\n    \"content\": \"Updated content.\",\n    \"published\": true,\n    \"isPublic\": true,\n    \"publishAt\": null,\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\"\n        }\n    ]\n}",
 											"options": {
 												"raw": {
 													"language": "json"
