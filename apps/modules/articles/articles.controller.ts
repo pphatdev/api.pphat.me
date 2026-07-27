@@ -258,13 +258,17 @@ export class ArticlesController {
 	}
 
 	/**
-	 * @description Handles slug conflict errors
+	 * @description Handles slug conflict and validation errors thrown by the repo
 	 * @param { unknown } err The error caught
-	 * @returns { Response } Conflict response or throws
+	 * @returns { Response } Appropriate error response or re-throws
 	 */
 	private static handleSlugConflict(err: unknown): Response {
-		if (err instanceof Error && err.message.includes("UNIQUE constraint failed: articles.slug")) {
-			return Res.conflict("An article with this slug already exists");
+		if (err instanceof Error) {
+			const status = (err as any).status;
+			if (status === 422) return Res.unprocessable(err.message);
+			if (err.message.includes("UNIQUE constraint failed: articles.slug")) {
+				return Res.conflict("An article with this slug already exists");
+			}
 		}
 		throw err;
 	}

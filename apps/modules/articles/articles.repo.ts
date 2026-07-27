@@ -207,6 +207,8 @@ export class ArticleRepository implements IArticleRepository {
 	 * @returns { Promise<Article> } The created article
 	 */
 	async create(dto: CreateArticleDto): Promise<Article> {
+		if (dto.author_ids?.length) await this.assertAuthorsExist(dto.author_ids);
+
 		const id = crypto.randomUUID();
 		const now = new Date().toISOString();
 
@@ -218,6 +220,29 @@ export class ArticleRepository implements IArticleRepository {
 		await this.initStats(id, dto.content || "");
 
 		return (await this.findById(id))!;
+	}
+
+	/**
+	 * @description Ensure every author_id exists in the authors table before we insert
+	 * article_authors rows. Throws a 422-flagged error listing the missing IDs so the
+	 * controller can convert it into a clean HTTP response instead of a mid-transaction
+	 * FOREIGN KEY crash.
+	 * @param { number[] } authorIds The author IDs from the DTO
+	 * @throws { Error & { status: 422 } } When any ID is missing
+	 */
+	private async assertAuthorsExist(authorIds: number[]): Promise<void> {
+		const unique = Array.from(new Set(authorIds));
+		if (unique.length === 0) return;
+		const placeholders = unique.map((_, i) => `?${i + 1}`).join(', ');
+		const { results } = await this.db
+			.prepare(`SELECT id FROM authors WHERE id IN (${placeholders})`)
+			.bind(...unique)
+			.all<{ id: number }>();
+		const found = new Set((results ?? []).map((r) => r.id));
+		const missing = unique.filter((id) => !found.has(id));
+		if (missing.length > 0) {
+			throw Object.assign(new Error(`author_ids not found: ${missing.join(', ')}`), { status: 422 });
+		}
 	}
 
 	/**
@@ -265,6 +290,8 @@ export class ArticleRepository implements IArticleRepository {
 	async update(id: string, dto: UpdateArticleDto): Promise<Article | null> {
 		const existing = await this.findById(id);
 		if (!existing) return null;
+
+		if (dto.author_ids?.length) await this.assertAuthorsExist(dto.author_ids);
 
 		const mappings: [keyof UpdateArticleDto, string, ((v: any) => any)?][] = [
 			['title', 'title'],
