@@ -1,5 +1,33 @@
-import type { User, JwtPayload, GitHubUser, GitHubEmail, GoogleUser, IAuthRepository } from './auth.interface';
+import type { User, JwtPayload, GitHubUser, GitHubEmail, GoogleUser, IAuthRepository, ApiKeyRecord } from './auth.interface';
 import { JwtService } from '../../shared/helpers/jwt';
+
+/**
+ * API key configuration
+ */
+const API_KEY_PREFIX = 'ppk_';
+const API_KEY_ENTROPY_BYTES = 24; // 24 bytes → 48 hex chars → full token "ppk_<48 hex>"
+const API_KEY_LOOKUP_PREFIX_LEN = API_KEY_PREFIX.length + 8; // stored prefix for humans
+
+/**
+ * @description Hash an API key using SHA-256
+ * @param { string } key Plaintext key
+ * @returns { Promise<string> } Hex-encoded hash
+ */
+export async function hashApiKey(key: string): Promise<string> {
+	const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
+	return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * @description Generate a new random API key value
+ * @returns { { plaintext: string; prefix: string } } The key and its display prefix
+ */
+export function generateApiKeyValue(): { plaintext: string; prefix: string } {
+	const bytes = crypto.getRandomValues(new Uint8Array(API_KEY_ENTROPY_BYTES));
+	const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+	const plaintext = `${API_KEY_PREFIX}${hex}`;
+	return { plaintext, prefix: plaintext.slice(0, API_KEY_LOOKUP_PREFIX_LEN) };
+}
 
 /**
  * JWT helpers (Delegated to JwtService)
@@ -395,6 +423,65 @@ export class AuthService {
 	 */
 	async logout(refreshToken: string): Promise<void> {
 		await this.repo.deleteRefreshToken(refreshToken);
+	}
+
+	/**
+	 * @description Issue a new API key for a user (SSO-style programmatic access)
+	 * @param { string } userId Owning user ID
+	 * @param { string } name Human-readable label
+	 * @param { number | null } [expiresInDays] Optional TTL in days
+	 * @returns { Promise<{ record: ApiKeyRecord; plaintext: string }> } The record and the one-time plaintext key
+	 */
+	async createApiKey(
+		userId: string,
+		name: string,
+		expiresInDays: number | null = null,
+	): Promise<{ record: ApiKeyRecord; plaintext: string }> {
+		const { plaintext, prefix } = generateApiKeyValue();
+		const keyHash = await hashApiKey(plaintext);
+		const id = crypto.randomUUID();
+		const expiresAt = expiresInDays && expiresInDays > 0
+			? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
+			: null;
+		const record = await this.repo.createApiKey(id, userId, name, prefix, keyHash, expiresAt);
+		return { record, plaintext };
+	}
+
+	/**
+	 * @description List a user's API keys (metadata only — no plaintext)
+	 * @param { string } userId Owning user ID
+	 * @returns { Promise<ApiKeyRecord[]> } The user's keys
+	 */
+	async listApiKeys(userId: string): Promise<ApiKeyRecord[]> {
+		return this.repo.listApiKeysByUser(userId);
+	}
+
+	/**
+	 * @description Revoke an API key owned by the user
+	 * @param { string } id Key ID
+	 * @param { string } userId Owning user ID
+	 * @returns { Promise<boolean> } True if a key was revoked
+	 */
+	async revokeApiKey(id: string, userId: string): Promise<boolean> {
+		return this.repo.revokeApiKey(id, userId);
+	}
+
+	/**
+	 * @description Verify a presented API key and return the owning user
+	 * @param { string } plaintext The raw API key string
+	 * @returns { Promise<User | null> } Owning user or null if invalid/revoked/expired
+	 */
+	async verifyApiKey(plaintext: string): Promise<User | null> {
+		if (!plaintext || !plaintext.startsWith(API_KEY_PREFIX)) return null;
+		const keyHash = await hashApiKey(plaintext);
+		const lookup = await this.repo.findApiKeyByHash(keyHash);
+		if (!lookup) return null;
+		if (lookup.revoked_at) return null;
+		if (lookup.expires_at && new Date(lookup.expires_at).getTime() < Date.now()) return null;
+		const user = await this.repo.findUserById(lookup.user_id);
+		if (!user) return null;
+		await this.repo.touchApiKeyLastUsed(lookup.id);
+		return user;
 	}
 }
 

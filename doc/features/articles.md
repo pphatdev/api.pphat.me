@@ -7,7 +7,7 @@
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/api/articles` | List articles (paginated) |
+| `GET` | `/v1/api/articles` | List articles (paginated) — **requires auth** (Bearer JWT or SSO API key) |
 | `GET` | `/v1/api/articles/:slug` | Get article by slug (includes `stats` and `reactions`) |
 | `POST` | `/v1/api/articles` | Create article |
 | `PATCH` | `/v1/api/articles/:slug` | Update article |

@@ -11,8 +11,13 @@ beforeAll(async () => {
 });
 
 describe("Tags API", () => {
-	it("GET /v1/api/tags returns list of tags", async () => {
+	it("GET /v1/api/tags without auth returns 401", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/tags");
+		expect(res.status).toBe(401);
+	});
+
+	it("GET /v1/api/tags returns list of tags", async () => {
+		const res = await SELF.fetch("http://example.com/v1/api/tags", { headers: authHeaders });
 		expect(res.status).toBe(200);
 		const body = await res.json() as Record<string, unknown>;
 		expect(body).toHaveProperty("data");

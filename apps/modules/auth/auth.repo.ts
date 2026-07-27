@@ -1,4 +1,4 @@
-import type { User, IAuthRepository } from './auth.interface';
+import type { User, IAuthRepository, ApiKeyRecord, ApiKeyLookup } from './auth.interface';
 
 export class AuthRepository implements IAuthRepository {
 	constructor(private readonly db: D1Database) { }
@@ -206,6 +206,92 @@ export class AuthRepository implements IAuthRepository {
 		await this.db
 			.prepare('DELETE FROM refresh_tokens WHERE user_id = ?1')
 			.bind(userId)
+			.run();
+	}
+
+	/**
+	 * @description Persist a new API key record (only the hash is stored)
+	 * @param { string } id Key ID (UUID)
+	 * @param { string } userId Owning user ID
+	 * @param { string } name Human-readable label
+	 * @param { string } prefix First characters of the plaintext key (for identification)
+	 * @param { string } keyHash SHA-256 hex hash of the plaintext key
+	 * @param { string | null } expiresAt ISO timestamp or null for no expiry
+	 * @returns { Promise<ApiKeyRecord> } The stored record (without the plaintext)
+	 */
+	async createApiKey(
+		id: string,
+		userId: string,
+		name: string,
+		prefix: string,
+		keyHash: string,
+		expiresAt: string | null,
+	): Promise<ApiKeyRecord> {
+		const now = new Date().toISOString();
+		await this.db
+			.prepare('INSERT INTO api_keys (id, user_id, name, prefix, key_hash, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)')
+			.bind(id, userId, name, prefix, keyHash, expiresAt)
+			.run();
+		return {
+			id,
+			user_id: userId,
+			name,
+			prefix,
+			last_used_at: null,
+			expires_at: expiresAt,
+			revoked_at: null,
+			created_at: now,
+		};
+	}
+
+	/**
+	 * @description List API keys belonging to a user (metadata only)
+	 * @param { string } userId User ID
+	 * @returns { Promise<ApiKeyRecord[]> } Non-secret key records
+	 */
+	async listApiKeysByUser(userId: string): Promise<ApiKeyRecord[]> {
+		const { results } = await this.db
+			.prepare('SELECT id, user_id, name, prefix, last_used_at, expires_at, revoked_at, created_at FROM api_keys WHERE user_id = ?1 ORDER BY created_at DESC')
+			.bind(userId)
+			.all<ApiKeyRecord>();
+		return results ?? [];
+	}
+
+	/**
+	 * @description Look up an API key by its hash
+	 * @param { string } keyHash SHA-256 hex hash
+	 * @returns { Promise<ApiKeyLookup | null> } Minimal record for guard checks or null
+	 */
+	async findApiKeyByHash(keyHash: string): Promise<ApiKeyLookup | null> {
+		return this.db
+			.prepare('SELECT id, user_id, expires_at, revoked_at FROM api_keys WHERE key_hash = ?1')
+			.bind(keyHash)
+			.first<ApiKeyLookup>();
+	}
+
+	/**
+	 * @description Revoke an API key owned by the given user
+	 * @param { string } id Key ID
+	 * @param { string } userId Owning user ID
+	 * @returns { Promise<boolean> } True if a row was updated
+	 */
+	async revokeApiKey(id: string, userId: string): Promise<boolean> {
+		const res = await this.db
+			.prepare("UPDATE api_keys SET revoked_at = datetime('now') WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL")
+			.bind(id, userId)
+			.run();
+		return (res.meta?.changes ?? 0) > 0;
+	}
+
+	/**
+	 * @description Update the last-used timestamp for an API key
+	 * @param { string } id Key ID
+	 * @returns { Promise<void> }
+	 */
+	async touchApiKeyLastUsed(id: string): Promise<void> {
+		await this.db
+			.prepare("UPDATE api_keys SET last_used_at = datetime('now') WHERE id = ?1")
+			.bind(id)
 			.run();
 	}
 }

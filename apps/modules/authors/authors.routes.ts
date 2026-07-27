@@ -14,7 +14,7 @@ const app = new Hono<{ Bindings: Env }>();
  * @param { String } sort - The field to sort by
  * @param { String } order - The sort order (asc or desc)
 */
-app.get('/v1/api/authors', (c) => AuthorsController.list(c.req.raw, c.env));
+app.get('/v1/api/authors', authGuard, (c) => AuthorsController.list(c.req.raw, c.env));
 
 /**
  * @description Create Author

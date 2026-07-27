@@ -7,7 +7,7 @@
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/api/tags` | List tags (paginated) |
+| `GET` | `/v1/api/tags` | List tags (paginated) — **requires auth** (Bearer JWT or SSO API key) |
 | `GET` | `/v1/api/tags/:id` | Get tag by ID |
 | `POST` | `/v1/api/tags` | Create tag |
 | `PATCH` | `/v1/api/tags/:id` | Update tag |

@@ -7,7 +7,7 @@
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/api/projects` | List projects (paginated) |
+| `GET` | `/v1/api/projects` | List projects (paginated) — **requires auth** (Bearer JWT or SSO API key) |
 | `GET` | `/v1/api/projects/:slug` | Get project by slug (includes `details` if set) |
 | `POST` | `/v1/api/projects` | Create project |
 | `PATCH` | `/v1/api/projects/:slug` | Update project |
