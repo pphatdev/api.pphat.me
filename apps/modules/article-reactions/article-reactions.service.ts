@@ -31,14 +31,4 @@ export class ArticleReactionService {
 	decrement(articleId: string, type: string): Promise<ArticleReaction | null> {
 		return this.repo.decrement(articleId, type);
 	}
-
-	/**
-	 * @description Delete a reaction entry
-	 * @param { string } articleId The article ID
-	 * @param { string } type The reaction type
-	 * @returns { Promise<boolean> } True if deleted
-	 */
-	delete(articleId: string, type: string): Promise<boolean> {
-		return this.repo.delete(articleId, type);
-	}
 }

@@ -29,7 +29,6 @@ export interface UpdateCommentDto {
 
 export interface IArticleCommentRepository {
 	findAllByArticleId(articleId: string, params: PaginationParams): Promise<PaginatedResult<ArticleComment>>;
-	findById(id: number): Promise<ArticleComment | null>;
 	create(articleId: string, dto: CreateCommentDto): Promise<ArticleComment>;
 	update(id: number, dto: UpdateCommentDto): Promise<ArticleComment | null>;
 	delete(id: number): Promise<boolean>;

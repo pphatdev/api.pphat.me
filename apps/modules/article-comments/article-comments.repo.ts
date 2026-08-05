@@ -44,20 +44,6 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 	}
 
 	/**
-	 * @description Find a comment by its ID
-	 * @param { number } id The comment ID
-	 * @returns { Promise<ArticleComment | null> } The comment or null
-	 */
-	async findById(id: number): Promise<ArticleComment | null> {
-		const row = await this.db
-			.prepare("SELECT * FROM article_comments WHERE id = ?1")
-			.bind(id)
-			.first<ArticleCommentRow>();
-		if (!row) return null;
-		return this.mapRow(row);
-	}
-
-	/**
 	 * @description Create a new comment in the database
 	 * @param { string } articleId The article ID
 	 * @param { CreateCommentDto } dto Comment data

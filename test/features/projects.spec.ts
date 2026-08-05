@@ -143,19 +143,7 @@ describe("Projects API", () => {
 		});
 	});
 
-	describe("Details", () => {
-		it(`GET /v1/api/projects/${PROJECT_SLUG}/details returns project details`, async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}/details`);
-			expect(res.status).toBe(200);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("projectId");
-		});
-
-		it("GET /v1/api/projects/non-existent/details returns 404", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/projects/non-existent/details");
-			expect(res.status).toBe(404);
-		});
-	});
+	// Project details tests live in test/features/project-details.spec.ts.
 
 	describe("Tags (by Project)", () => {
 		it(`GET /v1/api/projects/${PROJECT_SLUG}/tags returns tags for project`, async () => {

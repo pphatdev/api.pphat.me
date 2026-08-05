@@ -8,6 +8,7 @@ permissions:
   contents: write
   id-token: write
   attestations: write
+  pull-requests: write
 
 jobs:
   test:
@@ -55,3 +56,16 @@ jobs:
           generate_release_notes: true
           draft: ${{ github.event_name == 'pull_request' }}
           prerelease: ${{ github.event_name == 'pull_request' }}
+
+      # Alerts the team on release outcome. Falls back to a PR comment when
+      # TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID are not configured.
+      - name: Notify Telegram
+        if: always()
+        uses: pphatdev/telegrambot-alert-action@v1.1
+        with:
+          telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          telegram-chat-id: ${{ secrets.TELEGRAM_CHAT_ID }}
+          status: ${{ job.status }}
+          stage: Release
+          environment: production
+          extra: "<b>Version:</b> ${{ steps.get_version.outputs.version }}\n<b>Release:</b> ${{ github.event.release.html_url }}"

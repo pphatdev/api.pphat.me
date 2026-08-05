@@ -423,20 +423,6 @@ export class ArticleRepository implements IArticleRepository {
 	}
 
 	/**
-	 * @description Check if user is the article owner
-	 * @param { string } articleId Article ID
-	 * @param { string } userId User ID
-	 * @returns { Promise<boolean> } True if owner
-	 */
-	async isOwner(articleId: string, userId: string): Promise<boolean> {
-		const row = await this.db
-			.prepare("SELECT 1 FROM articles WHERE id = ?1 AND owner_id = ?2")
-			.bind(articleId, userId)
-			.first();
-		return row !== null;
-	}
-
-	/**
 	 * @description Check if user is a contributor
 	 * @param { string } articleId Article ID
 	 * @param { string } userId User ID

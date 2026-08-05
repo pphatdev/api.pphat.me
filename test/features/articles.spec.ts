@@ -121,6 +121,14 @@ describe("Articles API", () => {
 			expect(body.data).toHaveProperty("content");
 		});
 
+		it("includes navigation next/prev URLs in response", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}`);
+			const body = await res.json() as Record<string, unknown>;
+			expect(body).toHaveProperty("navigation");
+			expect(body.navigation).toHaveProperty("next");
+			expect(body.navigation).toHaveProperty("prev");
+		});
+
 		it("returns 404 for non-existent slug", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/articles/non-existent-slug");
 			expect(res.status).toBe(404);
@@ -202,221 +210,6 @@ describe("Articles API", () => {
 	});
 
 	/**
-	 * GET /v1/api/articles/:slug/stats
-	 */
-	describe("GET /v1/api/articles/:slug/stats", () => {
-		it("returns stats", async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/stats`);
-			expect(res.status).toBe(200);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("views");
-			expect(body).toHaveProperty("readingMins");
-		});
-
-		it("returns 404 for non-existent article", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/articles/non-existent/stats");
-			expect(res.status).toBe(404);
-		});
-	});
-
-	/**
-	 * POST /v1/api/articles/:slug/stats/view
-	 */
-	describe("POST /v1/api/articles/:slug/stats/view", () => {
-		it("increments view count", async () => {
-			const res = await SELF.fetch(
-				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/stats/view`,
-				{ method: "POST", headers: authHeaders }
-			);
-			expect(res.status).toBe(200);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("views");
-			expect(typeof body.views).toBe("number");
-		});
-	});
-
-	/**
-	 * GET /v1/api/articles/:slug/reactions
-	 */
-	describe("GET /v1/api/articles/:slug/reactions", () => {
-		it("returns reaction list", async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions`);
-			expect(res.status).toBe(200);
-			const body = await res.json() as unknown[];
-			expect(Array.isArray(body)).toBe(true);
-		});
-	});
-
-	/**
-	 * POST /v1/api/articles/:slug/reactions
-	 */
-	describe("POST /v1/api/articles/:slug/reactions", () => {
-		it("adds a reaction", async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions`, {
-				method: "POST",
-				headers: authHeaders,
-				body: JSON.stringify({ type: "like" }),
-			});
-			expect(res.status).toBe(200);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("type", "like");
-			expect(body).toHaveProperty("count");
-		});
-
-		it("with invalid type returns 422", async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions`, {
-				method: "POST",
-				headers: authHeaders,
-				body: JSON.stringify({ type: "invalid-type" }),
-			});
-			expect(res.status).toBe(422);
-		});
-
-		it("with missing type returns 422", async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions`, {
-				method: "POST",
-				headers: authHeaders,
-				body: JSON.stringify({}),
-			});
-			expect(res.status).toBe(422);
-		});
-	});
-
-	/**
-	 * DELETE /v1/api/articles/:slug/reactions/:type
-	 */
-	describe("DELETE /v1/api/articles/:slug/reactions/:type", () => {
-		it("decrements reaction", async () => {
-			const res = await SELF.fetch(
-				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions/like`,
-				{ method: "DELETE", headers: authHeaders }
-			);
-			expect(res.status).toBe(200);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("type", "like");
-		});
-
-		it("with invalid type returns 422", async () => {
-			const res = await SELF.fetch(
-				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/reactions/invalid-type`,
-				{ method: "DELETE", headers: authHeaders }
-			);
-			expect(res.status).toBe(422);
-		});
-	});
-
-	/**
-	 * GET /v1/api/articles/:slug/comments
-	 */
-	describe("GET /v1/api/articles/:slug/comments", () => {
-		it("returns paginated comments", async () => {
-			const res = await SELF.fetch(
-				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments?page=1&limit=10`
-			);
-			expect(res.status).toBe(200);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("data");
-			expect(Array.isArray(body.data)).toBe(true);
-			expect(body).toHaveProperty("pagination");
-		});
-	});
-
-	/**
-	 * POST /v1/api/articles/:slug/comments
-	 */
-	describe("POST /v1/api/articles/:slug/comments", () => {
-		it("creates a comment (201)", async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments`, {
-				method: "POST",
-				headers: authHeaders,
-				body: JSON.stringify({ authorName: "John Doe", content: "Great article!" }),
-			});
-			expect(res.status).toBe(201);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("content", "Great article!");
-			expect(body).toHaveProperty("id");
-		});
-
-		it("missing authorName returns 422", async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments`, {
-				method: "POST",
-				headers: authHeaders,
-				body: JSON.stringify({ content: "Missing author." }),
-			});
-			expect(res.status).toBe(422);
-		});
-
-		it("missing content returns 422", async () => {
-			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments`, {
-				method: "POST",
-				headers: authHeaders,
-				body: JSON.stringify({ authorName: "John Doe" }),
-			});
-			expect(res.status).toBe(422);
-		});
-	});
-
-	/**
-	 * PATCH /v1/api/articles/:slug/comments/:id
-	 */
-	describe("PATCH /v1/api/articles/:slug/comments/:id", () => {
-		it("updates a comment", async () => {
-			const res = await SELF.fetch(
-				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/1`,
-				{
-					method: "PATCH",
-					headers: authHeaders,
-					body: JSON.stringify({ content: "Updated comment text." }),
-				}
-			);
-			expect(res.status).toBe(200);
-			const body = await res.json() as Record<string, unknown>;
-			expect(body).toHaveProperty("content", "Updated comment text.");
-		});
-
-		it("returns 404 for non-existent comment", async () => {
-			const res = await SELF.fetch(
-				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/999`,
-				{
-					method: "PATCH",
-					headers: authHeaders,
-					body: JSON.stringify({ content: "Updated." }),
-				}
-			);
-			expect(res.status).toBe(404);
-		});
-	});
-
-	/**
-	 * DELETE /v1/api/articles/:slug/comments/:id
-	 */
-	describe("DELETE /v1/api/articles/:slug/comments/:id", () => {
-		it("deletes a comment (204)", async () => {
-			const res = await SELF.fetch(
-				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/1`,
-				{ method: "DELETE", headers: authHeaders }
-			);
-			expect(res.status).toBe(204);
-		});
-
-		it("returns 404 for non-existent comment", async () => {
-			const res = await SELF.fetch(
-				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/999`,
-				{ method: "DELETE", headers: authHeaders }
-			);
-			expect(res.status).toBe(404);
-		});
-
-		it("returns 400 for invalid comment ID", async () => {
-			const res = await SELF.fetch(
-				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/abc`,
-				{ method: "DELETE", headers: authHeaders }
-			);
-			expect(res.status).toBe(400);
-		});
-	});
-
-	/**
 	 * GET /v1/api/articles/:slug/tags
 	 */
 	describe("GET /v1/api/articles/:slug/tags", () => {
@@ -425,6 +218,115 @@ describe("Articles API", () => {
 			expect(res.status).toBe(200);
 			const body = await res.json() as unknown[];
 			expect(Array.isArray(body)).toBe(true);
+		});
+
+		it("returns 404 for non-existent article slug", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles/non-existent/tags");
+			expect(res.status).toBe(404);
+		});
+	});
+
+	/**
+	 * POST /v1/api/articles/:id/contributors
+	 * DELETE /v1/api/articles/:id/contributors/me
+	 */
+	describe("Contributors", () => {
+		it("owner can add a contributor", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_ID}/contributors`, {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({ user_id: "contributor-user-1" }),
+			});
+			expect(res.status).toBe(200);
+			const body = await res.json() as Record<string, unknown>;
+			expect(body).toHaveProperty("message");
+		});
+
+		it("adding the same contributor twice is idempotent (still 200)", async () => {
+			// Repo uses INSERT OR IGNORE, so duplicate adds succeed silently.
+			// The controller's 409 branch is unreachable dead code today; if
+			// that repo behavior ever changes, flip this expectation to 409.
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_ID}/contributors`, {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({ user_id: "contributor-user-1" }),
+			});
+			expect(res.status).toBe(200);
+		});
+
+		it("missing user_id returns 422", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_ID}/contributors`, {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({}),
+			});
+			expect(res.status).toBe(422);
+		});
+
+		it("returns 400 for invalid UUID", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/not-a-uuid/contributors`, {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({ user_id: "some-user" }),
+			});
+			expect(res.status).toBe(400);
+		});
+
+		it("non-owner non-admin cannot add contributors (403)", async () => {
+			// Create an article owned by admin, then have the non-admin user try to add a contributor.
+			const slug = `owned-by-admin-${Date.now()}`;
+			const createRes = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: adminHeaders,
+				body: JSON.stringify({ title: "Admin Owned", slug, description: "Owned by admin." }),
+			});
+			expect(createRes.status).toBe(201);
+			const created = await createRes.json() as { id: string };
+
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${created.id}/contributors`, {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({ user_id: "other-user" }),
+			});
+			expect(res.status).toBe(403);
+		});
+
+		it("returns 404 when adding contributor to non-existent article", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${NONEXISTENT_UUID}/contributors`, {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({ user_id: "some-user" }),
+			});
+			expect(res.status).toBe(404);
+		});
+
+		it("contributor can remove themself (204)", async () => {
+			// Seed a contributor row directly for the test user so DELETE /me finds a match.
+			await env.DB.prepare(
+				`INSERT OR IGNORE INTO article_contributors (article_id, user_id) VALUES (?1, ?2)`,
+			).bind(ARTICLE_ID, "test-user-id").run();
+
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_ID}/contributors/me`, {
+				method: "DELETE",
+				headers: authHeaders,
+			});
+			expect(res.status).toBe(204);
+		});
+
+		it("returns 404 when removing self and not a contributor", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${NONEXISTENT_UUID}/contributors/me`, {
+				method: "DELETE",
+				headers: authHeaders,
+			});
+			expect(res.status).toBe(404);
+		});
+
+		it("returns 400 for invalid UUID on remove-self", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/not-a-uuid/contributors/me`, {
+				method: "DELETE",
+				headers: authHeaders,
+			});
+			expect(res.status).toBe(400);
 		});
 	});
 

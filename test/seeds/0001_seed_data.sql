@@ -1,6 +1,16 @@
 -- Seed users
-INSERT OR IGNORE INTO users (id, provider, provider_id, email, name, role) 
+INSERT OR IGNORE INTO users (id, provider, provider_id, email, name, role)
 VALUES ('test-user-id', 'email', 'test-user-id', 'test@example.com', 'Test User', 'admin');
+
+-- The auth test helper (getAdminHeaders) signs JWTs with sub='admin-user-id' and
+-- role='admin'. Any endpoint that writes rows with an FK back to users(id) needs
+-- this user to exist, e.g. inserting articles with owner_id = 'admin-user-id'.
+INSERT OR IGNORE INTO users (id, provider, provider_id, email, name, role)
+VALUES ('admin-user-id', 'email', 'admin-user-id', 'admin@example.com', 'Admin User', 'admin');
+
+-- Generic secondary user for tests that add a contributor / secondary actor.
+INSERT OR IGNORE INTO users (id, provider, provider_id, email, name, role)
+VALUES ('contributor-user-1', 'email', 'contributor-user-1', 'contrib@example.com', 'Contributor One', 'user');
 
 -- Seed articles
 INSERT OR IGNORE INTO articles (id, title, slug, description, thumbnail, published, is_public, content, file_path, owner_id, created_at, updated_at)
@@ -34,9 +44,11 @@ VALUES ('00000000-0000-4000-8000-000000000001', 'Jane Doe', 'Great article!', '2
 INSERT OR IGNORE INTO projects (id, title, slug, description, thumbnail, published, created_at, updated_at, languages) 
 VALUES ('00000000-0000-4000-8000-000000000002', 'Test Project', 'test-project-slug', 'A test project description.', 'https://example.com/proj-thumb.png', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', '["TypeScript"]');
 
--- Seed project details
-INSERT OR IGNORE INTO project_details (id, project_id, content, demo_url, repo_url, tech_stack, status, created_at, updated_at) 
-VALUES ('pd-001', '00000000-0000-4000-8000-000000000002', '# Project content', 'https://demo.example.com', 'https://github.com/example/project', '["TypeScript"]', 'in-progress', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
+-- Seed project details. The id column has a CHECK constraint requiring a UUID v4
+-- pattern (see migrations/0008_create_project_details.sql), so a plain 'pd-001'
+-- would be silently rejected under INSERT OR IGNORE.
+INSERT OR IGNORE INTO project_details (id, project_id, content, demo_url, repo_url, tech_stack, status, created_at, updated_at)
+VALUES ('00000000-0000-4000-8000-0000000000d0', '00000000-0000-4000-8000-000000000002', '# Project content', 'https://demo.example.com', 'https://github.com/example/project', '["TypeScript"]', 'in-progress', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
 
 -- Seed tags
 INSERT OR IGNORE INTO tags (tag, article_id, description) 

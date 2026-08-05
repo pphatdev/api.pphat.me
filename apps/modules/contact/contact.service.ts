@@ -52,26 +52,6 @@ export class ContactService {
     }
 
     /**
-     * @description Convenience wrapper — persist then send email inline. Retained for
-     * callers that don't have access to an ExecutionContext. Prefer saveMessage +
-     * ctx.waitUntil(notifyEmail(...)) in Worker handlers.
-     * @param { D1Database } db Database binding
-     * @param { CreateContactDto } dto Message data
-     * @param { object } meta Client metadata (IP, UA)
-     * @param { SmtpConfig } smtp SMTP configuration
-     * @returns { Promise<void> }
-     */
-    static async submit(
-        db: D1Database,
-        dto: CreateContactDto,
-        meta: { ip: string; ua: string },
-        smtp: SmtpConfig,
-    ): Promise<void> {
-        await ContactService.saveMessage(db, dto, meta);
-        await ContactService.notifyEmail(dto, smtp);
-    }
-
-    /**
      * @description List contact messages with pagination
      * @param { D1Database } db Database binding
      * @param { number } page Page number

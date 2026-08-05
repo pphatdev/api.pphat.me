@@ -13,5 +13,4 @@ export interface ArticleStatsRow {
 export interface IArticleStatsRepository {
 	findByArticleId(articleId: string): Promise<ArticleStats | null>;
 	incrementViews(articleId: string): Promise<ArticleStats>;
-	upsert(articleId: string, readingMins: number): Promise<void>;
 }

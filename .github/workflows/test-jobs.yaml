@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   test:
@@ -51,3 +52,16 @@ jobs:
           echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+      # Alerts the team on build outcome. Skipped when the calling workflow is a
+      # release (the release job posts its own final alert). Falls back to a PR
+      # comment when TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID are not configured.
+      - name: Notify Telegram
+        if: always() && github.event_name != 'release'
+        uses: pphatdev/telegrambot-alert-action@v1.1
+        with:
+          telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          telegram-chat-id: ${{ secrets.TELEGRAM_CHAT_ID }}
+          status: ${{ job.status }}
+          stage: "Build (Node ${{ inputs.node-version }})"
+          extra: "<b>Branch:</b> ${{ github.ref_name }}\n<b>Commit:</b> <code>${{ github.sha }}</code>"

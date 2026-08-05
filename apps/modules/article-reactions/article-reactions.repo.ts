@@ -69,20 +69,6 @@ export class ArticleReactionRepository implements IArticleReactionRepository {
 	}
 
 	/**
-	 * @description Delete a reaction from the database
-	 * @param { string } articleId The article ID
-	 * @param { string } type The reaction type
-	 * @returns { Promise<boolean> } True if changes occurred
-	 */
-	async delete(articleId: string, type: string): Promise<boolean> {
-		const result = await this.db
-			.prepare("DELETE FROM article_reactions WHERE article_id = ?1 AND type = ?2")
-			.bind(articleId, type)
-			.run();
-		return result.meta.changes > 0;
-	}
-
-	/**
 	 * @description Maps a database row to a reaction object
 	 * @param { ArticleReactionRow } row The database row
 	 * @returns { ArticleReaction } The mapped reaction
