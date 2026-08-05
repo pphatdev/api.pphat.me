@@ -3,9 +3,9 @@
  * All wire timestamps for scheduling APIs are interpreted in this timezone
  * and stored internally as UTC (matching D1's `datetime('now')`).
  */
-export const PHNOM_PENH_OFFSET_MINUTES = 7 * 60;
-export const PHNOM_PENH_OFFSET_MS = PHNOM_PENH_OFFSET_MINUTES * 60 * 1000;
-export const PHNOM_PENH_ISO_OFFSET = '+07:00';
+const PHNOM_PENH_OFFSET_MINUTES = 7 * 60;
+const PHNOM_PENH_OFFSET_MS = PHNOM_PENH_OFFSET_MINUTES * 60 * 1000;
+const PHNOM_PENH_ISO_OFFSET = '+07:00';
 
 /**
  * @description Parse an incoming scheduling timestamp and return a UTC ISO string suitable for D1.
@@ -46,14 +46,4 @@ export function formatUtcAsPhnomPenh(utcIso: string | null): string | null {
     const local = new Date(d.getTime() + PHNOM_PENH_OFFSET_MS);
     const pad = (n: number, w = 2) => String(n).padStart(w, '0');
     return `${local.getUTCFullYear()}-${pad(local.getUTCMonth() + 1)}-${pad(local.getUTCDate())}T${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}:${pad(local.getUTCSeconds())}${PHNOM_PENH_ISO_OFFSET}`;
-}
-
-/**
- * @description Check whether a UTC ISO timestamp is strictly in the past.
- * @param { string } utcIso UTC ISO
- * @returns { boolean } True if past
- */
-export function isPast(utcIso: string): boolean {
-    const d = new Date(utcIso);
-    return !Number.isNaN(d.getTime()) && d.getTime() <= Date.now();
 }
