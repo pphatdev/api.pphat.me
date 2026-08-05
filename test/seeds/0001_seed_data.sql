@@ -36,9 +36,18 @@ VALUES ('00000000-0000-4000-8000-000000000001', 10, 3);
 INSERT OR IGNORE INTO article_reactions (article_id, type, count) 
 VALUES ('00000000-0000-4000-8000-000000000001', 'like', 5);
 
--- Seed article comments
-INSERT OR IGNORE INTO article_comments (article_id, author_name, content, created_at, updated_at) 
-VALUES ('00000000-0000-4000-8000-000000000001', 'Jane Doe', 'Great article!', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
+-- Seed test users referenced by owner/ownership checks. Must be inserted
+-- before article_comments (FK constraint via user_id) and before any seed row
+-- that references users.id.
+INSERT OR IGNORE INTO users (id, role, provider, provider_id, email, name, email_verified)
+VALUES
+    ('test-user-id', 'user', 'email', 'test@example.com', 'test@example.com', 'Test User', 1),
+    ('admin-user-id', 'admin', 'email', 'admin@example.com', 'admin@example.com', 'Admin User', 1);
+
+-- Seed article comments. user_id is populated so ownership checks succeed for
+-- the test user; a NULL user_id is treated as legacy/admin-only.
+INSERT OR IGNORE INTO article_comments (article_id, user_id, author_name, content, created_at, updated_at)
+VALUES ('00000000-0000-4000-8000-000000000001', 'test-user-id', 'Test User', 'Great article!', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
 
 -- Seed projects
 INSERT OR IGNORE INTO projects (id, title, slug, description, thumbnail, published, created_at, updated_at, languages) 

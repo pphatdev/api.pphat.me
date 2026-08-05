@@ -29,7 +29,10 @@ export class DashboardController {
 	}
 
 	/**
-	 * @description Streams live traffic data using SSE
+	 * @description Streams live traffic data using SSE.
+	 * The loop honours client aborts (browser closes tab, network drop) and enforces
+	 * a hard maximum duration so a stuck connection cannot burn CPU / DB / billing
+	 * indefinitely. Clients that need longer streams must reconnect.
 	 * @method GET
 	 * @param { Context } c Hono context
 	 * @returns { Promise<Response> } SSE stream
@@ -41,10 +44,15 @@ export class DashboardController {
 		const authorRepo = new AuthorRepository(db);
 		const repo = new DashboardRepository(db, articleRepo, projectRepo, authorRepo);
 
+		const POLL_INTERVAL_MS = 5000;
+		const MAX_STREAM_DURATION_MS = 10 * 60 * 1000; // 10 min hard cap; client reconnects
+		const signal = c.req.raw.signal;
+
 		return streamSSE(c, async (stream) => {
+			const deadline = Date.now() + MAX_STREAM_DURATION_MS;
 			let lastCount = -1;
 
-			while (true) {
+			while (!signal.aborted && !stream.aborted && !stream.closed && Date.now() < deadline) {
 				try {
 					const currentCount = await repo.getLiveTraffic();
 
@@ -58,9 +66,35 @@ export class DashboardController {
 					console.error("Live traffic stream error:", err);
 				}
 
-				// Wait 5 seconds before next poll
-				await new Promise(r => setTimeout(r, 5000));
+				await abortableSleep(POLL_INTERVAL_MS, signal, stream);
 			}
 		});
 	}
+}
+
+/**
+ * @description Sleep that resolves early on request abort / stream close
+ * @param { number } ms Sleep duration in milliseconds
+ * @param { AbortSignal } signal The request's abort signal
+ * @param { { aborted?: boolean; closed?: boolean } } stream The SSE stream handle
+ * @returns { Promise<void> }
+ */
+function abortableSleep(
+	ms: number,
+	signal: AbortSignal,
+	stream: { aborted?: boolean; closed?: boolean },
+): Promise<void> {
+	return new Promise((resolve) => {
+		if (signal.aborted || stream.aborted || stream.closed) return resolve();
+		const timer = setTimeout(() => {
+			signal.removeEventListener('abort', onAbort);
+			resolve();
+		}, ms);
+		const onAbort = () => {
+			clearTimeout(timer);
+			signal.removeEventListener('abort', onAbort);
+			resolve();
+		};
+		signal.addEventListener('abort', onAbort, { once: true });
+	});
 }

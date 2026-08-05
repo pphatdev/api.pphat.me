@@ -153,7 +153,7 @@ app.post(
     '/v1/api/articles/:slug/comments',
     authGuard,
     ArticlesController.resolveArticle,
-    (c) => ArticleCommentsController.create(c.req.raw, c.env, c.get('articleId'))
+    (c) => ArticleCommentsController.create(c.req.raw, c.env, c.get('articleId'), c.get('user')!)
 );
 
 /**
@@ -167,7 +167,7 @@ app.patch(
     '/v1/api/articles/:slug/comments/:id',
     authGuard,
     ArticlesController.resolveArticle,
-    (c) => ArticleCommentsController.update(c.req.raw, c.env, c.get('articleId'), c.req.param('id')!)
+    (c) => ArticleCommentsController.update(c.req.raw, c.env, c.get('articleId'), c.req.param('id')!, c.get('user')!)
 );
 
 /**
@@ -180,7 +180,7 @@ app.delete(
     '/v1/api/articles/:slug/comments/:id',
     authGuard,
     ArticlesController.resolveArticle,
-    (c) => ArticleCommentsController.delete(c.req.raw, c.env, c.get('articleId'), c.req.param('id')!)
+    (c) => ArticleCommentsController.delete(c.req.raw, c.env, c.get('articleId'), c.req.param('id')!, c.get('user')!)
 );
 
 /**

@@ -1,13 +1,22 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { seedDatabase, ARTICLE_SLUG, getAuthHeaders } from "../../apps/shared/helpers/test-cases";
+import { seedDatabase, ARTICLE_SLUG, getAuthHeaders, getAdminHeaders } from "../../apps/shared/helpers/test-cases";
+import { createJwt } from "../../apps/modules/auth/auth.service";
 
 const SELF = exports.default;
 let authHeaders: Record<string, string>;
+let adminHeaders: Record<string, string>;
+let otherUserHeaders: Record<string, string>;
 
 beforeAll(async () => {
 	await seedDatabase(env.DB);
 	authHeaders = await getAuthHeaders(env.JWT_SECRET);
+	adminHeaders = await getAdminHeaders(env.JWT_SECRET);
+	const otherToken = await createJwt(
+		{ sub: "other-user-id", provider: "email", email: "other@example.com", name: "Other User", role: "user" },
+		env.JWT_SECRET,
+	);
+	otherUserHeaders = { Authorization: `Bearer ${otherToken}`, "Content-Type": "application/json" };
 });
 
 describe("Article Comments API", () => {
@@ -65,16 +74,21 @@ describe("Article Comments API", () => {
 			expect(body).toHaveProperty("id");
 		});
 
-		it("missing authorName returns 422", async () => {
+		it("ignores client-supplied authorName (uses JWT identity)", async () => {
+			// A malicious client cannot impersonate another user via authorName —
+			// the server always writes the authenticated user's name/id.
 			const res = await SELF.fetch(
 				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments`,
 				{
 					method: "POST",
 					headers: authHeaders,
-					body: JSON.stringify({ content: "Missing author." }),
+					body: JSON.stringify({ authorName: "Impersonation Attempt", content: "hi" }),
 				},
 			);
-			expect(res.status).toBe(422);
+			expect(res.status).toBe(201);
+			const body = (await res.json()) as Record<string, unknown>;
+			expect(body).toHaveProperty("authorName", "Test User");
+			expect(body).toHaveProperty("userId", "test-user-id");
 		});
 
 		it("missing content returns 422", async () => {
@@ -195,6 +209,57 @@ describe("Article Comments API", () => {
 				{ method: "DELETE", headers: authHeaders },
 			);
 			expect(res.status).toBe(404);
+		});
+	});
+
+	/**
+	 * Ownership / IDOR protection
+	 */
+	describe("ownership enforcement (C2)", () => {
+		it("prevents another user from patching a comment (403)", async () => {
+			// Test user creates a comment
+			const create = await SELF.fetch(
+				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments`,
+				{ method: "POST", headers: authHeaders, body: JSON.stringify({ content: "mine" }) },
+			);
+			const { id } = (await create.json()) as { id: number };
+
+			// A different user tries to edit it
+			const res = await SELF.fetch(
+				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/${id}`,
+				{ method: "PATCH", headers: otherUserHeaders, body: JSON.stringify({ content: "hacked" }) },
+			);
+			expect(res.status).toBe(403);
+		});
+
+		it("prevents another user from deleting a comment (403)", async () => {
+			const create = await SELF.fetch(
+				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments`,
+				{ method: "POST", headers: authHeaders, body: JSON.stringify({ content: "keep me" }) },
+			);
+			const { id } = (await create.json()) as { id: number };
+
+			const res = await SELF.fetch(
+				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/${id}`,
+				{ method: "DELETE", headers: otherUserHeaders },
+			);
+			expect(res.status).toBe(403);
+		});
+
+		it("admin can edit any comment", async () => {
+			const create = await SELF.fetch(
+				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments`,
+				{ method: "POST", headers: authHeaders, body: JSON.stringify({ content: "original" }) },
+			);
+			const { id } = (await create.json()) as { id: number };
+
+			const res = await SELF.fetch(
+				`http://example.com/v1/api/articles/${ARTICLE_SLUG}/comments/${id}`,
+				{ method: "PATCH", headers: adminHeaders, body: JSON.stringify({ content: "moderated" }) },
+			);
+			expect(res.status).toBe(200);
+			const body = (await res.json()) as Record<string, unknown>;
+			expect(body).toHaveProperty("content", "moderated");
 		});
 	});
 });

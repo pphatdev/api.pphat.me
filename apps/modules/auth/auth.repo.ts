@@ -1,4 +1,4 @@
-import type { User, IAuthRepository, ApiKeyRecord, ApiKeyLookup } from './auth.interface';
+import type { User, PublicUser, IAuthRepository, ApiKeyRecord, ApiKeyLookup } from './auth.interface';
 
 export class AuthRepository implements IAuthRepository {
 	constructor(private readonly db: D1Database) { }
@@ -50,15 +50,27 @@ export class AuthRepository implements IAuthRepository {
 	}
 
 	/**
-	 * @description Find a user by their UUID
+	 * @description Find a user by their UUID (internal use only — includes password_hash)
 	 * @param { string } id User ID
 	 * @returns { Promise<User | null> } User record or null
 	 */
 	async findUserById(id: string): Promise<User | null> {
 		return this.db
-			.prepare('SELECT * FROM users WHERE id = ?1')
+			.prepare('SELECT id, provider, provider_id, email, name, avatar, email_verified, password_hash, role, created_at, updated_at FROM users WHERE id = ?1')
 			.bind(id)
 			.first<User>();
+	}
+
+	/**
+	 * @description Find a user by their UUID, safe to return to clients (no password_hash, no provider_id)
+	 * @param { string } id User ID
+	 * @returns { Promise<PublicUser | null> } Public user record or null
+	 */
+	async findPublicUserById(id: string): Promise<PublicUser | null> {
+		return this.db
+			.prepare('SELECT id, provider, email, name, avatar, email_verified, role, created_at, updated_at FROM users WHERE id = ?1')
+			.bind(id)
+			.first<PublicUser>();
 	}
 
 	/**
@@ -111,27 +123,48 @@ export class AuthRepository implements IAuthRepository {
 	}
 
 	/**
-	 * @description Verify an OTP and mark it as used
+	 * @description Verify an OTP and either mark it consumed on success or
+	 * increment the attempt counter on failure. Invalidates the OTP once the
+	 * attempt cap is reached so brute-force windows are bounded.
 	 * @param { string } email User email
 	 * @param { string } code The OTP code
+	 * @param { number } [maxAttempts=5] Attempts allowed before the OTP is invalidated
 	 * @returns { Promise<boolean> } True if valid and consumed
 	 */
-	async verifyAndConsumeOtp(email: string, code: string): Promise<boolean> {
+	async verifyAndConsumeOtp(email: string, code: string, maxAttempts = 5): Promise<boolean> {
+		// Load the most recent unused, unexpired OTP for this email
 		const otp = await this.db
 			.prepare(
-				"SELECT id FROM email_otps WHERE email = ?1 AND code = ?2 AND used = 0 AND expires_at > datetime('now') ORDER BY created_at DESC LIMIT 1",
+				"SELECT id, code, attempts FROM email_otps WHERE email = ?1 AND used = 0 AND expires_at > datetime('now') ORDER BY created_at DESC LIMIT 1",
 			)
-			.bind(email, code)
-			.first<{ id: string }>();
+			.bind(email)
+			.first<{ id: string; code: string; attempts: number }>();
 
 		if (!otp) return false;
 
-		await this.db
-			.prepare('UPDATE email_otps SET used = 1 WHERE id = ?1')
-			.bind(otp.id)
-			.run();
+		if (otp.code === code) {
+			await this.db
+				.prepare('UPDATE email_otps SET used = 1 WHERE id = ?1')
+				.bind(otp.id)
+				.run();
+			return true;
+		}
 
-		return true;
+		// Wrong code — increment attempts and, on the cap, invalidate the OTP so
+		// further guesses cannot use it even if the client keeps trying.
+		const nextAttempts = (otp.attempts ?? 0) + 1;
+		if (nextAttempts >= maxAttempts) {
+			await this.db
+				.prepare('UPDATE email_otps SET attempts = ?1, used = 1 WHERE id = ?2')
+				.bind(nextAttempts, otp.id)
+				.run();
+		} else {
+			await this.db
+				.prepare('UPDATE email_otps SET attempts = ?1 WHERE id = ?2')
+				.bind(nextAttempts, otp.id)
+				.run();
+		}
+		return false;
 	}
 
 	/**

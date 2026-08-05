@@ -1,4 +1,4 @@
-import type { User, JwtPayload, GitHubUser, GitHubEmail, GoogleUser, IAuthRepository, ApiKeyRecord } from './auth.interface';
+import type { User, PublicUser, JwtPayload, GitHubUser, GitHubEmail, GoogleUser, IAuthRepository, ApiKeyRecord } from './auth.interface';
 import { JwtService } from '../../shared/helpers/jwt';
 
 /**
@@ -316,12 +316,12 @@ export class AuthService {
 	}
 
 	/**
-	 * @description Get user details by ID
+	 * @description Get user details by ID (safe for client responses — no password_hash)
 	 * @param { string } id User ID
-	 * @returns { Promise<User | null> } User details or null
+	 * @returns { Promise<PublicUser | null> } Public user details or null
 	 */
-	getCurrentUser(id: string): Promise<User | null> {
-		return this.repo.findUserById(id);
+	getCurrentUser(id: string): Promise<PublicUser | null> {
+		return this.repo.findPublicUserById(id);
 	}
 
 	/**

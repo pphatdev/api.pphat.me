@@ -71,6 +71,20 @@ export async function authGuard(c: Context<any>, next: Next): Promise<Response |
 }
 
 /**
+ * @description Hono middleware that requires the caller to be an admin.
+ * Must run after `authGuard` — relies on `c.get('user')` being populated.
+ * @param { Context } c The Hono context
+ * @param { Next } next The next middleware
+ * @returns { Promise<Response | void> }
+ */
+export async function requireAdmin(c: Context<any>, next: Next): Promise<Response | void> {
+	const user = c.get('user') as JwtPayload | undefined;
+	if (!user) return json({ error: "Unauthorized" }, 401);
+	if (user.role !== 'admin') return json({ error: "Admin privileges required" }, 403);
+	return next();
+}
+
+/**
  * @description Hono middleware that optionally parses Bearer JWT or API key
  * @param { Context } c The Hono context
  * @param { Next } next The next middleware
