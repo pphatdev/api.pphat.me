@@ -34,7 +34,7 @@
         "wrangler": "^4.114.0"
     },
     "dependencies": {
-        "hono": "^4.12.31",
+        "hono": "^4.12.32",
         "nodemailer": "^9.0.3"
     },
     "overrides": {
