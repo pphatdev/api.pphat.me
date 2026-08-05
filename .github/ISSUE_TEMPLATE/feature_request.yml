@@ -1,0 +1,62 @@
+name: "🚀 Feature Request"
+description: Suggest an idea or new API capability for api.pphat.me
+title: "[FEAT]: "
+labels: ["enhancement", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature for api.pphat.me!
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Motivation
+      description: Is your feature request related to a problem or business requirement?
+      placeholder: Describe the problem or motivation...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe what you want to happen and how the feature should behave.
+      placeholder: Describe the proposed behavior or endpoint...
+    validations:
+      required: true
+  - type: dropdown
+    id: target_module
+    attributes:
+      label: Target Module / Scope
+      description: Which feature area does this belong to?
+      options:
+        - New API Endpoint / Module
+        - Authentication & RBAC
+        - D1 Database Schema / Migrations
+        - Developer Experience & Scripts
+        - Integration Testing & CI
+        - Other
+    validations:
+      required: false
+  - type: textarea
+    id: api_spec
+    attributes:
+      label: Proposed API Schema / Request-Response Example (Optional)
+      description: Provide any draft JSON schema or HTTP request/response examples.
+      render: json
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or features you've considered.
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate.
+          required: true

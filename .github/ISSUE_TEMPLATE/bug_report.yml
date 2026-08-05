@@ -1,0 +1,80 @@
+name: "🐛 Bug Report"
+description: Create a report to help us improve api.pphat.me
+title: "[BUG]: "
+labels: ["bug", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: summary
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe what happened...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Send HTTP request to POST /api/...
+        2. Pass body {...}
+        3. See error response ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: dropdown
+    id: affected_module
+    attributes:
+      label: Affected Module / Subsystem
+      description: Which part of the project is affected?
+      options:
+        - Apps / API Modules
+        - Authentication & Security Guards
+        - D1 Database / Schema / Migrations
+        - Cloudflare Workers / Wrangler Configuration
+        - Integration Tests (Vitest)
+        - Documentation / Other
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment & Runtime Details
+      description: Please provide details about your runtime environment.
+      value: |
+        - **API Version**: 
+        - **Node.js Version**: 
+        - **Wrangler Version**: 
+        - **OS**: 
+        - **Environment**: [Local Dev / Staging / Production]
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs & Stack Traces
+      description: Paste any relevant output from Wrangler or test runs here.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have searched existing issues and verified this is not a duplicate.
+          required: true
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/pphatdev/api.pphat.me/blob/main/CODE_OF_CONDUCT.md).
+          required: true

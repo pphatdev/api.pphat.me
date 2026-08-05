@@ -1,25 +1,53 @@
 ---
 name: "🚀 Feature Request"
-about: Suggest an idea for this project
+about: Suggest a new API endpoint or capability for api.pphat.me
 title: "[FEAT] "
-labels: enhancement
+labels: ["enhancement", "triage"]
 assignees: ""
 ---
 
-## Is your feature request related to a problem?
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+## 🎯 Problem & Motivation
+A clear and concise description of what problem this feature solves or what business requirement it fulfills.
 
-## Describe the Solution
-A clear and concise description of what you want to happen.
+## 💡 Proposed Solution
+Describe the proposed feature, API endpoint structure, and behavior in detail.
 
-## Describe Alternatives
-A clear and concise description of any alternative solutions or features you've considered.
+## 📐 Target Scope & Architectural Impact
+- [ ] **New API Endpoint / Module** (`apps/modules/<feature>/`)
+- [ ] **Middleware / Security Guard** (`apps/middlewares/`)
+- [ ] **D1 Database Schema Migration** (`migrations/`)
+- [ ] **Developer Experience & Tooling**
+- [ ] **Integration Test Coverage** (`test/features/*.spec.ts`)
 
-## Use Cases
-Describe the scenarios where this feature would be useful.
+## 📑 Proposed API Specification
+```http
+POST /api/v1/<endpoint>
+Content-Type: application/json
+Authorization: Bearer <token>
 
-## Additional Context
-Add any other context or screenshots about the feature request here.
+{
+  "request_field": "value"
+}
+```
+
+**Expected Response (`201 Created`)**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "..."
+  }
+}
+```
+
+## 🔄 Alternatives Considered
+A clear description of any alternative solutions, workaround patterns, or designs you've evaluated.
+
+## 📋 Acceptance Criteria Checklist
+- [ ] Defined Hono route structure and type-safe `Env` bindings.
+- [ ] Implemented parameter validation with Zod / schema validators.
+- [ ] Added `authGuard` or RBAC controls if endpoint is restricted.
+- [ ] Created integration tests in `test/features/*.spec.ts`.
 
 ---
 © 2026 [PPhat](https://pphat.me). All rights reserved.
