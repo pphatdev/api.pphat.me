@@ -73,14 +73,12 @@ export interface IAuthRepository {
 	createEmailUser(email: string, name: string, passwordHash: string): Promise<User>;
 	createOtp(email: string, code: string, expiresAt: string): Promise<void>;
 	verifyAndConsumeOtp(email: string, code: string): Promise<boolean>;
-	invalidateUserOtps(email: string): Promise<void>;
 	markEmailVerified(email: string): Promise<void>;
 
 	// Refresh Tokens
 	saveRefreshToken(userId: string, token: string, expiresAt: string): Promise<void>;
 	findRefreshToken(token: string): Promise<{ user_id: string; expires_at: string } | null>;
 	deleteRefreshToken(token: string): Promise<void>;
-	deleteUserRefreshTokens(userId: string): Promise<void>;
 
 	// API Keys (SSO)
 	createApiKey(id: string, userId: string, name: string, prefix: string, keyHash: string, expiresAt: string | null): Promise<ApiKeyRecord>;

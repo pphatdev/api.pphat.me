@@ -13,7 +13,7 @@ const API_KEY_LOOKUP_PREFIX_LEN = API_KEY_PREFIX.length + 8; // stored prefix fo
  * @param { string } key Plaintext key
  * @returns { Promise<string> } Hex-encoded hash
  */
-export async function hashApiKey(key: string): Promise<string> {
+async function hashApiKey(key: string): Promise<string> {
 	const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
 	return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
@@ -22,7 +22,7 @@ export async function hashApiKey(key: string): Promise<string> {
  * @description Generate a new random API key value
  * @returns { { plaintext: string; prefix: string } } The key and its display prefix
  */
-export function generateApiKeyValue(): { plaintext: string; prefix: string } {
+function generateApiKeyValue(): { plaintext: string; prefix: string } {
 	const bytes = crypto.getRandomValues(new Uint8Array(API_KEY_ENTROPY_BYTES));
 	const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
 	const plaintext = `${API_KEY_PREFIX}${hex}`;

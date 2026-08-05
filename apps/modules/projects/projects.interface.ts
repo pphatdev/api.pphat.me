@@ -70,6 +70,8 @@ export interface UpdateProjectDto {
 	status?: 'in-progress' | 'completed' | 'archived';
 }
 
+// Intentionally shares the AppEnv name with articles.interface.ts —
+// each module scopes its own Variables shape (projectId here, articleId there).
 export interface AppEnv {
 	Bindings: Env;
 	Variables: { projectId: string };

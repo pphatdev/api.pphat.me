@@ -74,6 +74,8 @@ export interface UpdateArticleDto {
 	tags?: { tag: string; description?: string }[];
 }
 
+// Intentionally shares the AppEnv name with projects.interface.ts —
+// each module scopes its own Variables shape (articleId + user here).
 export type AppEnv = {
 	Bindings: Env;
 	Variables: {
@@ -90,7 +92,6 @@ export interface IArticleRepository {
 	create(dto: CreateArticleDto): Promise<Article>;
 	update(id: string, dto: UpdateArticleDto): Promise<Article | null>;
 	delete(id: string): Promise<boolean>;
-	isOwner(articleId: string, userId: string): Promise<boolean>;
 	isContributor(articleId: string, userId: string): Promise<boolean>;
 	addContributor(articleId: string, userId: string): Promise<void>;
 	removeContributor(articleId: string, userId: string): Promise<boolean>;

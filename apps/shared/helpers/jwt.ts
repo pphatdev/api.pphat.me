@@ -1,4 +1,4 @@
-import { sign, verify, decode } from 'hono/jwt';
+import { sign, verify } from 'hono/jwt';
 import type { SignatureAlgorithm } from 'hono/utils/jwt/jwa';
 
 export interface JwtOptions {
@@ -78,20 +78,6 @@ export class JwtService {
 			const payload = await verify(token, this.secret, this.alg);
 			return payload as T;
 		} catch (err) {
-			return null;
-		}
-	}
-
-	/**
-	 * @description Decodes token without verification
-	 * @param { string } token The token to decode
-	 * @returns { T | null } The decoded payload or null
-	 */
-	decode<T = any>(token: string): T | null {
-		try {
-			const { payload } = decode(token);
-			return payload as T;
-		} catch {
 			return null;
 		}
 	}

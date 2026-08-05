@@ -10,11 +10,8 @@ beforeAll(async () => {
 
 describe("Project Details API", () => {
 	/**
-	 * GET /v1/api/projects/:slug/details
-	 *
-	 * Only the GET endpoint is registered in projects.route.ts. The
-	 * ProjectDetailsController exposes create/update/delete methods but they
-	 * are not currently mounted — see apps/modules/projects/projects.route.ts.
+	 * GET /v1/api/projects/:slug/details is the only mounted endpoint —
+	 * see apps/modules/projects/projects.route.ts.
 	 */
 	describe("GET /v1/api/projects/:slug/details", () => {
 		it("returns project details for seeded project", async () => {

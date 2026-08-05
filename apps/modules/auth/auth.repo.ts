@@ -135,18 +135,6 @@ export class AuthRepository implements IAuthRepository {
 	}
 
 	/**
-	 * @description Invalidate all active OTPs for a user
-	 * @param { string } email User email
-	 * @returns { Promise<void> }
-	 */
-	async invalidateUserOtps(email: string): Promise<void> {
-		await this.db
-			.prepare("UPDATE email_otps SET used = 1 WHERE email = ?1 AND used = 0")
-			.bind(email)
-			.run();
-	}
-
-	/**
 	 * @description Mark a user's email as verified
 	 * @param { string } email User email
 	 * @returns { Promise<void> }
@@ -194,18 +182,6 @@ export class AuthRepository implements IAuthRepository {
 		await this.db
 			.prepare('DELETE FROM refresh_tokens WHERE token = ?1')
 			.bind(token)
-			.run();
-	}
-
-	/**
-	 * @description Delete all refresh tokens for a user
-	 * @param { string } userId User ID
-	 * @returns { Promise<void> }
-	 */
-	async deleteUserRefreshTokens(userId: string): Promise<void> {
-		await this.db
-			.prepare('DELETE FROM refresh_tokens WHERE user_id = ?1')
-			.bind(userId)
 			.run();
 	}
 

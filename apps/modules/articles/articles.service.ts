@@ -1,4 +1,4 @@
-import { Article, IArticleRepository, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
+import { Article, IArticleRepository, UpdateArticleDto } from "./articles.interface";
 import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 
 export class ArticleService {
@@ -45,15 +45,6 @@ export class ArticleService {
 	}
 
 	/**
-	 * @description Create a new article
-	 * @param { CreateArticleDto } dto Article data
-	 * @returns { Promise<Article> } The created article
-	 */
-	create(dto: CreateArticleDto): Promise<Article> {
-		return this.repo.create(dto);
-	}
-
-	/**
 	 * @description Update an existing article
 	 * @param { string } id The article ID
 	 * @param { UpdateArticleDto } dto Update data
@@ -70,36 +61,6 @@ export class ArticleService {
 	 */
 	delete(id: string): Promise<boolean> {
 		return this.repo.delete(id);
-	}
-
-	/**
-	 * @description Check if a user is the owner of an article
-	 * @param { string } articleId The article ID
-	 * @param { string } userId The user ID
-	 * @returns { boolean } True if owner
-	 */
-	isOwner(articleId: string, userId: string): Promise<boolean> {
-		return this.repo.isOwner(articleId, userId);
-	}
-
-	/**
-	 * @description Check if a user is a contributor to an article
-	 * @param { string } articleId The article ID
-	 * @param { string } userId The user ID
-	 * @returns { boolean } True if contributor
-	 */
-	isContributor(articleId: string, userId: string): Promise<boolean> {
-		return this.repo.isContributor(articleId, userId);
-	}
-
-	/**
-	 * @description Add a contributor to an article
-	 * @param { string } articleId The article ID
-	 * @param { string } userId The user ID
-	 * @returns { Promise<void> }
-	 */
-	addContributor(articleId: string, userId: string): Promise<void> {
-		return this.repo.addContributor(articleId, userId);
 	}
 
 	/**

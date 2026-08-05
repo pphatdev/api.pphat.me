@@ -107,32 +107,4 @@ export class TagsController {
 		if (!deleted) return Res.notFound();
 		return Res.noContent();
 	}
-
-	/**
-	 * @description List tags by article ID
-	 * @method GET
-	 * @param { Request } request The incoming request
-	 * @param { Env } env Environment bindings
-	 * @param { string } articleId The article UUID
-	 * @returns { Promise<Response> } List of tags
-	 */
-	static async listByArticle(request: Request, env: Env, articleId: string): Promise<Response> {
-		const repository = new TagRepository(env.DB);
-		const tags = await new TagService(repository).listByArticle(articleId);
-		return Res.ok(tags);
-	}
-
-	/**
-	 * @description List tags by project ID
-	 * @method GET
-	 * @param { Request } request The incoming request
-	 * @param { Env } env Environment bindings
-	 * @param { string } projectId The project UUID
-	 * @returns { Promise<Response> } List of tags
-	 */
-	static async listByProject(request: Request, env: Env, projectId: string): Promise<Response> {
-		const repository = new TagRepository(env.DB);
-		const tags = await new TagService(repository).listByProject(projectId);
-		return Res.ok(tags);
-	}
 }

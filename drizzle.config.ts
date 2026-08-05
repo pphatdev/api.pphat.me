@@ -12,7 +12,7 @@ function resolveLocalD1(): string {
     if (!file) {
         throw new Error(`No .sqlite file in ${D1_DIR}. Run \`npm run migrate:local\`.`);
     }
-    // @libsql/client expects a `file:` URL. Use forward slashes for cross-platform safety.
+    // drizzle-kit expects a `file:` URL. Forward slashes work cross-platform.
     const abs = path.resolve(D1_DIR, file).replace(/\\/g, '/');
     return `file:${abs}`;
 }

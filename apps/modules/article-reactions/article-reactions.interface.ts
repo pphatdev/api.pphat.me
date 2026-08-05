@@ -16,5 +16,4 @@ export interface IArticleReactionRepository {
 	findAllByArticleId(articleId: string): Promise<ArticleReaction[]>;
 	increment(articleId: string, type: string): Promise<ArticleReaction>;
 	decrement(articleId: string, type: string): Promise<ArticleReaction | null>;
-	delete(articleId: string, type: string): Promise<boolean>;
 }

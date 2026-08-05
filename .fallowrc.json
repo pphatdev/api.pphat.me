@@ -10,6 +10,7 @@
   "rules": {
     "unused-files": "error",
     "unused-exports": "warn",
-    "unused-types": "off"
+    "unused-types": "off",
+    "duplicate-export": "off"
   }
 }
