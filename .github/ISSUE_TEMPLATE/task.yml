@@ -1,0 +1,44 @@
+name: "🛠️ Task / Chore"
+description: Maintenance, refactoring, documentation, or dependency updates
+title: "[TASK]: "
+labels: ["chore"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for internal tasks, technical debt, refactoring, or maintenance work.
+  - type: textarea
+    id: description
+    attributes:
+      label: Task Description
+      description: Clear and concise summary of the task.
+      placeholder: Describe the task...
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation & Business Rationale
+      description: Why is this task needed? (e.g. dependency update, architecture refactor, performance)
+    validations:
+      required: true
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Action Items & Acceptance Criteria
+      description: List sub-tasks and verification steps.
+      value: |
+        - [ ] Implementation task 1
+        - [ ] Implementation task 2
+        - [ ] Create / update feature test in `test/features/*.spec.ts`
+        - [ ] Verify local tests pass (`npm test`)
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have verified this task complies with the technical standards in AGENTS.md.
+          required: true
