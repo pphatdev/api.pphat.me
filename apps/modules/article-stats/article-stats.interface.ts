@@ -12,5 +12,9 @@ export interface ArticleStatsRow {
 
 export interface IArticleStatsRepository {
 	findByArticleId(articleId: string): Promise<ArticleStats | null>;
-	incrementViews(articleId: string): Promise<ArticleStats>;
+	/**
+	 * Increment the article's view count IF this user has not already viewed
+	 * it today (UTC calendar day). Idempotent per (article, user, day).
+	 */
+	incrementViews(articleId: string, userId: string): Promise<ArticleStats>;
 }

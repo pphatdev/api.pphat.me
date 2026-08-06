@@ -1,4 +1,5 @@
 import { Res } from "../../shared/helpers/response";
+import type { JwtPayload } from "../auth/auth.interface";
 import { ArticleReactionRepository } from "./article-reactions.repo";
 import { ArticleReactionService } from "./article-reactions.service";
 
@@ -40,7 +41,7 @@ export class ArticleReactionsController {
 	 * @param { string } articleId The article ID
 	 * @returns { Promise<Response> } The updated reaction
 	 */
-	static async create(request: Request, env: Env, articleId: string): Promise<Response> {
+	static async create(request: Request, env: Env, articleId: string, user: JwtPayload): Promise<Response> {
 		const repo = new ArticleReactionRepository(env.DB);
 		const body = await request.json().catch(() => null);
 		if (!body || typeof body !== "object") return Res.badRequest("Invalid JSON body");
@@ -48,7 +49,7 @@ export class ArticleReactionsController {
 		if (!type || typeof type !== "string") return Res.unprocessable("type is required");
 		const invalid = ArticleReactionsController.validateType(type);
 		if (invalid) return invalid;
-		const reaction = await new ArticleReactionService(repo).increment(articleId, type);
+		const reaction = await new ArticleReactionService(repo).increment(articleId, type, user.sub);
 		return Res.ok(reaction);
 	}
 
@@ -59,13 +60,14 @@ export class ArticleReactionsController {
 	 * @param { Env } env Environment bindings
 	 * @param { string } articleId The article ID
 	 * @param { string } type The reaction type
+	 * @param { JwtPayload } user Authenticated user (from authGuard)
 	 * @returns { Promise<Response> } The updated reaction
 	 */
-	static async incrementByType(request: Request, env: Env, articleId: string, type: string): Promise<Response> {
+	static async incrementByType(request: Request, env: Env, articleId: string, type: string, user: JwtPayload): Promise<Response> {
 		const invalid = ArticleReactionsController.validateType(type);
 		if (invalid) return invalid;
 		const repo = new ArticleReactionRepository(env.DB);
-		const reaction = await new ArticleReactionService(repo).increment(articleId, type);
+		const reaction = await new ArticleReactionService(repo).increment(articleId, type, user.sub);
 		return Res.ok(reaction);
 	}
 
@@ -76,13 +78,14 @@ export class ArticleReactionsController {
 	 * @param { Env } env Environment bindings
 	 * @param { string } articleId The article ID
 	 * @param { string } type The reaction type
+	 * @param { JwtPayload } user Authenticated user (from authGuard)
 	 * @returns { Promise<Response> } The updated reaction or removal status
 	 */
-	static async decrementByType(request: Request, env: Env, articleId: string, type: string): Promise<Response> {
+	static async decrementByType(request: Request, env: Env, articleId: string, type: string, user: JwtPayload): Promise<Response> {
 		const invalid = ArticleReactionsController.validateType(type);
 		if (invalid) return invalid;
 		const repo = new ArticleReactionRepository(env.DB);
-		const reaction = await new ArticleReactionService(repo).decrement(articleId, type);
+		const reaction = await new ArticleReactionService(repo).decrement(articleId, type, user.sub);
 		return Res.ok({ type, removed: reaction === null, reaction });
 	}
 }

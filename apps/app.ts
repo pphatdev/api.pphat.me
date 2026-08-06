@@ -10,6 +10,7 @@ import { aiRoutes } from './modules/ai/ai.route';
 import { chatRoutes } from './modules/chat/chat.route';
 import { contactRoutes } from './modules/contact/contact.route';
 import { dashboardRoutes } from './modules/dashboard/dashboard.route';
+import { bodyLimitMiddleware } from './middlewares/body-limit.middleware';
 import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 import { securityMiddleware } from './middlewares/security.middleware';
 import { trafficMiddleware } from './middlewares/traffic.middleware';
@@ -27,6 +28,9 @@ app.use('*', cors({
 
 app.use('*', securityMiddleware);
 app.use('*', trafficMiddleware);
+// Reject oversized bodies before they hit rate-limit counters or auth checks
+// so a garbage attacker can't waste those cycles.
+app.use('/v1/api/*', bodyLimitMiddleware);
 app.use('/v1/api/*', rateLimitMiddleware);
 app.get('/', (c) => c.json({ message: 'Welcome to the API', version: packageJson.version }));
 

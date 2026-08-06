@@ -13,11 +13,12 @@ export class ArticleStatsService {
 	}
 
 	/**
-	 * @description Increment view count for an article
+	 * @description Increment view count for an article (idempotent per user + day).
 	 * @param { string } articleId The article ID
+	 * @param { string } userId The viewing user ID
 	 * @returns { Promise<ArticleStats> } The updated stats
 	 */
-	incrementViews(articleId: string): Promise<ArticleStats> {
-		return this.repo.incrementViews(articleId);
+	incrementViews(articleId: string, userId: string): Promise<ArticleStats> {
+		return this.repo.incrementViews(articleId, userId);
 	}
 }

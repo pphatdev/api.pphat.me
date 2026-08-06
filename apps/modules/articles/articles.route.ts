@@ -77,7 +77,7 @@ app.post(
     '/v1/api/articles/:slug/stats/view',
     authGuard,
     ArticlesController.resolveArticle,
-    (c) => ArticleStatsController.incrementViews(c.req.raw, c.env, c.get('articleId'))
+    (c) => ArticleStatsController.incrementViews(c.req.raw, c.env, c.get('articleId'), c.get('user')!)
 );
 
 /**
@@ -101,7 +101,7 @@ app.post(
     '/v1/api/articles/:slug/reactions',
     authGuard,
     ArticlesController.resolveArticle,
-    (c) => ArticleReactionsController.create(c.req.raw, c.env, c.get('articleId'))
+    (c) => ArticleReactionsController.create(c.req.raw, c.env, c.get('articleId'), c.get('user')!)
 );
 
 /**
@@ -114,7 +114,7 @@ app.post(
     '/v1/api/articles/:slug/reactions/:type',
     authGuard,
     ArticlesController.resolveArticle,
-    (c) => ArticleReactionsController.incrementByType(c.req.raw, c.env, c.get('articleId'), c.req.param('type')!)
+    (c) => ArticleReactionsController.incrementByType(c.req.raw, c.env, c.get('articleId'), c.req.param('type')!, c.get('user')!)
 );
 
 /**
@@ -127,7 +127,7 @@ app.delete(
     '/v1/api/articles/:slug/reactions/:type',
     authGuard,
     ArticlesController.resolveArticle,
-    (c) => ArticleReactionsController.decrementByType(c.req.raw, c.env, c.get('articleId'), c.req.param('type')!)
+    (c) => ArticleReactionsController.decrementByType(c.req.raw, c.env, c.get('articleId'), c.req.param('type')!, c.get('user')!)
 );
 
 /**

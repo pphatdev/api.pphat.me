@@ -14,6 +14,15 @@ export interface ArticleReactionRow {
 
 export interface IArticleReactionRepository {
 	findAllByArticleId(articleId: string): Promise<ArticleReaction[]>;
-	increment(articleId: string, type: string): Promise<ArticleReaction>;
-	decrement(articleId: string, type: string): Promise<ArticleReaction | null>;
+	/**
+	 * Record a user's reaction if it does not already exist and bump the
+	 * aggregate count only on first insert. Repeat calls by the same user
+	 * for the same (article, type) are idempotent.
+	 */
+	increment(articleId: string, type: string, userId: string): Promise<ArticleReaction>;
+	/**
+	 * Remove the user's per-user marker if present; only then decrement the
+	 * aggregate count. Repeat calls after removal are no-ops.
+	 */
+	decrement(articleId: string, type: string, userId: string): Promise<ArticleReaction | null>;
 }
