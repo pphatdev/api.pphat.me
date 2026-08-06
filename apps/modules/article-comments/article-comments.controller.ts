@@ -43,21 +43,25 @@ export class ArticleCommentsController {
 	}
 
 	/**
-	 * @description Strip HTML tags and control chars from a raw display string.
-	 * A user's OAuth-provided or self-registered display name can legally
-	 * contain angle brackets; leaving those in place risks XSS in any client
-	 * that dumps `authorName` straight into innerHTML (typical in admin
+	 * @description Strip HTML-tag markers and control chars from a raw display
+	 * string. A user's OAuth-provided or self-registered display name can
+	 * legally contain angle brackets; leaving those in place risks XSS in any
+	 * client that dumps `authorName` straight into innerHTML (typical in admin
 	 * dashboards). Stripping — rather than escaping — keeps the JSON payload
 	 * plain text so client renderers do not need to un-escape entities.
+	 *
+	 * Only single-character classes are used here (per CodeQL rule
+	 * `js/incomplete-multi-character-sanitization`): each match is one char,
+	 * the replacement is one char (space) or empty, and neither can
+	 * regenerate a member of the class — so the pattern cannot re-appear in
+	 * the output. An input like `<sc<script>ript>` therefore comes out with
+	 * every `<` / `>` removed and no `<script` substring left behind.
 	 * @param { string } value The candidate display string
 	 * @returns { string } Trimmed, tag-free, length-capped string
 	 */
 	private static sanitizeAuthorName(value: string): string {
 		return value
 			.replace(/[\r\n\t\0]+/g, ' ')
-			// Strip anything that looks like an HTML tag (`<...>`) plus any
-			// lone `<` / `>` characters.
-			.replace(/<[^>]*>/g, '')
 			.replace(/[<>]/g, '')
 			.trim()
 			.slice(0, MAX_AUTHOR_NAME_LENGTH);
