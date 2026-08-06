@@ -80,26 +80,92 @@ export async function createJwt(payload: Record<string, any>, secret: string, ex
 }
 
 /**
- * OAuth state (CSRF protection)
+ * OAuth state (CSRF protection) + PKCE
+ *
+ * Design:
+ *  - Random opaque `state` nonce is sent in the auth URL.
+ *  - The verifier (nonce + PKCE code_verifier + provider) is stored in a
+ *    JWT-signed HttpOnly cookie so that the callback can prove the request
+ *    started on this origin. Without the cookie, an attacker cannot forge
+ *    a callback even if they know a valid signed state.
  */
-/**
- * @description Generate OAuth state for CSRF protection
- * @param { string } secret JWT secret
- * @returns { Promise<string> } Encoded state
- */
-export async function generateOAuthState(secret: string): Promise<string> {
-	return JwtService.create({ secret, expiresIn: 600 }).generate({ ts: Date.now() });
+
+const OAUTH_STATE_TTL_SECONDS = 600;
+
+export type OAuthProvider = 'github' | 'google';
+
+export interface OAuthStateInit {
+	/** Random nonce sent to the provider as `state`. */
+	state: string;
+	/** JWT-signed cookie value containing `{ n, cv, p }`. */
+	cookieValue: string;
+	/** PKCE code_verifier (kept server-side via the cookie). */
+	codeVerifier: string;
+	/** PKCE S256 code_challenge sent to the provider. */
+	codeChallenge: string;
 }
 
 /**
- * @description Verify OAuth state
- * @param { string } state The state to verify
- * @param { string } secret JWT secret
- * @returns { Promise<boolean> } True if valid
+ * @description Encode raw bytes as URL-safe base64 (no padding).
  */
-export async function verifyOAuthState(state: string, secret: string): Promise<boolean> {
-	const payload = await JwtService.create({ secret }).verify(state);
-	return !!payload;
+function base64UrlEncode(bytes: Uint8Array): string {
+	let bin = '';
+	for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+	return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function randomToken(byteLength: number): string {
+	return base64UrlEncode(crypto.getRandomValues(new Uint8Array(byteLength)));
+}
+
+async function sha256Base64Url(input: string): Promise<string> {
+	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+	return base64UrlEncode(new Uint8Array(digest));
+}
+
+/**
+ * @description Build OAuth `state` nonce, cookie, and PKCE pair for a new
+ *              authorization redirect. Caller sets the cookie on the redirect
+ *              response and puts `state` + `codeChallenge` in the auth URL.
+ * @param { string } secret JWT secret
+ * @param { OAuthProvider } provider The provider we're starting the flow for
+ * @returns { Promise<OAuthStateInit> } State, cookie, and PKCE values
+ */
+export async function generateOAuthState(secret: string, provider: OAuthProvider): Promise<OAuthStateInit> {
+	const state = randomToken(24); // nonce sent to provider
+	const codeVerifier = randomToken(48); // PKCE verifier (kept server-side)
+	const codeChallenge = await sha256Base64Url(codeVerifier);
+	const cookieValue = await JwtService.create({ secret, expiresIn: OAUTH_STATE_TTL_SECONDS })
+		.generate({ n: state, cv: codeVerifier, p: provider });
+	return { state, cookieValue, codeVerifier, codeChallenge };
+}
+
+/**
+ * @description Verify a callback's `state` against the client's cookie.
+ *              On success, returns the PKCE `code_verifier` needed to exchange
+ *              the authorization code.
+ * @param { string } state       `state` query param from the provider redirect
+ * @param { string | null } cookieValue The `oauth_state` cookie sent by the client
+ * @param { string } secret      JWT secret
+ * @param { OAuthProvider } provider The provider whose callback fired
+ * @returns { Promise<{ codeVerifier: string } | null> } Verifier on success, null on any mismatch
+ */
+export async function verifyOAuthState(
+	state: string,
+	cookieValue: string | null | undefined,
+	secret: string,
+	provider: OAuthProvider,
+): Promise<{ codeVerifier: string } | null> {
+	if (!cookieValue) return null;
+	const payload = await JwtService.create({ secret }).verify<{ n?: string; cv?: string; p?: string }>(cookieValue);
+	if (!payload?.n || !payload?.cv || !payload?.p) return null;
+	if (payload.p !== provider) return null;
+	// Constant-time-ish equality via encoded length + explicit compare
+	if (payload.n.length !== state.length) return null;
+	let diff = 0;
+	for (let i = 0; i < state.length; i++) diff |= state.charCodeAt(i) ^ payload.n.charCodeAt(i);
+	if (diff !== 0) return null;
+	return { codeVerifier: payload.cv };
 }
 
 /**
@@ -111,6 +177,7 @@ export async function verifyOAuthState(state: string, secret: string): Promise<b
  * @param { string } clientId GitHub client ID
  * @param { string } clientSecret GitHub client secret
  * @param { string } redirectUri GitHub redirect URI
+ * @param { string } [codeVerifier] PKCE code_verifier (required when the auth URL sent code_challenge)
  * @returns { Promise<string> } Access token
  */
 export async function exchangeGitHubCode(
@@ -118,11 +185,14 @@ export async function exchangeGitHubCode(
 	clientId: string,
 	clientSecret: string,
 	redirectUri: string,
+	codeVerifier?: string,
 ): Promise<string> {
+	const body: Record<string, string> = { client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirectUri };
+	if (codeVerifier) body.code_verifier = codeVerifier;
 	const res = await fetch('https://github.com/login/oauth/access_token', {
 		method: 'POST',
 		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-		body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirectUri }),
+		body: JSON.stringify(body),
 	});
 	const data = (await res.json()) as { access_token?: string; error?: string };
 	if (!data.access_token) throw new Error(data.error ?? 'GitHub token exchange failed');
@@ -165,6 +235,7 @@ export async function fetchGitHubUser(
  * @param { string } clientId Google client ID
  * @param { string } clientSecret Google client secret
  * @param { string } redirectUri Google redirect URI
+ * @param { string } [codeVerifier] PKCE code_verifier (required when the auth URL sent code_challenge)
  * @returns { Promise<string> } Access token
  */
 export async function exchangeGoogleCode(
@@ -172,17 +243,20 @@ export async function exchangeGoogleCode(
 	clientId: string,
 	clientSecret: string,
 	redirectUri: string,
+	codeVerifier?: string,
 ): Promise<string> {
+	const form: Record<string, string> = {
+		code,
+		client_id: clientId,
+		client_secret: clientSecret,
+		redirect_uri: redirectUri,
+		grant_type: 'authorization_code',
+	};
+	if (codeVerifier) form.code_verifier = codeVerifier;
 	const res = await fetch('https://oauth2.googleapis.com/token', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-		body: new URLSearchParams({
-			code,
-			client_id: clientId,
-			client_secret: clientSecret,
-			redirect_uri: redirectUri,
-			grant_type: 'authorization_code',
-		}),
+		body: new URLSearchParams(form),
 	});
 	const data = (await res.json()) as { access_token?: string; error?: string };
 	if (!data.access_token) throw new Error(data.error ?? 'Google token exchange failed');

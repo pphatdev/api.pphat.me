@@ -12,11 +12,22 @@ beforeAll(async () => {
 
 describe("Auth API", () => {
 	describe("GitHub OAuth", () => {
-		it("GET /v1/api/auth/github redirects to GitHub (302)", async () => {
+		it("GET /v1/api/auth/github redirects to GitHub (302) with PKCE and state cookie", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/auth/github", { redirect: "manual" });
 			expect(res.status).toBe(302);
 			const location = res.headers.get("location") ?? "";
 			expect(location).toContain("github.com/login/oauth/authorize");
+			// PKCE parameters are present on the auth URL
+			const locUrl = new URL(location);
+			expect(locUrl.searchParams.get("code_challenge_method")).toBe("S256");
+			expect(locUrl.searchParams.get("code_challenge")?.length ?? 0).toBeGreaterThan(0);
+			expect(locUrl.searchParams.get("state")?.length ?? 0).toBeGreaterThan(0);
+			// State-binding cookie is set (HttpOnly + SameSite=Lax + scoped path)
+			const cookie = res.headers.get("set-cookie") ?? "";
+			expect(cookie).toMatch(/oauth_state=/);
+			expect(cookie).toMatch(/HttpOnly/i);
+			expect(cookie).toMatch(/SameSite=Lax/i);
+			expect(cookie).toMatch(/Path=\/v1\/api\/auth/i);
 		});
 
 		it("GET /v1/api/auth/github/callback without code returns 400", async () => {
@@ -26,13 +37,28 @@ describe("Auth API", () => {
 			expect(body).toHaveProperty("error");
 		});
 
-		it("GET /v1/api/auth/github/callback with invalid state returns 400", async () => {
+		it("GET /v1/api/auth/github/callback without cookie returns 400 (state binding)", async () => {
+			// Even a syntactically valid-looking state fails without the client cookie.
 			const res = await SELF.fetch(
 				"http://example.com/v1/api/auth/github/callback?code=FAKE_CODE&state=INVALID_STATE"
 			);
 			expect(res.status).toBe(400);
 			const body = await res.json() as Record<string, unknown>;
 			expect(body).toHaveProperty("error");
+		});
+
+		it("GET /v1/api/auth/github/callback with mismatched state vs cookie returns 400", async () => {
+			// Start a real flow to capture a valid cookie
+			const start = await SELF.fetch("http://example.com/v1/api/auth/github", { redirect: "manual" });
+			const cookie = (start.headers.get("set-cookie") ?? "").split(";")[0]; // "oauth_state=<jwt>"
+			expect(cookie).toMatch(/oauth_state=/);
+
+			// Send the cookie but a state value the cookie doesn't attest to
+			const res = await SELF.fetch(
+				"http://example.com/v1/api/auth/github/callback?code=FAKE&state=SOMETHING_ELSE",
+				{ headers: { Cookie: cookie } },
+			);
+			expect(res.status).toBe(400);
 		});
 
 		it("POST /v1/api/auth/github returns 404", async () => {
@@ -42,11 +68,19 @@ describe("Auth API", () => {
 	});
 
 	describe("Google OAuth", () => {
-		it("GET /v1/api/auth/google redirects to Google (302)", async () => {
+		it("GET /v1/api/auth/google redirects to Google (302) with PKCE and state cookie", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/auth/google", { redirect: "manual" });
 			expect(res.status).toBe(302);
 			const location = res.headers.get("location") ?? "";
 			expect(location).toContain("accounts.google.com");
+			const locUrl = new URL(location);
+			expect(locUrl.searchParams.get("code_challenge_method")).toBe("S256");
+			expect(locUrl.searchParams.get("code_challenge")?.length ?? 0).toBeGreaterThan(0);
+			expect(locUrl.searchParams.get("state")?.length ?? 0).toBeGreaterThan(0);
+			const cookie = res.headers.get("set-cookie") ?? "";
+			expect(cookie).toMatch(/oauth_state=/);
+			expect(cookie).toMatch(/HttpOnly/i);
+			expect(cookie).toMatch(/SameSite=Lax/i);
 		});
 
 		it("GET /v1/api/auth/google/callback without code returns 400", async () => {
@@ -56,13 +90,27 @@ describe("Auth API", () => {
 			expect(body).toHaveProperty("error");
 		});
 
-		it("GET /v1/api/auth/google/callback with invalid state returns 400", async () => {
+		it("GET /v1/api/auth/google/callback without cookie returns 400 (state binding)", async () => {
 			const res = await SELF.fetch(
 				"http://example.com/v1/api/auth/google/callback?code=FAKE_CODE&state=INVALID_STATE"
 			);
 			expect(res.status).toBe(400);
 			const body = await res.json() as Record<string, unknown>;
 			expect(body).toHaveProperty("error");
+		});
+
+		it("GET /v1/api/auth/google/callback rejects a github-issued state cookie (provider binding)", async () => {
+			// A cookie minted for the GitHub flow must not be usable for Google.
+			const start = await SELF.fetch("http://example.com/v1/api/auth/github", { redirect: "manual" });
+			const cookie = (start.headers.get("set-cookie") ?? "").split(";")[0];
+			const state = new URL(start.headers.get("location") ?? "http://x").searchParams.get("state") ?? "";
+			expect(state.length).toBeGreaterThan(0);
+
+			const res = await SELF.fetch(
+				`http://example.com/v1/api/auth/google/callback?code=FAKE&state=${encodeURIComponent(state)}`,
+				{ headers: { Cookie: cookie } },
+			);
+			expect(res.status).toBe(400);
 		});
 	});
 
