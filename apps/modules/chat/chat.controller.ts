@@ -1,10 +1,34 @@
 import type { Context } from 'hono';
 import { Res } from '../../shared/helpers/response';
 import { isObject } from '../../shared/helpers/json';
+import { DEFAULT_AI_MODEL, isAllowedAiModel } from '../../shared/config/ai';
 import type { ChatPayload, ChatMessage } from './chat.interface';
 import skillsData from './skills.json';
 
-const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+const HISTORY_MAX_LIMIT = 100;
+const HISTORY_DEFAULT_LIMIT = 50;
+
+// Ceilings for the *incoming* /chat payload — separate from the DB history
+// cap. Anything above these would let a caller push a giant prompt through
+// the AI binding on a single request and burn tokens.
+const MAX_MESSAGE_CHARS = 4000;
+const MAX_HISTORY_MESSAGES = 20;
+const MAX_HISTORY_TOTAL_CHARS = 20000;
+const ALLOWED_HISTORY_ROLES = new Set<ChatMessage['role']>(['user', 'assistant']);
+
+/**
+ * @description Parse a positive integer query param clamped to [min, max]
+ * @param { string | undefined } raw The raw query string value
+ * @param { number } fallback Value to use when unset or invalid
+ * @param { number } min Lower bound (inclusive)
+ * @param { number } max Upper bound (inclusive)
+ * @returns { number } Sanitised integer
+ */
+function clampInt(raw: string | undefined, fallback: number, min: number, max: number): number {
+	const n = Number.parseInt(raw ?? '', 10);
+	if (!Number.isFinite(n)) return fallback;
+	return Math.min(max, Math.max(min, n));
+}
 
 /**
  * @description Builds the system prompt for the Portfolio Chatbot
@@ -59,7 +83,51 @@ function prepareChatMessages(userMessage: string, history: ChatMessage[]): ChatM
 }
 
 /**
- * @description Saves chat history to the database
+ * @description Validate the client-supplied `history` array so a caller cannot
+ * push arbitrary system prompts or an unbounded transcript into the model.
+ * @param { unknown } raw The `history` field from the request body
+ * @returns { { history: ChatMessage[] } | { error: string } } Sanitised history or a validation error
+ */
+function validateHistory(raw: unknown): { history: ChatMessage[] } | { error: string } {
+	if (raw === undefined || raw === null) return { history: [] };
+	if (!Array.isArray(raw)) return { error: 'history must be an array' };
+	if (raw.length > MAX_HISTORY_MESSAGES) {
+		return { error: `history exceeds maximum length of ${MAX_HISTORY_MESSAGES} messages` };
+	}
+
+	const history: ChatMessage[] = [];
+	let totalChars = 0;
+	for (const entry of raw) {
+		if (!isObject(entry)) return { error: 'each history entry must be an object' };
+		const role = (entry as any).role;
+		const content = (entry as any).content;
+		if (!ALLOWED_HISTORY_ROLES.has(role)) {
+			return { error: 'history role must be "user" or "assistant"' };
+		}
+		if (typeof content !== 'string' || content.length === 0) {
+			return { error: 'history content must be a non-empty string' };
+		}
+		if (content.length > MAX_MESSAGE_CHARS) {
+			return { error: `history message exceeds ${MAX_MESSAGE_CHARS} characters` };
+		}
+		totalChars += content.length;
+		if (totalChars > MAX_HISTORY_TOTAL_CHARS) {
+			return { error: `history exceeds ${MAX_HISTORY_TOTAL_CHARS} total characters` };
+		}
+		history.push({ role, content });
+	}
+	return { history };
+}
+
+// Per-user retention cap for chat_history (#34). Enough to keep a useful
+// transcript for the returning user; small enough that a chatty account
+// cannot grow the table unboundedly.
+const CHAT_HISTORY_PER_USER_MAX = 500;
+
+/**
+ * @description Saves chat history to the database and trims the user's rows
+ * to the retention cap. Failure is logged but never surfaced — history is a
+ * nice-to-have, not part of the request's success contract.
  * @param { D1Database | undefined } db Database binding
  * @param { string | undefined } userId User ID
  * @param { string } userMessage User's message
@@ -75,6 +143,21 @@ async function saveChatHistory(db: D1Database | undefined, userId: string | unde
 			userId, 'user', userMessage,
 			userId, 'assistant', aiResponse
 		).run();
+
+		// Trim: keep only the newest CHAT_HISTORY_PER_USER_MAX rows for this
+		// user. Runs on every insert so the cap holds tightly without needing
+		// a background cron. The subquery is bounded by the same user_id, so
+		// it's cheap even for the largest offenders.
+		await db.prepare(
+			`DELETE FROM chat_history
+			 WHERE user_id = ?1
+			   AND id NOT IN (
+			     SELECT id FROM chat_history
+			     WHERE user_id = ?1
+			     ORDER BY created_at DESC, id DESC
+			     LIMIT ?2
+			   )`,
+		).bind(userId, CHAT_HISTORY_PER_USER_MAX).run();
 	} catch (dbError) {
 		console.error('[DB_SAVE_CHAT_ERROR]', dbError);
 	}
@@ -96,11 +179,28 @@ export class ChatController {
 			const payload = body as ChatPayload;
 			const userMessage = payload.message?.trim();
 			if (!userMessage) return Res.unprocessable('message is required');
+			if (userMessage.length > MAX_MESSAGE_CHARS) {
+				return Res.unprocessable(`message exceeds ${MAX_MESSAGE_CHARS} characters`);
+			}
 
+			const rawModel = typeof payload.model === 'string' && payload.model.trim()
+				? payload.model.trim()
+				: DEFAULT_AI_MODEL;
+			if (!isAllowedAiModel(rawModel)) {
+				return Res.unprocessable(`model "${rawModel}" is not permitted`);
+			}
+			const model = rawModel;
+
+			const historyResult = validateHistory(payload.history);
+			if ('error' in historyResult) return Res.unprocessable(historyResult.error);
+			const history = historyResult.history;
+
+			// Validation must run before this infrastructure check so tests and
+			// misconfigured deploys still surface 422s (not 500s) on bad input.
 			if (!env.AI) return Res.internalError('Workers AI binding "AI" is not configured');
 
-			const messages = prepareChatMessages(userMessage, payload.history || []);
-			const response: any = await env.AI.run((payload.model || DEFAULT_MODEL) as any, {
+			const messages = prepareChatMessages(userMessage, history);
+			const response: any = await env.AI.run(model as any, {
 				messages,
 				max_tokens: 1000,
 				temperature: 0.7,
@@ -110,17 +210,18 @@ export class ChatController {
 			const user = c.get('user');
 			await saveChatHistory(env.DB, user?.sub, userMessage, aiResponse);
 
-			const history = payload.history || [];
 			return Res.ok({
 				response: aiResponse,
 				history: [...history, { role: 'user', content: userMessage }, { role: 'assistant', content: aiResponse }],
-				model: payload.model || DEFAULT_MODEL
+				model,
 			});
 
 		} catch (error) {
+			// Log full error server-side; do NOT surface exception text to
+			// clients — it can leak binding names, upstream URLs, or stack
+			// frames on stubbed / misconfigured envs.
 			console.error('[CHAT_ERROR]', error);
-			const message = error instanceof Error ? error.message : 'An unexpected error occurred during chat';
-			return Res.internalError(message);
+			return Res.internalError('Chat request failed');
 		}
 	}
 
@@ -143,18 +244,24 @@ export class ChatController {
 				return Res.internalError('Database binding "DB" is not configured');
 			}
 
+			const limit = clampInt(c.req.query('limit'), HISTORY_DEFAULT_LIMIT, 1, HISTORY_MAX_LIMIT);
+			const offset = clampInt(c.req.query('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
+
+			// Fetch newest-first for pagination, then reverse so the caller still
+			// gets messages in ascending chronological order per page.
 			const history = await env.DB.prepare(
-				'SELECT role, content, created_at FROM chat_history WHERE user_id = ? ORDER BY created_at ASC'
-			).bind(user.sub).all();
+				'SELECT role, content, created_at FROM chat_history WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+			).bind(user.sub, limit, offset).all();
 
 			return Res.ok({
-				history: history.results
+				history: (history.results ?? []).reverse(),
+				limit,
+				offset,
 			});
 
 		} catch (error) {
 			console.error('[GET_HISTORY_ERROR]', error);
-			const message = error instanceof Error ? error.message : 'An unexpected error occurred while fetching history';
-			return Res.internalError(message);
+			return Res.internalError('Failed to fetch chat history');
 		}
 	}
 }

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { ProjectsController } from './projects.controller';
 import { ProjectDetailsController } from '../project-details/project-details.controller';
-import { authGuard } from '../../middlewares/auth.middleware';
+import { authGuard, requireAdmin } from '../../middlewares/auth.middleware';
 import { AppEnv } from './projects.interface';
 
 const app = new Hono<AppEnv>();
@@ -36,7 +36,7 @@ app.get('/v1/api/projects', authGuard, (c) => ProjectsController.list(c.req.raw,
  * @param { Array<String> } [techStack] - The technologies used in the project
  * @param { String } [status] - The status of the project (e.g., in-progress, completed)
 */
-app.post('/v1/api/projects', authGuard, (c) => ProjectsController.create(c.req.raw, c.env));
+app.post('/v1/api/projects', authGuard, requireAdmin, (c) => ProjectsController.create(c.req.raw, c.env));
 
 /**
  * @description Get Project Details
@@ -79,8 +79,8 @@ app.get('/v1/api/projects/:slug', (c) => ProjectsController.getBySlug(c));
  * @param { Array<String> } [techStack] - The technologies used in the project
  * @param { String } [status] - The status of the project (e.g., in-progress, completed)
 */
-app.put('/v1/api/projects/:slug', authGuard, (c) => ProjectsController.update(c.req.raw, c.env, c.req.param('slug')!));
-app.patch('/v1/api/projects/:slug', authGuard, (c) => ProjectsController.update(c.req.raw, c.env, c.req.param('slug')!));
+app.put('/v1/api/projects/:slug', authGuard, requireAdmin, (c) => ProjectsController.update(c.req.raw, c.env, c.req.param('slug')!));
+app.patch('/v1/api/projects/:slug', authGuard, requireAdmin, (c) => ProjectsController.update(c.req.raw, c.env, c.req.param('slug')!));
 
 /**
  * @description Delete Project
@@ -88,6 +88,6 @@ app.patch('/v1/api/projects/:slug', authGuard, (c) => ProjectsController.update(
  * ---------------------------------------
  * @param { String } slug - The slug of the project
 */
-app.delete('/v1/api/projects/:slug', authGuard, (c) => ProjectsController.delete(c.req.raw, c.env, c.req.param('slug')!));
+app.delete('/v1/api/projects/:slug', authGuard, requireAdmin, (c) => ProjectsController.delete(c.req.raw, c.env, c.req.param('slug')!));
 
 export { app as projectRoutes };

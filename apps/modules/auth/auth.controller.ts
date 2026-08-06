@@ -1,3 +1,4 @@
+import { serialize, parse } from 'hono/utils/cookie';
 import { json, isObject } from '../../shared/helpers/json';
 import { Res } from '../../shared/helpers/response';
 import { AuthRepository } from './auth.repo';
@@ -10,8 +11,92 @@ import {
 	exchangeGoogleCode,
 	fetchGoogleUser,
 	verifyJwt,
+	type OAuthProvider,
 } from './auth.service';
 import { sendOtpEmail } from './email.service';
+
+const OAUTH_STATE_COOKIE = 'oauth_state';
+const OAUTH_COOKIE_PATH = '/v1/api/auth';
+const OAUTH_STATE_TTL_SECONDS = 600;
+const REFRESH_COOKIE = 'refreshToken';
+// Scope the refresh cookie to the auth router so it is not sent on every API
+// request — reduces the surface area if any other endpoint is ever
+// XSS-compromised or logs headers.
+const REFRESH_COOKIE_PATH = '/v1/api/auth';
+
+function isSecureAppUrl(env: Env): boolean {
+	return typeof env.APP_URL === 'string' && env.APP_URL.startsWith('https:');
+}
+
+function buildRefreshCookie(env: Env, token: string, maxAgeSeconds: number): string {
+	return serialize(REFRESH_COOKIE, token, {
+		httpOnly: true,
+		secure: isSecureAppUrl(env),
+		sameSite: 'Lax',
+		path: REFRESH_COOKIE_PATH,
+		maxAge: maxAgeSeconds,
+	});
+}
+
+function clearRefreshCookie(env: Env): string {
+	return serialize(REFRESH_COOKIE, '', {
+		httpOnly: true,
+		secure: isSecureAppUrl(env),
+		sameSite: 'Lax',
+		path: REFRESH_COOKIE_PATH,
+		maxAge: 0,
+	});
+}
+
+function readRefreshCookie(request: Request): string | null {
+	const header = request.headers.get('Cookie');
+	if (!header) return null;
+	const jar = parse(header, REFRESH_COOKIE);
+	return jar[REFRESH_COOKIE] ?? null;
+}
+
+/**
+ * Build the success response for any auth flow that mints a token pair.
+ * Sets the refresh token as an HttpOnly cookie AND returns it in the JSON
+ * body for one release so existing clients keep working during the migration
+ * (see #14 in SECURITY_FIX_PLAN.md). Once every client reads from the
+ * cookie, drop the `refreshToken` field from the body.
+ */
+function tokenResponse(env: Env, pair: { accessToken: string; refreshToken: string; refreshTTL: number }): Response {
+	const res = Res.ok({
+		accessToken: pair.accessToken,
+		refreshToken: pair.refreshToken,
+	});
+	res.headers.append('Set-Cookie', buildRefreshCookie(env, pair.refreshToken, pair.refreshTTL));
+	return res;
+}
+
+function buildStateCookie(env: Env, value: string): string {
+	return serialize(OAUTH_STATE_COOKIE, value, {
+		httpOnly: true,
+		secure: isSecureAppUrl(env),
+		sameSite: 'Lax',
+		path: OAUTH_COOKIE_PATH,
+		maxAge: OAUTH_STATE_TTL_SECONDS,
+	});
+}
+
+function clearStateCookie(env: Env): string {
+	return serialize(OAUTH_STATE_COOKIE, '', {
+		httpOnly: true,
+		secure: isSecureAppUrl(env),
+		sameSite: 'Lax',
+		path: OAUTH_COOKIE_PATH,
+		maxAge: 0,
+	});
+}
+
+function readStateCookie(request: Request): string | null {
+	const header = request.headers.get('Cookie');
+	if (!header) return null;
+	const jar = parse(header, OAUTH_STATE_COOKIE);
+	return jar[OAUTH_STATE_COOKIE] ?? null;
+}
 
 export class AuthController {
 
@@ -23,14 +108,22 @@ export class AuthController {
 	 * @returns { Promise<Response> } Redirect response
 	 */
 	static async github(request: Request, env: Env): Promise<Response> {
-		const state = await generateOAuthState(env.JWT_SECRET);
+		const { state, cookieValue, codeChallenge } = await generateOAuthState(env.JWT_SECRET, 'github');
 		const params = new URLSearchParams({
 			client_id: env.GITHUB_CLIENT_ID,
 			redirect_uri: `${env.APP_URL}/v1/api/auth/github/callback`,
 			scope: 'read:user user:email',
 			state,
+			code_challenge: codeChallenge,
+			code_challenge_method: 'S256',
 		});
-		return Response.redirect(`https://github.com/login/oauth/authorize?${params}`, 302);
+		return new Response(null, {
+			status: 302,
+			headers: {
+				Location: `https://github.com/login/oauth/authorize?${params}`,
+				'Set-Cookie': buildStateCookie(env, cookieValue),
+			},
+		});
 	}
 
 	/**
@@ -52,15 +145,23 @@ export class AuthController {
 	 * @returns { Promise<Response> } Redirect response
 	 */
 	static async google(request: Request, env: Env): Promise<Response> {
-		const state = await generateOAuthState(env.JWT_SECRET);
+		const { state, cookieValue, codeChallenge } = await generateOAuthState(env.JWT_SECRET, 'google');
 		const params = new URLSearchParams({
 			client_id: env.GOOGLE_CLIENT_ID,
 			redirect_uri: `${env.APP_URL}/v1/api/auth/google/callback`,
 			response_type: 'code',
 			scope: 'openid email profile',
 			state,
+			code_challenge: codeChallenge,
+			code_challenge_method: 'S256',
 		});
-		return Response.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`, 302);
+		return new Response(null, {
+			status: 302,
+			headers: {
+				Location: `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
+				'Set-Cookie': buildStateCookie(env, cookieValue),
+			},
+		});
 	}
 
 	/**
@@ -136,7 +237,7 @@ export class AuthController {
 		try {
 			const repo = new AuthRepository(env.DB);
 			const tokens = await new AuthService(repo).loginWithPassword(email, password, env.JWT_SECRET);
-			return Res.ok(tokens);
+			return tokenResponse(env, tokens);
 		} catch (err) {
 			return handleAuthError(err);
 		}
@@ -160,7 +261,7 @@ export class AuthController {
 		try {
 			const repo = new AuthRepository(env.DB);
 			const tokens = await new AuthService(repo).verifyEmailOtp(email, otp, env.JWT_SECRET);
-			return Res.ok(tokens);
+			return tokenResponse(env, tokens);
 		} catch (err) {
 			return handleAuthError(err);
 		}
@@ -174,16 +275,24 @@ export class AuthController {
 	 * @returns { Promise<Response> } New auth tokens
 	 */
 	static async tokenRefresh(request: Request, env: Env): Promise<Response> {
-		const body = await request.json().catch(() => null);
-		if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
-
-		const { refreshToken } = body as any;
-		if (!refreshToken || typeof refreshToken !== 'string') return Res.badRequest('refreshToken is required');
+		// Prefer the HttpOnly cookie; fall back to a JSON body for backwards
+		// compatibility with clients that have not migrated yet. Once every
+		// client reads the cookie, drop the JSON-body path.
+		const cookieToken = readRefreshCookie(request);
+		let bodyToken: string | null = null;
+		if (!cookieToken) {
+			const body = await request.json().catch(() => null);
+			if (isObject(body) && typeof (body as any).refreshToken === 'string') {
+				bodyToken = (body as any).refreshToken;
+			}
+		}
+		const refreshToken = cookieToken || bodyToken;
+		if (!refreshToken) return Res.badRequest('refreshToken is required');
 
 		try {
 			const repo = new AuthRepository(env.DB);
 			const tokens = await new AuthService(repo).refresh(refreshToken, env.JWT_SECRET);
-			return Res.ok(tokens);
+			return tokenResponse(env, tokens);
 		} catch (err) {
 			return handleAuthError(err);
 		}
@@ -276,10 +385,18 @@ export class AuthController {
 	 * @returns { Promise<Response> } Success message
 	 */
 	static async logout(request: Request, env: Env): Promise<Response> {
-		const body = await request.json().catch(() => null);
-		const refreshToken = isObject(body) ? (body as any).refreshToken : null;
+		// Same precedence as refresh: cookie first, JSON body as fallback.
+		const cookieToken = readRefreshCookie(request);
+		let bodyToken: string | null = null;
+		if (!cookieToken) {
+			const body = await request.json().catch(() => null);
+			if (isObject(body) && typeof (body as any).refreshToken === 'string') {
+				bodyToken = (body as any).refreshToken;
+			}
+		}
+		const refreshToken = cookieToken || bodyToken;
 
-		if (refreshToken && typeof refreshToken === 'string') {
+		if (refreshToken) {
 			try {
 				const repo = new AuthRepository(env.DB);
 				await new AuthService(repo).logout(refreshToken);
@@ -287,7 +404,9 @@ export class AuthController {
 				// Silently fail on logout if token is already gone or invalid
 			}
 		}
-		return Res.ok({ message: 'Logged out successfully' });
+		const res = Res.ok({ message: 'Logged out successfully' });
+		res.headers.append('Set-Cookie', clearRefreshCookie(env));
+		return res;
 	}
 }
 
@@ -321,32 +440,41 @@ function validateRegisterBody(body: any): Response | null {
 async function handleOAuthCallback(
 	request: Request,
 	env: Env,
-	provider: 'github' | 'google',
-	exchangeCode: Function,
-	fetchUser: Function,
+	provider: OAuthProvider,
+	exchangeCode: (code: string, clientId: string, clientSecret: string, redirectUri: string, codeVerifier?: string) => Promise<string>,
+	fetchUser: (accessToken: string) => Promise<{ providerId: string; email: string | null; name: string | null; avatar: string | null }>,
 ): Promise<Response> {
+	const clearCookie = clearStateCookie(env);
+	const withCleared = (res: Response): Response => {
+		res.headers.append('Set-Cookie', clearCookie);
+		return res;
+	};
+
 	const url = new URL(request.url);
 	const oauthError = url.searchParams.get('error');
-	if (oauthError) return json({ error: oauthError, description: url.searchParams.get('error_description') }, 400);
+	if (oauthError) return withCleared(json({ error: oauthError, description: url.searchParams.get('error_description') }, 400));
 
 	const code = url.searchParams.get('code');
 	const state = url.searchParams.get('state');
-	if (!code || !state) return Res.badRequest('Missing code or state');
-	if (!(await verifyOAuthState(state, env.JWT_SECRET))) return Res.badRequest('Invalid or expired state');
+	if (!code || !state) return withCleared(Res.badRequest('Missing code or state'));
+
+	const cookieVal = readStateCookie(request);
+	const verified = await verifyOAuthState(state, cookieVal, env.JWT_SECRET, provider);
+	if (!verified) return withCleared(Res.badRequest('Invalid or expired state'));
 
 	try {
 		const redirectUri = `${env.APP_URL}/v1/api/auth/${provider}/callback`;
 		const clientId = provider === 'github' ? env.GITHUB_CLIENT_ID : env.GOOGLE_CLIENT_ID;
 		const clientSecret = provider === 'github' ? env.GITHUB_CLIENT_SECRET : env.GOOGLE_CLIENT_SECRET;
 
-		const accessToken = await exchangeCode(code, clientId, clientSecret, redirectUri);
+		const accessToken = await exchangeCode(code, clientId, clientSecret, redirectUri, verified.codeVerifier);
 		const userInfo = await fetchUser(accessToken);
 
 		const repo = new AuthRepository(env.DB);
 		const tokens = await new AuthService(repo).handleOAuthCallback(provider, userInfo, env.JWT_SECRET);
-		return Res.ok(tokens);
+		return withCleared(tokenResponse(env, tokens));
 	} catch (err) {
-		return json({ error: err instanceof Error ? err.message : `${provider} authentication failed` }, 502);
+		return withCleared(json({ error: err instanceof Error ? err.message : `${provider} authentication failed` }, 502));
 	}
 }
 

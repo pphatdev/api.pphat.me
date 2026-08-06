@@ -53,9 +53,9 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 		const now = new Date().toISOString();
 		const result = await this.db
 			.prepare(
-				"INSERT INTO article_comments (article_id, author_name, content, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)"
+				"INSERT INTO article_comments (article_id, user_id, author_name, content, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
 			)
-			.bind(articleId, dto.authorName, dto.content, now, now)
+			.bind(articleId, dto.userId, dto.authorName, dto.content, now, now)
 			.run();
 		const id = result.meta.last_row_id as number;
 		const row = await this.db
@@ -63,6 +63,19 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 			.bind(id)
 			.first<ArticleCommentRow>();
 		return this.mapRow(row!);
+	}
+
+	/**
+	 * @description Find a comment by its ID
+	 * @param { number } id The comment ID
+	 * @returns { Promise<ArticleComment | null> } The comment or null
+	 */
+	async findById(id: number): Promise<ArticleComment | null> {
+		const row = await this.db
+			.prepare("SELECT * FROM article_comments WHERE id = ?1")
+			.bind(id)
+			.first<ArticleCommentRow>();
+		return row ? this.mapRow(row) : null;
 	}
 
 	/**
@@ -112,6 +125,7 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 		return {
 			id: row.id,
 			articleId: row.article_id,
+			userId: row.user_id ?? null,
 			authorName: row.author_name,
 			content: row.content,
 			createdAt: row.created_at,

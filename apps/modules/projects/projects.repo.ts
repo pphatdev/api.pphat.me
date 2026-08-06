@@ -35,7 +35,7 @@ export class ProjectRepository implements IProjectRepository {
 		]);
 
 		const total = countRow?.count ?? 0;
-		const data = await Promise.all((dataResult.results as ProjectRow[]).map((row) => this.hydrate(row)));
+		const data = await this.hydrateMany(dataResult.results as ProjectRow[]);
 
 		return {
 			data,
@@ -247,7 +247,7 @@ export class ProjectRepository implements IProjectRepository {
 			.bind(limit)
 			.all<ProjectRow>();
 		
-		return Promise.all((result.results as ProjectRow[]).map(row => this.hydrate(row)));
+		return this.hydrateMany(result.results as ProjectRow[]);
 	}
 
 	/**
@@ -359,34 +359,70 @@ export class ProjectRepository implements IProjectRepository {
 	 * @returns { Promise<Project> } Hydrated project
 	 */
 	public async hydrate(row: ProjectRow): Promise<Project> {
+		// Single-row delegates to the batched path so listing callsites can
+		// swap to hydrateMany without changing the single-row shape (#35).
+		const [project] = await this.hydrateMany([row]);
+		return project;
+	}
+
+	/**
+	 * @description Hydrate many project rows in two batched queries — one for
+	 * tags, one for contributors — instead of one query per row. Cuts a page
+	 * of N projects from ~2N DB round-trips down to 2.
+	 * @param { ProjectRow[] } rows Project rows to hydrate
+	 * @returns { Promise<Project[]> } Projects in the same order as `rows`
+	 */
+	public async hydrateMany(rows: ProjectRow[]): Promise<Project[]> {
+		if (rows.length === 0) return [];
+
+		const ids = rows.map((r) => r.id);
+		const placeholders = ids.map((_, i) => `?${i + 1}`).join(', ');
+
 		const [tagsResult, contributorsResult] = await Promise.all([
 			this.db
-				.prepare("SELECT id, tag, description FROM tags WHERE project_id = ?1")
-				.bind(row.id)
-				.all<Tag>(),
+				.prepare(`SELECT id, tag, description, project_id FROM tags WHERE project_id IN (${placeholders})`)
+				.bind(...ids)
+				.all<Tag & { project_id: string }>(),
 			this.db
 				.prepare(
-					"SELECT a.id, a.name, a.profile, a.url, ad.bio, ad.avatar_url, ad.social_links, ad.status, ad.created_at, ad.updated_at FROM project_contributors pc JOIN authors a ON pc.author_id = a.id LEFT JOIN author_details ad ON a.id = ad.author_id WHERE pc.project_id = ?1"
+					`SELECT pc.project_id, a.id, a.name, a.profile, a.url, ad.bio, ad.avatar_url, ad.social_links, ad.status, ad.created_at, ad.updated_at
+					 FROM project_contributors pc
+					 JOIN authors a ON pc.author_id = a.id
+					 LEFT JOIN author_details ad ON a.id = ad.author_id
+					 WHERE pc.project_id IN (${placeholders})`,
 				)
-				.bind(row.id)
-				.all<AuthorRow & AuthorDetailRow>(),
+				.bind(...ids)
+				.all<AuthorRow & AuthorDetailRow & { project_id: string }>(),
 		]);
 
-		const tags: Tag[] = tagsResult.results;
-		const contributors: Author[] = contributorsResult.results.map((a: any) => mapAuthorRow(a));
+		const tagsByProject = new Map<string, Tag[]>();
+		for (const raw of tagsResult.results) {
+			const projectId = (raw as any).project_id as string;
+			const bucket = tagsByProject.get(projectId) ?? [];
+			const { project_id: _drop, ...tag } = raw as any;
+			bucket.push(tag as Tag);
+			tagsByProject.set(projectId, bucket);
+		}
+		const contributorsByProject = new Map<string, Author[]>();
+		for (const raw of contributorsResult.results) {
+			const projectId = (raw as any).project_id as string;
+			const bucket = contributorsByProject.get(projectId) ?? [];
+			bucket.push(mapAuthorRow(raw));
+			contributorsByProject.set(projectId, bucket);
+		}
 
-		return {
+		return rows.map((row) => ({
 			id: row.id,
 			title: row.title,
 			slug: row.slug,
 			description: row.description,
-			tags,
-			contributors,
+			tags: tagsByProject.get(row.id) ?? [],
+			contributors: contributorsByProject.get(row.id) ?? [],
 			languages: JSON.parse(row.languages || '[]'),
 			thumbnail: row.thumbnail,
 			published: row.published === 1,
 			createdAt: row.created_at,
 			updatedAt: row.updated_at,
-		};
+		}));
 	}
 }

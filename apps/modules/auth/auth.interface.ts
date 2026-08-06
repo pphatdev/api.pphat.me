@@ -12,6 +12,8 @@ export interface User {
 	updated_at: string;
 }
 
+export type PublicUser = Omit<User, 'password_hash' | 'provider_id'>;
+
 export interface JwtPayload {
 	sub: string;
 	provider: string;
@@ -44,6 +46,13 @@ export interface GoogleUser {
 	picture: string;
 }
 
+export interface RefreshTokenRow {
+	user_id: string;
+	family_id: string;
+	expires_at: string;
+	consumed_at: string | null;
+}
+
 export interface ApiKeyRecord {
 	id: string;
 	user_id: string;
@@ -69,16 +78,31 @@ export interface IAuthRepository {
 		data: { email: string | null; name: string | null; avatar: string | null },
 	): Promise<User>;
 	findUserById(id: string): Promise<User | null>;
+	findPublicUserById(id: string): Promise<PublicUser | null>;
 	findEmailUser(email: string): Promise<User | null>;
 	createEmailUser(email: string, name: string, passwordHash: string): Promise<User>;
+	/**
+	 * Replace an existing user's `password_hash` in-place. Used by the login
+	 * flow to opportunistically upgrade legacy PBKDF2 hashes to the current
+	 * iteration count (#36) without asking the user to reset their password.
+	 */
+	updatePasswordHash(userId: string, passwordHash: string): Promise<void>;
 	createOtp(email: string, code: string, expiresAt: string): Promise<void>;
 	verifyAndConsumeOtp(email: string, code: string): Promise<boolean>;
 	markEmailVerified(email: string): Promise<void>;
 
-	// Refresh Tokens
-	saveRefreshToken(userId: string, token: string, expiresAt: string): Promise<void>;
-	findRefreshToken(token: string): Promise<{ user_id: string; expires_at: string } | null>;
-	deleteRefreshToken(token: string): Promise<void>;
+	// Refresh Tokens (stored as sha256 hash + family_id for reuse detection)
+	saveRefreshToken(userId: string, familyId: string, tokenHash: string, expiresAt: string): Promise<void>;
+	findRefreshTokenByHash(tokenHash: string): Promise<RefreshTokenRow | null>;
+	markRefreshTokenConsumed(tokenHash: string): Promise<void>;
+	deleteRefreshTokenByHash(tokenHash: string): Promise<void>;
+	revokeRefreshTokenFamily(familyId: string): Promise<void>;
+	deleteExpiredRefreshTokens(): Promise<void>;
+
+	// Access-token invalidation floor. authGuard compares JWT.iat against this
+	// timestamp; anything issued before it is rejected. Written on logout.
+	invalidateUserSessions(userId: string): Promise<void>;
+	getSessionInvalidatedAt(userId: string): Promise<number | null>;
 
 	// API Keys (SSO)
 	createApiKey(id: string, userId: string, name: string, prefix: string, keyHash: string, expiresAt: string | null): Promise<ApiKeyRecord>;

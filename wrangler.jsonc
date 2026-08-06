@@ -75,6 +75,25 @@
 		"binding": "AI"
 	},
 	/**
+	 * Rate Limiting bindings — one per API type. Period is fixed by the
+	 * Cloudflare runtime to 10 or 60 seconds; use per-minute budgets. Adjust
+	 * `limit` here (not from an env var) — the binding does not accept dynamic
+	 * limits. `namespace_id` is an opaque integer per binding, unique within
+	 * this Worker (Cloudflare dashboard exposes shared namespaces if you need
+	 * cross-worker aggregation, otherwise per-worker IDs are fine).
+	 *
+	 * Middleware fails open when a binding is missing (see
+	 * apps/middlewares/rate-limit.middleware.ts) so removing one here disables
+	 * that policy rather than crashing the request.
+	 */
+	"ratelimits": [
+		{ "name": "RATE_LIMITER_AUTH",       "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } },
+		{ "name": "RATE_LIMITER_READ",       "namespace_id": "1002", "simple": { "limit": 120, "period": 60 } },
+		{ "name": "RATE_LIMITER_WRITE",      "namespace_id": "1003", "simple": { "limit": 20, "period": 60 } },
+		{ "name": "RATE_LIMITER_ENGAGEMENT", "namespace_id": "1004", "simple": { "limit": 30, "period": 60 } },
+		{ "name": "RATE_LIMITER_CONTACT",    "namespace_id": "1005", "simple": { "limit": 2, "period": 60 } }
+	],
+	/**
 	 * Scheduled (Cron) Triggers
 	 * https://developers.cloudflare.com/workers/configuration/cron-triggers/
 	 *

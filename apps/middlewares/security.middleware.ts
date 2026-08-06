@@ -7,7 +7,11 @@ import type { MiddlewareHandler } from 'hono';
 export const securityMiddleware: MiddlewareHandler = secureHeaders({
     contentSecurityPolicy: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        // No 'unsafe-inline' on scripts (#28). This is a JSON API — nothing
+        // it serves ever needs to execute an inline <script>. If a future
+        // handler starts rendering HTML with inline JS, nonce it instead of
+        // widening this back.
+        scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com'],
         imgSrc: ["'self'", 'data:', 'https:'],

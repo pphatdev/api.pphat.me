@@ -2,25 +2,23 @@ import type { Context, Next } from 'hono';
 
 type ApiType = 'auth' | 'read' | 'write' | 'engagement' | 'contact';
 
-interface RateLimitPolicy {
-	limit: number;
-	windowMs: number;
-}
-
-interface RateLimitCounter {
-	count: number;
-	resetAt: number;
-}
-
-const RATE_LIMITS: Record<ApiType, RateLimitPolicy> = {
-	auth: { limit: parseInt(process.env.RATE_AUTH ?? '500'), windowMs: 60 * 60 * 1000 },
-	read: { limit: parseInt(process.env.RATE_READ ?? '500'), windowMs: 60 * 60 * 1000 },
-	write: { limit: parseInt(process.env.RATE_WRITE ?? '500'), windowMs: 60 * 60 * 1000 },
-	engagement: { limit: parseInt(process.env.RATE_ENGAGEMENT ?? '500'), windowMs: 60 * 60 * 1000 },
-	contact: { limit: parseInt(process.env.RATE_CONTACT ?? '500'), windowMs: 24 * 60 * 60 * 1000 }, // 5 requests per 24 hours
+/**
+ * Map each API type to the binding name declared in `wrangler.jsonc`. The
+ * limit + window for each policy is set at deploy time on the binding itself
+ * (Rate Limiting bindings do not accept dynamic limits), so this file only
+ * routes requests to the right binding — it does not carry any numeric limits.
+ */
+const BINDING_BY_TYPE: Record<ApiType, keyof Env> = {
+	auth: 'RATE_LIMITER_AUTH',
+	read: 'RATE_LIMITER_READ',
+	write: 'RATE_LIMITER_WRITE',
+	engagement: 'RATE_LIMITER_ENGAGEMENT',
+	contact: 'RATE_LIMITER_CONTACT',
 };
 
-const counters = new Map<string, RateLimitCounter>();
+// Warn once per missing binding so a misconfigured deploy is obvious in logs
+// without flooding on every request.
+const warned = new Set<string>();
 
 /**
  * @description Check if the route is an engagement route
@@ -63,46 +61,42 @@ function getClientIdentity(request: Request): string {
 }
 
 /**
- * @description Hono middleware for rate limiting
+ * @description Hono middleware for rate limiting. Delegates to a per-type
+ * Cloudflare Rate Limiting binding for atomic, cross-isolate counting. Fails
+ * open (with a one-time warning) if the binding is missing so tests and dev
+ * environments without a binding still function.
  * @param { Context } c The Hono context
  * @param { Next } next The next middleware
  * @returns { Promise<Response | void> }
  */
-export async function rateLimitMiddleware(c: Context, next: Next): Promise<Response | void> {
+export async function rateLimitMiddleware(c: Context<{ Bindings: Env }>, next: Next): Promise<Response | void> {
 	const apiType = getApiType(c.req.raw);
 	if (!apiType) return next();
 
-	const policy = RATE_LIMITS[apiType];
-	const key = `${apiType}:${getClientIdentity(c.req.raw)}`;
-	const now = Date.now();
+	const bindingName = BINDING_BY_TYPE[apiType];
+	const binding = (c.env as any)[bindingName] as RateLimit | undefined;
 
-	const current = counters.get(key);
-	const counter = !current || now >= current.resetAt
-		? { count: 0, resetAt: now + policy.windowMs }
-		: current;
+	if (!binding || typeof binding.limit !== 'function') {
+		if (!warned.has(bindingName)) {
+			warned.add(bindingName);
+			console.warn(`[rate-limit] binding "${bindingName}" is not configured — allowing requests`);
+		}
+		return next();
+	}
 
-	counter.count += 1;
-	counters.set(key, counter);
+	const key = getClientIdentity(c.req.raw);
+	const outcome = await binding.limit({ key });
 
-	const remaining = Math.max(0, policy.limit - counter.count);
-	const resetIn = Math.max(0, Math.ceil((counter.resetAt - now) / 1000));
-
-	if (counter.count > policy.limit) {
+	if (!outcome.success) {
 		return c.json(
 			{ error: `Too Many Requests for ${apiType} API type` },
 			429,
 			{
-				'X-RateLimit-Limit': String(policy.limit),
-				'X-RateLimit-Remaining': '0',
-				'X-RateLimit-Reset': String(resetIn),
-				'Retry-After': String(resetIn),
+				'Retry-After': '60',
+				'X-RateLimit-Policy': apiType,
 			},
 		);
 	}
 
-	await next();
-
-	c.header('X-RateLimit-Limit', String(policy.limit));
-	c.header('X-RateLimit-Remaining', String(remaining));
-	c.header('X-RateLimit-Reset', String(resetIn));
+	return next();
 }

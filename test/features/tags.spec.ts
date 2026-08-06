@@ -1,13 +1,15 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { getAuthHeaders, seedDatabase } from "../../apps/shared/helpers/test-cases";
+import { getAdminHeaders, getAuthHeaders, seedDatabase } from "../../apps/shared/helpers/test-cases";
 
 const SELF = exports.default;
 let authHeaders: Record<string, string>;
+let adminHeaders: Record<string, string>;
 
 beforeAll(async () => {
 	await seedDatabase(env.DB);
     authHeaders = await getAuthHeaders(env.JWT_SECRET);
+    adminHeaders = await getAdminHeaders(env.JWT_SECRET);
 });
 
 describe("Tags API", () => {
@@ -47,7 +49,7 @@ describe("Tags API", () => {
 	it("POST /v1/api/tags with valid body creates a tag (201)", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/tags", {
 			method: "POST",
-			headers: authHeaders,
+			headers: adminHeaders,
 			body: JSON.stringify({
 				tag: "new-tag",
 				description: "A brand-new tag.",
@@ -62,7 +64,7 @@ describe("Tags API", () => {
 	it("POST /v1/api/tags missing tag field returns 422", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/tags", {
 			method: "POST",
-			headers: authHeaders,
+			headers: adminHeaders,
 			body: JSON.stringify({ description: "No tag name." }),
 		});
 		expect(res.status).toBe(422);
@@ -71,7 +73,7 @@ describe("Tags API", () => {
 	it("PATCH /v1/api/tags/1 updates a tag", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/tags/1", {
 			method: "PATCH",
-			headers: authHeaders,
+			headers: adminHeaders,
 			body: JSON.stringify({ description: "Updated tag description." }),
 		});
 		expect(res.status).toBe(200);
@@ -82,7 +84,7 @@ describe("Tags API", () => {
 	it("PATCH /v1/api/tags/999 returns 404", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/tags/999", {
 			method: "PATCH",
-			headers: authHeaders,
+			headers: adminHeaders,
 			body: JSON.stringify({ description: "Should not exist." }),
 		});
 		expect(res.status).toBe(404);
@@ -91,22 +93,39 @@ describe("Tags API", () => {
 	it("PATCH /v1/api/tags/not-a-number returns 400", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/tags/not-a-number", {
 			method: "PATCH",
-			headers: authHeaders,
+			headers: adminHeaders,
 			body: JSON.stringify({ description: "Bad ID." }),
 		});
 		expect(res.status).toBe(400);
 	});
 
 	it("DELETE /v1/api/tags/999 returns 404", async () => {
-		const res = await SELF.fetch("http://example.com/v1/api/tags/999", { method: "DELETE", headers: authHeaders });
+		const res = await SELF.fetch("http://example.com/v1/api/tags/999", { method: "DELETE", headers: adminHeaders });
 		expect(res.status).toBe(404);
 	});
 
 	it("DELETE /v1/api/tags/not-a-number returns 400", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/tags/not-a-number", {
 			method: "DELETE",
-            headers: authHeaders
+            headers: adminHeaders
 		});
 		expect(res.status).toBe(400);
+	});
+
+	it("POST /v1/api/tags as a non-admin user returns 403 (#24)", async () => {
+		const res = await SELF.fetch("http://example.com/v1/api/tags", {
+			method: "POST",
+			headers: authHeaders,
+			body: JSON.stringify({ tag: "should-not-create" }),
+		});
+		expect(res.status).toBe(403);
+	});
+
+	it("DELETE /v1/api/tags/1 as a non-admin user returns 403 (#24)", async () => {
+		const res = await SELF.fetch("http://example.com/v1/api/tags/1", {
+			method: "DELETE",
+			headers: authHeaders,
+		});
+		expect(res.status).toBe(403);
 	});
 });

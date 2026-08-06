@@ -45,18 +45,43 @@ export async function getPrevSlug(db: D1Database, tableName: string, currentSlug
 }
 
 /**
- * @description Builds dynamic update fields and values for D1 queries
- * @param { T } dto The data object containing updates
- * @param { [keyof T, string, ((v: any) => any)?][] } mappings Map of keys to DB fields
- * @param { number } [startIdx=1] Starting bind parameter index
- * @returns { object } Object with fields array, values array, and nextIdx
+ * SQL identifier pattern. DB column names go straight into an UPDATE SET
+ * clause so they cannot be user-controlled — this regex is a defense-in-depth
+ * check against a mapping array that got constructed from untrusted input.
+ * (No caller does that today; this is a tripwire for a future refactor.)
  */
-export function buildUpdateFields<T>(dto: T, mappings: [keyof T, string, ((v: any) => any)?][], startIdx = 1): { fields: string[], values: unknown[], nextIdx: number } {
+const SQL_IDENT_RE = /^[a-z_][a-z0-9_]*$/;
+
+/**
+ * @description Build a parameterised UPDATE SET clause from a DTO + a
+ * caller-supplied mappings table. The mappings array IS the allow-list of
+ * writable fields for this table — callers must hard-code it, never build
+ * it from a request body. Any mapping whose DB field name is not a
+ * SQL-safe identifier is rejected at runtime with a thrown Error so the
+ * mistake is loud rather than a query that binds the value into a
+ * malformed SET clause.
+ *
+ * Undefined DTO values are skipped (so a partial PATCH works). Optional
+ * transforms let a caller coerce booleans → 0/1 for D1's integer storage.
+ *
+ * @param { T } dto The DTO to project
+ * @param { [keyof T, string, ((v: any) => any)?][] } mappings Field allow-list
+ * @param { number } [startIdx=1] Starting placeholder index
+ * @returns { { fields: string[]; values: unknown[]; nextIdx: number } }
+ */
+export function buildUpdateFields<T>(
+	dto: T,
+	mappings: [keyof T, string, ((v: any) => any)?][],
+	startIdx = 1,
+): { fields: string[]; values: unknown[]; nextIdx: number } {
 	const fields: string[] = [];
 	const values: unknown[] = [];
 	let idx = startIdx;
 
 	for (const [key, field, transform] of mappings) {
+		if (!SQL_IDENT_RE.test(field)) {
+			throw new Error(`buildUpdateFields: unsafe DB column name "${field}"`);
+		}
 		if (dto[key] !== undefined) {
 			const val = transform ? transform(dto[key]) : dto[key];
 			if (val !== undefined) {

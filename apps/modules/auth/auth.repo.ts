@@ -1,4 +1,4 @@
-import type { User, IAuthRepository, ApiKeyRecord, ApiKeyLookup } from './auth.interface';
+import type { User, PublicUser, IAuthRepository, ApiKeyRecord, ApiKeyLookup, RefreshTokenRow } from './auth.interface';
 
 export class AuthRepository implements IAuthRepository {
 	constructor(private readonly db: D1Database) { }
@@ -50,15 +50,27 @@ export class AuthRepository implements IAuthRepository {
 	}
 
 	/**
-	 * @description Find a user by their UUID
+	 * @description Find a user by their UUID (internal use only — includes password_hash)
 	 * @param { string } id User ID
 	 * @returns { Promise<User | null> } User record or null
 	 */
 	async findUserById(id: string): Promise<User | null> {
 		return this.db
-			.prepare('SELECT * FROM users WHERE id = ?1')
+			.prepare('SELECT id, provider, provider_id, email, name, avatar, email_verified, password_hash, role, created_at, updated_at FROM users WHERE id = ?1')
 			.bind(id)
 			.first<User>();
+	}
+
+	/**
+	 * @description Find a user by their UUID, safe to return to clients (no password_hash, no provider_id)
+	 * @param { string } id User ID
+	 * @returns { Promise<PublicUser | null> } Public user record or null
+	 */
+	async findPublicUserById(id: string): Promise<PublicUser | null> {
+		return this.db
+			.prepare('SELECT id, provider, email, name, avatar, email_verified, role, created_at, updated_at FROM users WHERE id = ?1')
+			.bind(id)
+			.first<PublicUser>();
 	}
 
 	/**
@@ -91,6 +103,20 @@ export class AuthRepository implements IAuthRepository {
 	}
 
 	/**
+	 * @description Replace a user's stored `password_hash`. Used by the
+	 * opportunistic PBKDF2 upgrade path on login (#36).
+	 * @param { string } userId User ID
+	 * @param { string } passwordHash New hash string
+	 * @returns { Promise<void> }
+	 */
+	async updatePasswordHash(userId: string, passwordHash: string): Promise<void> {
+		await this.db
+			.prepare("UPDATE users SET password_hash = ?1, updated_at = datetime('now') WHERE id = ?2")
+			.bind(passwordHash, userId)
+			.run();
+	}
+
+	/**
 	 * @description Create a new verification OTP
 	 * @param { string } email User email
 	 * @param { string } code The OTP code
@@ -111,27 +137,48 @@ export class AuthRepository implements IAuthRepository {
 	}
 
 	/**
-	 * @description Verify an OTP and mark it as used
+	 * @description Verify an OTP and either mark it consumed on success or
+	 * increment the attempt counter on failure. Invalidates the OTP once the
+	 * attempt cap is reached so brute-force windows are bounded.
 	 * @param { string } email User email
 	 * @param { string } code The OTP code
+	 * @param { number } [maxAttempts=5] Attempts allowed before the OTP is invalidated
 	 * @returns { Promise<boolean> } True if valid and consumed
 	 */
-	async verifyAndConsumeOtp(email: string, code: string): Promise<boolean> {
+	async verifyAndConsumeOtp(email: string, code: string, maxAttempts = 5): Promise<boolean> {
+		// Load the most recent unused, unexpired OTP for this email
 		const otp = await this.db
 			.prepare(
-				"SELECT id FROM email_otps WHERE email = ?1 AND code = ?2 AND used = 0 AND expires_at > datetime('now') ORDER BY created_at DESC LIMIT 1",
+				"SELECT id, code, attempts FROM email_otps WHERE email = ?1 AND used = 0 AND expires_at > datetime('now') ORDER BY created_at DESC LIMIT 1",
 			)
-			.bind(email, code)
-			.first<{ id: string }>();
+			.bind(email)
+			.first<{ id: string; code: string; attempts: number }>();
 
 		if (!otp) return false;
 
-		await this.db
-			.prepare('UPDATE email_otps SET used = 1 WHERE id = ?1')
-			.bind(otp.id)
-			.run();
+		if (otp.code === code) {
+			await this.db
+				.prepare('UPDATE email_otps SET used = 1 WHERE id = ?1')
+				.bind(otp.id)
+				.run();
+			return true;
+		}
 
-		return true;
+		// Wrong code — increment attempts and, on the cap, invalidate the OTP so
+		// further guesses cannot use it even if the client keeps trying.
+		const nextAttempts = (otp.attempts ?? 0) + 1;
+		if (nextAttempts >= maxAttempts) {
+			await this.db
+				.prepare('UPDATE email_otps SET attempts = ?1, used = 1 WHERE id = ?2')
+				.bind(nextAttempts, otp.id)
+				.run();
+		} else {
+			await this.db
+				.prepare('UPDATE email_otps SET attempts = ?1 WHERE id = ?2')
+				.bind(nextAttempts, otp.id)
+				.run();
+		}
+		return false;
 	}
 
 	/**
@@ -147,42 +194,111 @@ export class AuthRepository implements IAuthRepository {
 	}
 
 	/**
-	 * @description Save a new refresh token
+	 * @description Save a new refresh token (as SHA-256 hash). Every token
+	 * belongs to a family — rotation keeps the same family_id so that reuse of
+	 * any consumed token in the family can revoke the whole line.
 	 * @param { string } userId User ID
-	 * @param { string } token The refresh token
+	 * @param { string } familyId Family identifier (shared across rotations)
+	 * @param { string } tokenHash SHA-256 hex hash of the raw token
 	 * @param { string } expiresAt Expiry timestamp
 	 * @returns { Promise<void> }
 	 */
-	async saveRefreshToken(userId: string, token: string, expiresAt: string): Promise<void> {
+	async saveRefreshToken(userId: string, familyId: string, tokenHash: string, expiresAt: string): Promise<void> {
 		const id = crypto.randomUUID();
 		await this.db
-			.prepare('INSERT INTO refresh_tokens (id, user_id, token, expires_at) VALUES (?1, ?2, ?3, ?4)')
-			.bind(id, userId, token, expiresAt)
+			.prepare('INSERT INTO refresh_tokens (id, user_id, family_id, token_hash, expires_at) VALUES (?1, ?2, ?3, ?4, ?5)')
+			.bind(id, userId, familyId, tokenHash, expiresAt)
 			.run();
 	}
 
 	/**
-	 * @description Find a refresh token record
-	 * @param { string } token The refresh token
-	 * @returns { Promise<{ user_id: string; expires_at: string } | null> } Token record or null
+	 * @description Find a refresh token record by hash.
+	 * @param { string } tokenHash SHA-256 hex hash of the raw token
+	 * @returns { Promise<RefreshTokenRow | null> } Row or null
 	 */
-	async findRefreshToken(token: string): Promise<{ user_id: string; expires_at: string } | null> {
+	async findRefreshTokenByHash(tokenHash: string): Promise<RefreshTokenRow | null> {
 		return this.db
-			.prepare('SELECT user_id, expires_at FROM refresh_tokens WHERE token = ?1')
-			.bind(token)
-			.first<{ user_id: string; expires_at: string }>();
+			.prepare('SELECT user_id, family_id, expires_at, consumed_at FROM refresh_tokens WHERE token_hash = ?1')
+			.bind(tokenHash)
+			.first<RefreshTokenRow>();
 	}
 
 	/**
-	 * @description Delete a refresh token
-	 * @param { string } token The refresh token to delete
+	 * @description Mark a refresh token as consumed (rotated). The row remains
+	 * so that reuse detection can still match it and trigger family revocation.
+	 * @param { string } tokenHash SHA-256 hex hash of the raw token
 	 * @returns { Promise<void> }
 	 */
-	async deleteRefreshToken(token: string): Promise<void> {
+	async markRefreshTokenConsumed(tokenHash: string): Promise<void> {
 		await this.db
-			.prepare('DELETE FROM refresh_tokens WHERE token = ?1')
-			.bind(token)
+			.prepare("UPDATE refresh_tokens SET consumed_at = datetime('now') WHERE token_hash = ?1 AND consumed_at IS NULL")
+			.bind(tokenHash)
 			.run();
+	}
+
+	/**
+	 * @description Hard-delete a refresh token row (used by logout).
+	 * @param { string } tokenHash SHA-256 hex hash of the raw token
+	 * @returns { Promise<void> }
+	 */
+	async deleteRefreshTokenByHash(tokenHash: string): Promise<void> {
+		await this.db
+			.prepare('DELETE FROM refresh_tokens WHERE token_hash = ?1')
+			.bind(tokenHash)
+			.run();
+	}
+
+	/**
+	 * @description Revoke every token in a family (reuse detection).
+	 * @param { string } familyId Family identifier
+	 * @returns { Promise<void> }
+	 */
+	async revokeRefreshTokenFamily(familyId: string): Promise<void> {
+		await this.db
+			.prepare('DELETE FROM refresh_tokens WHERE family_id = ?1')
+			.bind(familyId)
+			.run();
+	}
+
+	/**
+	 * @description Sweep rows whose `expires_at` is past. Cheap enough to call
+	 * on every refresh/logout so the table does not grow unboundedly.
+	 * @returns { Promise<void> }
+	 */
+	async deleteExpiredRefreshTokens(): Promise<void> {
+		await this.db
+			.prepare("DELETE FROM refresh_tokens WHERE expires_at < datetime('now')")
+			.run();
+	}
+
+	/**
+	 * @description Set the access-token invalidation floor for a user to "now".
+	 * Any access JWT with `iat` earlier than this is rejected by authGuard.
+	 * @param { string } userId User ID
+	 * @returns { Promise<void> }
+	 */
+	async invalidateUserSessions(userId: string): Promise<void> {
+		await this.db
+			.prepare("UPDATE users SET session_invalidated_at = datetime('now') WHERE id = ?1")
+			.bind(userId)
+			.run();
+	}
+
+	/**
+	 * @description Read the access-token invalidation floor as a Unix
+	 * timestamp (seconds). Returns null when the user has never invalidated
+	 * a session (never logged out), letting authGuard skip the comparison.
+	 * @param { string } userId User ID
+	 * @returns { Promise<number | null> } Unix seconds, or null
+	 */
+	async getSessionInvalidatedAt(userId: string): Promise<number | null> {
+		const row = await this.db
+			.prepare('SELECT session_invalidated_at as t FROM users WHERE id = ?1')
+			.bind(userId)
+			.first<{ t: string | null }>();
+		if (!row?.t) return null;
+		const ms = Date.parse(row.t.includes('T') ? row.t : row.t.replace(' ', 'T') + 'Z');
+		return Number.isFinite(ms) ? Math.floor(ms / 1000) : null;
 	}
 
 	/**

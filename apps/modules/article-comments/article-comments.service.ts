@@ -25,6 +25,15 @@ export class ArticleCommentService {
 	}
 
 	/**
+	 * @description Get a comment by ID
+	 * @param { number } id The comment ID
+	 * @returns { Promise<ArticleComment | null> } The comment or null
+	 */
+	findById(id: number): Promise<ArticleComment | null> {
+		return this.repo.findById(id);
+	}
+
+	/**
 	 * @description Update an existing comment
 	 * @param { number } id The comment ID
 	 * @param { UpdateCommentDto } dto Update data

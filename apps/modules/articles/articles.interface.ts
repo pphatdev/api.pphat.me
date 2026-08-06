@@ -80,13 +80,23 @@ export type AppEnv = {
 	Bindings: Env;
 	Variables: {
 		articleId: string;
+		/**
+		 * Set by `requireWriteAccess` alongside `articleId`. `update` uses this
+		 * to enforce field-level ACL (#20): contributors may only touch
+		 * content / description / thumbnail; owner + admin get the full set.
+		 */
+		articleRole?: 'owner' | 'contributor' | 'admin';
 		user?: import('../auth/auth.interface').JwtPayload;
 	};
 };
 
 export interface IArticleRepository {
 	findAll(params: PaginationParams, onlyPublished?: boolean, opts?: { admin?: boolean }): Promise<PaginatedResult<Article>>;
-	findAllByAuthor(authorId: number, params: PaginationParams, onlyPublished: boolean): Promise<PaginatedResult<Article>>;
+	findAllByAuthor(
+		authorId: number,
+		params: PaginationParams,
+		opts?: { admin?: boolean; viewerUserId?: string | null },
+	): Promise<PaginatedResult<Article>>;
 	findBySlug(slug: string): Promise<Article | null>;
 	findById(id: string): Promise<Article | null>;
 	create(dto: CreateArticleDto): Promise<Article>;

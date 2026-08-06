@@ -16,14 +16,20 @@ export class ArticleService {
 	}
 
 	/**
-	 * @description List articles by author ID
+	 * @description List articles by author ID. Row-level visibility filter:
+	 * admin sees everything; a signed-in caller sees their own drafts + all
+	 * public rows; anonymous callers see only public rows.
 	 * @param { number } authorId The author ID
 	 * @param { PaginationParams } params Pagination parameters
-	 * @param { boolean } onlyPublished Whether to only list published articles
+	 * @param { object } [opts] Auth context (admin flag + viewer user id)
 	 * @returns { Promise<PaginatedResult<Article>> } Paginated articles
 	 */
-	listByAuthor(authorId: number, params: PaginationParams, onlyPublished: boolean): Promise<PaginatedResult<Article>> {
-		return this.repo.findAllByAuthor(authorId, params, onlyPublished);
+	listByAuthor(
+		authorId: number,
+		params: PaginationParams,
+		opts?: { admin?: boolean; viewerUserId?: string | null },
+	): Promise<PaginatedResult<Article>> {
+		return this.repo.findAllByAuthor(authorId, params, opts);
 	}
 
 	/**

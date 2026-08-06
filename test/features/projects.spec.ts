@@ -1,13 +1,15 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { seedDatabase, PROJECT_SLUG, getAuthHeaders } from "../../apps/shared/helpers/test-cases";
+import { seedDatabase, PROJECT_SLUG, getAuthHeaders, getAdminHeaders } from "../../apps/shared/helpers/test-cases";
 
 const SELF = exports.default;
 let authHeaders: Record<string, string>;
+let adminHeaders: Record<string, string>;
 
 beforeAll(async () => {
 	await seedDatabase(env.DB);
 	authHeaders = await getAuthHeaders(env.JWT_SECRET);
+	adminHeaders = await getAdminHeaders(env.JWT_SECRET);
 });
 
 describe("Projects API", () => {
@@ -27,11 +29,11 @@ describe("Projects API", () => {
 		});
 
 		it("GET /v1/api/projects does not return unpublished projects", async () => {
-			// First, create an unpublished project
+			// First, create an unpublished project (admin-only)
 			const slug = "unpublished-project-" + Date.now();
 			await SELF.fetch("http://example.com/v1/api/projects", {
 				method: "POST",
-				headers: { ...authHeaders, "Content-Type": "application/json" },
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
 				body: JSON.stringify({
 					title: "Unpublished Project",
 					slug,
@@ -62,10 +64,10 @@ describe("Projects API", () => {
 			expect(res.status).toBe(404);
 		});
 
-		it("POST /v1/api/projects with valid body creates project (201)", async () => {
+		it("POST /v1/api/projects with valid body creates project (201) — admin", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/projects", {
 				method: "POST",
-				headers: { ...authHeaders, "Content-Type": "application/json" },
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
 				body: JSON.stringify({
 					title: "New Test Project",
 					slug: "new-test-project",
@@ -85,7 +87,7 @@ describe("Projects API", () => {
 		it("POST /v1/api/projects with missing required fields returns 422", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/projects", {
 				method: "POST",
-				headers: { ...authHeaders, "Content-Type": "application/json" },
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
 				body: JSON.stringify({ title: "No Slug" }),
 			});
 			expect(res.status).toBe(422);
@@ -94,7 +96,7 @@ describe("Projects API", () => {
 		it("POST /v1/api/projects with duplicate slug returns 409", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/projects", {
 				method: "POST",
-				headers: { ...authHeaders, "Content-Type": "application/json" },
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
 				body: JSON.stringify({
 					title: "Duplicate",
 					slug: PROJECT_SLUG,
@@ -104,10 +106,10 @@ describe("Projects API", () => {
 			expect(res.status).toBe(409);
 		});
 
-		it(`PATCH /v1/api/projects/${PROJECT_SLUG} updates the project`, async () => {
+		it(`PATCH /v1/api/projects/${PROJECT_SLUG} updates the project (admin)`, async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}`, {
 				method: "PATCH",
-				headers: { ...authHeaders, "Content-Type": "application/json" },
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
 				body: JSON.stringify({ description: "Updated project description." }),
 			});
 			expect(res.status).toBe(200);
@@ -118,16 +120,16 @@ describe("Projects API", () => {
 		it("PATCH /v1/api/projects/non-existent returns 404", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/projects/non-existent", {
 				method: "PATCH",
-				headers: { ...authHeaders, "Content-Type": "application/json" },
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
 				body: JSON.stringify({ description: "Updated." }),
 			});
 			expect(res.status).toBe(404);
 		});
 
-		it("DELETE /v1/api/projects/new-test-project deletes project (200)", async () => {
+		it("DELETE /v1/api/projects/new-test-project deletes project (200) — admin", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/projects/new-test-project", {
 				method: "DELETE",
-				headers: authHeaders,
+				headers: adminHeaders,
 			});
 			expect(res.status).toBe(200);
 			const body = await res.json() as Record<string, unknown>;
@@ -137,9 +139,40 @@ describe("Projects API", () => {
 		it("DELETE /v1/api/projects/non-existent returns 404", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/projects/non-existent", {
 				method: "DELETE",
-				headers: authHeaders,
+				headers: adminHeaders,
 			});
 			expect(res.status).toBe(404);
+		});
+	});
+
+	/**
+	 * Authorization enforcement (C3)
+	 */
+	describe("authorization enforcement (C3)", () => {
+		it("POST /v1/api/projects as regular user returns 403", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/projects", {
+				method: "POST",
+				headers: { ...authHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ title: "Forbidden Project", slug: "forbidden-p", description: "nope" }),
+			});
+			expect(res.status).toBe(403);
+		});
+
+		it(`PATCH /v1/api/projects/${PROJECT_SLUG} as regular user returns 403`, async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}`, {
+				method: "PATCH",
+				headers: { ...authHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ description: "Attempted takeover" }),
+			});
+			expect(res.status).toBe(403);
+		});
+
+		it(`DELETE /v1/api/projects/${PROJECT_SLUG} as regular user returns 403`, async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}`, {
+				method: "DELETE",
+				headers: authHeaders,
+			});
+			expect(res.status).toBe(403);
 		});
 	});
 

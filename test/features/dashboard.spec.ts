@@ -23,6 +23,11 @@ describe("Dashboard API", () => {
 			expect(res.status).toBe(401);
 		});
 
+		it("rejects ?token= in query string (query-token fallback is SSE-only)", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/dashboard?token=${adminToken}`);
+			expect(res.status).toBe(401);
+		});
+
 		it("returns dashboard data with valid token", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/dashboard", {
 				headers: authHeaders

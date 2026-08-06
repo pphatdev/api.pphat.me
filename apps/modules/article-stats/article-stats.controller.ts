@@ -1,4 +1,5 @@
 import { Res } from "../../shared/helpers/response";
+import type { JwtPayload } from "../auth/auth.interface";
 import { ArticleStatsRepository } from "./article-stats.repo";
 import { ArticleStatsService } from "./article-stats.service";
 
@@ -27,9 +28,9 @@ export class ArticleStatsController {
 	 * @param { string } articleId The article ID
 	 * @returns { Promise<Response> } The updated stats
 	 */
-	static async incrementViews(request: Request, env: Env, articleId: string): Promise<Response> {
+	static async incrementViews(request: Request, env: Env, articleId: string, user: JwtPayload): Promise<Response> {
 		const repo = new ArticleStatsRepository(env.DB);
-		const stats = await new ArticleStatsService(repo).incrementViews(articleId);
+		const stats = await new ArticleStatsService(repo).incrementViews(articleId, user.sub);
 		return Res.ok(stats);
 	}
 }

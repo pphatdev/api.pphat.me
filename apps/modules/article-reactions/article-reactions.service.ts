@@ -13,22 +13,24 @@ export class ArticleReactionService {
 	}
 
 	/**
-	 * @description Increment a reaction count
+	 * @description Increment a reaction count (idempotent per user).
 	 * @param { string } articleId The article ID
 	 * @param { string } type The reaction type
+	 * @param { string } userId The reacting user ID
 	 * @returns { Promise<ArticleReaction> } The updated reaction
 	 */
-	increment(articleId: string, type: string): Promise<ArticleReaction> {
-		return this.repo.increment(articleId, type);
+	increment(articleId: string, type: string, userId: string): Promise<ArticleReaction> {
+		return this.repo.increment(articleId, type, userId);
 	}
 
 	/**
-	 * @description Decrement a reaction count
+	 * @description Decrement a reaction count (only if the user had voted).
 	 * @param { string } articleId The article ID
 	 * @param { string } type The reaction type
+	 * @param { string } userId The reacting user ID
 	 * @returns { Promise<ArticleReaction | null> } The updated reaction or null if removed
 	 */
-	decrement(articleId: string, type: string): Promise<ArticleReaction | null> {
-		return this.repo.decrement(articleId, type);
+	decrement(articleId: string, type: string, userId: string): Promise<ArticleReaction | null> {
+		return this.repo.decrement(articleId, type, userId);
 	}
 }

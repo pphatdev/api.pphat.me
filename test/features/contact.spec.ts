@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
 import { getAdminHeaders, getAuthHeaders, seedDatabase } from "../../apps/shared/helpers/test-cases";
+import { renderContactEmail } from "../../apps/modules/auth/email.service";
 
 const SELF = exports.default;
 let authHeaders: Record<string, string>;
@@ -54,6 +55,88 @@ describe("Contact API", () => {
                 }),
             });
             expect(res.status).toBe(400);
+        });
+
+        it("returns 422 for an oversized name", async () => {
+            const res = await SELF.fetch("http://example.com/v1/api/contact", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: "A".repeat(101),
+                    email: "who@example.com",
+                    message: "This is a test message that is long enough.",
+                }),
+            });
+            expect(res.status).toBe(422);
+        });
+
+        it("returns 422 for an oversized message", async () => {
+            const res = await SELF.fetch("http://example.com/v1/api/contact", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: "John Doe",
+                    email: "who@example.com",
+                    message: "x".repeat(5001),
+                }),
+            });
+            expect(res.status).toBe(422);
+        });
+
+        it("returns 422 for an oversized subject", async () => {
+            const res = await SELF.fetch("http://example.com/v1/api/contact", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: "John Doe",
+                    email: "who@example.com",
+                    subject: "s".repeat(201),
+                    message: "This is a test message that is long enough.",
+                }),
+            });
+            expect(res.status).toBe(422);
+        });
+
+        it("returns 422 for a non-string name (array injection attempt)", async () => {
+            const res = await SELF.fetch("http://example.com/v1/api/contact", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: ["a", "b"],
+                    email: "who@example.com",
+                    message: "This is a test message that is long enough.",
+                }),
+            });
+            expect(res.status).toBe(400);
+        });
+    });
+
+    describe("renderContactEmail (template escaping)", () => {
+        it("escapes HTML in every submitter-supplied field", () => {
+            const rendered = renderContactEmail({
+                name: '<img src=x onerror="alert(1)">',
+                email: 'attacker@example.com',
+                subject: 'Hi</h2><script>alert(2)</script>',
+                message: '<b>bold</b> & <script>steal()</script>',
+            });
+            expect(rendered.html).not.toContain('<script>');
+            expect(rendered.html).not.toContain('<img src=x');
+            expect(rendered.html).toContain('&lt;script&gt;');
+            expect(rendered.html).toContain('&lt;img src=x');
+            expect(rendered.html).toContain('&amp;');
+        });
+
+        it("strips CR/LF from header-facing fields (SMTP injection defense)", () => {
+            const rendered = renderContactEmail({
+                name: 'Evil\r\nBcc: victim@example.com',
+                email: 'foo@example.com\r\nBcc: leak@example.com',
+                subject: 'Line1\r\nLine2',
+                message: 'ok',
+            });
+            expect(rendered.replyTo).not.toMatch(/[\r\n]/);
+            expect(rendered.subject).not.toMatch(/[\r\n]/);
+            expect(rendered.replyTo).toContain('Bcc: victim@example.com'); // present but as one line
+            expect(rendered.replyTo.split(/\r?\n/)).toHaveLength(1);
         });
     });
 

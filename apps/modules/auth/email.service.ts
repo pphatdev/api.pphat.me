@@ -47,6 +47,75 @@ export async function sendOtpEmail(to: string, code: string, config: SmtpConfig)
 }
 
 /**
+ * @description Escape the five characters that carry meaning in HTML so
+ * submitter-supplied strings render as literal text rather than markup.
+ * @param { string } input Raw string
+ * @returns { string } HTML-safe string
+ */
+function escapeHtml(input: string): string {
+	return input
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+}
+
+/**
+ * @description Strip CR/LF from a value going into an SMTP header. nodemailer
+ * generally guards its known headers, but the `replyTo` field is composed from
+ * two user-supplied fragments (`name` and `email`) so a defense-in-depth pass
+ * here removes the CRLF-injection surface entirely.
+ * @param { string } input Raw string
+ * @returns { string } String with all CR/LF removed
+ */
+function stripHeaderNewlines(input: string): string {
+	return input.replace(/[\r\n]+/g, ' ');
+}
+
+export interface ContactEmailRendered {
+	replyTo: string;
+	subject: string;
+	text: string;
+	html: string;
+}
+
+/**
+ * @description Build the operator-facing contact email. Pure: no I/O. Escapes
+ * every submitter-supplied field before templating so an `<img onerror>` or a
+ * `</div><script>` payload lands in the owner's inbox as literal text.
+ * @param { object } data Contact form data
+ * @returns { ContactEmailRendered } The rendered email pieces
+ */
+export function renderContactEmail(
+	data: { name: string; email: string; subject: string; message: string },
+): ContactEmailRendered {
+	const nameHeader = stripHeaderNewlines(data.name);
+	const emailHeader = stripHeaderNewlines(data.email);
+	const subjectHeader = stripHeaderNewlines(data.subject || 'New Message');
+
+	const name = escapeHtml(data.name);
+	const email = escapeHtml(data.email);
+	const subject = escapeHtml(data.subject || 'N/A');
+	const message = escapeHtml(data.message);
+
+	return {
+		replyTo: `${nameHeader} <${emailHeader}>`,
+		subject: `[Contact Form] ${subjectHeader}`,
+		text: `Name: ${data.name}\nEmail: ${data.email}\nSubject: ${data.subject}\n\nMessage:\n${data.message}`,
+		html: `
+			<div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;padding:24px">
+				<h2 style="color:#111827;margin-top:0">New Contact Message</h2>
+				<p><strong>From:</strong> ${name} (${email})</p>
+				<p><strong>Subject:</strong> ${subject}</p>
+				<hr style="border:0;border-top:1px solid #e5e7eb;margin:16px 0" />
+				<div style="white-space:pre-wrap;color:#374151">${message}</div>
+			</div>
+		`,
+	};
+}
+
+/**
  * @description Send a contact form message to the site owner
  * @param { object } data Contact form data
  * @param { SmtpConfig } config SMTP configuration
@@ -66,20 +135,13 @@ export async function sendContactEmail(
 		},
 	});
 
+	const rendered = renderContactEmail(data);
 	await transporter.sendMail({
 		from: config.from,
 		to: config.user, // Send TO the owner
-		replyTo: `${data.name} <${data.email}>`,
-		subject: `[Contact Form] ${data.subject || 'New Message'}`,
-		text: `Name: ${data.name}\nEmail: ${data.email}\nSubject: ${data.subject}\n\nMessage:\n${data.message}`,
-		html: `
-			<div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;padding:24px">
-				<h2 style="color:#111827;margin-top:0">New Contact Message</h2>
-				<p><strong>From:</strong> ${data.name} (${data.email})</p>
-				<p><strong>Subject:</strong> ${data.subject || 'N/A'}</p>
-				<hr style="border:0;border-top:1px solid #e5e7eb;margin:16px 0" />
-				<div style="white-space:pre-wrap;color:#374151">${data.message}</div>
-			</div>
-		`,
+		replyTo: rendered.replyTo,
+		subject: rendered.subject,
+		text: rendered.text,
+		html: rendered.html,
 	});
 }
