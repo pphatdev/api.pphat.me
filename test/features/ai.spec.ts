@@ -39,6 +39,21 @@ describe("AI API", () => {
 		expect(body.error).toBe("title is required");
 	});
 
+	it("POST /v1/api/ai/generate rejects a model outside the allow-list (422)", async () => {
+		const res = await SELF.fetch("http://example.com/v1/api/ai/generate", {
+			method: "POST",
+			headers: authHeaders,
+			body: JSON.stringify({
+				title: "Hi",
+				mode: "description",
+				model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+			}),
+		});
+		expect(res.status).toBe(422);
+		const body = (await res.json()) as { error: string };
+		expect(body.error).toMatch(/not permitted/);
+	});
+
 	it("POST /v1/api/ai/generate returns generated description and content", async () => {
 		const aiRun = vi.fn().mockResolvedValue({
 			response: JSON.stringify({

@@ -18,9 +18,57 @@ import { sendOtpEmail } from './email.service';
 const OAUTH_STATE_COOKIE = 'oauth_state';
 const OAUTH_COOKIE_PATH = '/v1/api/auth';
 const OAUTH_STATE_TTL_SECONDS = 600;
+const REFRESH_COOKIE = 'refreshToken';
+// Scope the refresh cookie to the auth router so it is not sent on every API
+// request — reduces the surface area if any other endpoint is ever
+// XSS-compromised or logs headers.
+const REFRESH_COOKIE_PATH = '/v1/api/auth';
 
 function isSecureAppUrl(env: Env): boolean {
 	return typeof env.APP_URL === 'string' && env.APP_URL.startsWith('https:');
+}
+
+function buildRefreshCookie(env: Env, token: string, maxAgeSeconds: number): string {
+	return serialize(REFRESH_COOKIE, token, {
+		httpOnly: true,
+		secure: isSecureAppUrl(env),
+		sameSite: 'Lax',
+		path: REFRESH_COOKIE_PATH,
+		maxAge: maxAgeSeconds,
+	});
+}
+
+function clearRefreshCookie(env: Env): string {
+	return serialize(REFRESH_COOKIE, '', {
+		httpOnly: true,
+		secure: isSecureAppUrl(env),
+		sameSite: 'Lax',
+		path: REFRESH_COOKIE_PATH,
+		maxAge: 0,
+	});
+}
+
+function readRefreshCookie(request: Request): string | null {
+	const header = request.headers.get('Cookie');
+	if (!header) return null;
+	const jar = parse(header, REFRESH_COOKIE);
+	return jar[REFRESH_COOKIE] ?? null;
+}
+
+/**
+ * Build the success response for any auth flow that mints a token pair.
+ * Sets the refresh token as an HttpOnly cookie AND returns it in the JSON
+ * body for one release so existing clients keep working during the migration
+ * (see #14 in SECURITY_FIX_PLAN.md). Once every client reads from the
+ * cookie, drop the `refreshToken` field from the body.
+ */
+function tokenResponse(env: Env, pair: { accessToken: string; refreshToken: string; refreshTTL: number }): Response {
+	const res = Res.ok({
+		accessToken: pair.accessToken,
+		refreshToken: pair.refreshToken,
+	});
+	res.headers.append('Set-Cookie', buildRefreshCookie(env, pair.refreshToken, pair.refreshTTL));
+	return res;
 }
 
 function buildStateCookie(env: Env, value: string): string {
@@ -189,7 +237,7 @@ export class AuthController {
 		try {
 			const repo = new AuthRepository(env.DB);
 			const tokens = await new AuthService(repo).loginWithPassword(email, password, env.JWT_SECRET);
-			return Res.ok(tokens);
+			return tokenResponse(env, tokens);
 		} catch (err) {
 			return handleAuthError(err);
 		}
@@ -213,7 +261,7 @@ export class AuthController {
 		try {
 			const repo = new AuthRepository(env.DB);
 			const tokens = await new AuthService(repo).verifyEmailOtp(email, otp, env.JWT_SECRET);
-			return Res.ok(tokens);
+			return tokenResponse(env, tokens);
 		} catch (err) {
 			return handleAuthError(err);
 		}
@@ -227,16 +275,24 @@ export class AuthController {
 	 * @returns { Promise<Response> } New auth tokens
 	 */
 	static async tokenRefresh(request: Request, env: Env): Promise<Response> {
-		const body = await request.json().catch(() => null);
-		if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
-
-		const { refreshToken } = body as any;
-		if (!refreshToken || typeof refreshToken !== 'string') return Res.badRequest('refreshToken is required');
+		// Prefer the HttpOnly cookie; fall back to a JSON body for backwards
+		// compatibility with clients that have not migrated yet. Once every
+		// client reads the cookie, drop the JSON-body path.
+		const cookieToken = readRefreshCookie(request);
+		let bodyToken: string | null = null;
+		if (!cookieToken) {
+			const body = await request.json().catch(() => null);
+			if (isObject(body) && typeof (body as any).refreshToken === 'string') {
+				bodyToken = (body as any).refreshToken;
+			}
+		}
+		const refreshToken = cookieToken || bodyToken;
+		if (!refreshToken) return Res.badRequest('refreshToken is required');
 
 		try {
 			const repo = new AuthRepository(env.DB);
 			const tokens = await new AuthService(repo).refresh(refreshToken, env.JWT_SECRET);
-			return Res.ok(tokens);
+			return tokenResponse(env, tokens);
 		} catch (err) {
 			return handleAuthError(err);
 		}
@@ -329,10 +385,18 @@ export class AuthController {
 	 * @returns { Promise<Response> } Success message
 	 */
 	static async logout(request: Request, env: Env): Promise<Response> {
-		const body = await request.json().catch(() => null);
-		const refreshToken = isObject(body) ? (body as any).refreshToken : null;
+		// Same precedence as refresh: cookie first, JSON body as fallback.
+		const cookieToken = readRefreshCookie(request);
+		let bodyToken: string | null = null;
+		if (!cookieToken) {
+			const body = await request.json().catch(() => null);
+			if (isObject(body) && typeof (body as any).refreshToken === 'string') {
+				bodyToken = (body as any).refreshToken;
+			}
+		}
+		const refreshToken = cookieToken || bodyToken;
 
-		if (refreshToken && typeof refreshToken === 'string') {
+		if (refreshToken) {
 			try {
 				const repo = new AuthRepository(env.DB);
 				await new AuthService(repo).logout(refreshToken);
@@ -340,7 +404,9 @@ export class AuthController {
 				// Silently fail on logout if token is already gone or invalid
 			}
 		}
-		return Res.ok({ message: 'Logged out successfully' });
+		const res = Res.ok({ message: 'Logged out successfully' });
+		res.headers.append('Set-Cookie', clearRefreshCookie(env));
+		return res;
 	}
 }
 
@@ -406,7 +472,7 @@ async function handleOAuthCallback(
 
 		const repo = new AuthRepository(env.DB);
 		const tokens = await new AuthService(repo).handleOAuthCallback(provider, userInfo, env.JWT_SECRET);
-		return withCleared(Res.ok(tokens));
+		return withCleared(tokenResponse(env, tokens));
 	} catch (err) {
 		return withCleared(json({ error: err instanceof Error ? err.message : `${provider} authentication failed` }, 502));
 	}

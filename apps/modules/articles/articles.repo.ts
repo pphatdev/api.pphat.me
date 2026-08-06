@@ -146,7 +146,11 @@ export class ArticleRepository implements IArticleRepository {
 	 * @param { boolean } onlyPublished Published filter
 	 * @returns { Promise<PaginatedResult<Article>> } Paginated articles
 	 */
-	async findAllByAuthor(authorId: number, { page, limit, search, sort, order }: PaginationParams, onlyPublished: boolean): Promise<PaginatedResult<Article>> {
+	async findAllByAuthor(
+		authorId: number,
+		{ page, limit, search, sort, order }: PaginationParams,
+		opts?: { admin?: boolean; viewerUserId?: string | null },
+	): Promise<PaginatedResult<Article>> {
 		const ALLOWED_SORT_COLS = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
 		const safeOrder = order === 'asc' ? 'ASC' : 'DESC';
 		const sortCols = (sort?.length ? sort : ['created_at']);
@@ -154,9 +158,23 @@ export class ArticleRepository implements IArticleRepository {
 			.map(col => `a.${ALLOWED_SORT_COLS.includes(col) ? col : 'created_at'} ${safeOrder}`)
 			.join(', ');
 		const offset = (page - 1) * limit;
-		const publishedFilter = onlyPublished
-			? "AND a.published = 1 AND (a.is_public = 1 OR (a.publish_at IS NOT NULL AND datetime(a.publish_at) <= datetime('now')))"
-			: '';
+
+		// Row-level visibility filter (#19). Previously, whether drafts were
+		// visible was decided upstream from author identity — a co-author on
+		// someone else's draft could therefore see that draft. Now the check
+		// is per-row against owner_id, so only articles the viewer actually
+		// owns leak drafts to them.
+		const publicClause = "a.published = 1 AND (a.is_public = 1 OR (a.publish_at IS NOT NULL AND datetime(a.publish_at) <= datetime('now')))";
+		let visibilityFilter = '';
+		const visibilityBinds: unknown[] = [];
+		if (!opts?.admin) {
+			if (opts?.viewerUserId) {
+				visibilityFilter = `AND (a.owner_id = ? OR (${publicClause}))`;
+				visibilityBinds.push(opts.viewerUserId);
+			} else {
+				visibilityFilter = `AND (${publicClause})`;
+			}
+		}
 
 		let dataResult: Awaited<ReturnType<D1PreparedStatement['all']>>;
 		let countRow: { count: number } | null;
@@ -165,23 +183,23 @@ export class ArticleRepository implements IArticleRepository {
 			const like = `%${search}%`;
 			[dataResult, countRow] = await Promise.all([
 				this.db
-					.prepare(`SELECT a.* FROM articles a JOIN article_authors aa ON aa.article_id = a.id WHERE aa.author_id = ?1 AND (a.title LIKE ?2 OR a.slug LIKE ?3 OR a.description LIKE ?4) ${publishedFilter} ORDER BY ${orderBy} LIMIT ?5 OFFSET ?6`)
-					.bind(authorId, like, like, like, limit, offset)
+					.prepare(`SELECT a.* FROM articles a JOIN article_authors aa ON aa.article_id = a.id WHERE aa.author_id = ? AND (a.title LIKE ? OR a.slug LIKE ? OR a.description LIKE ?) ${visibilityFilter} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
+					.bind(authorId, like, like, like, ...visibilityBinds, limit, offset)
 					.all<ArticleRow>(),
 				this.db
-					.prepare(`SELECT COUNT(*) as count FROM articles a JOIN article_authors aa ON aa.article_id = a.id WHERE aa.author_id = ?1 AND (a.title LIKE ?2 OR a.slug LIKE ?3 OR a.description LIKE ?4) ${publishedFilter}`)
-					.bind(authorId, like, like, like)
+					.prepare(`SELECT COUNT(*) as count FROM articles a JOIN article_authors aa ON aa.article_id = a.id WHERE aa.author_id = ? AND (a.title LIKE ? OR a.slug LIKE ? OR a.description LIKE ?) ${visibilityFilter}`)
+					.bind(authorId, like, like, like, ...visibilityBinds)
 					.first<{ count: number }>(),
 			]);
 		} else {
 			[dataResult, countRow] = await Promise.all([
 				this.db
-					.prepare(`SELECT a.* FROM articles a JOIN article_authors aa ON aa.article_id = a.id WHERE aa.author_id = ?1 ${publishedFilter} ORDER BY ${orderBy} LIMIT ?2 OFFSET ?3`)
-					.bind(authorId, limit, offset)
+					.prepare(`SELECT a.* FROM articles a JOIN article_authors aa ON aa.article_id = a.id WHERE aa.author_id = ? ${visibilityFilter} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
+					.bind(authorId, ...visibilityBinds, limit, offset)
 					.all<ArticleRow>(),
 				this.db
-					.prepare(`SELECT COUNT(*) as count FROM articles a JOIN article_authors aa ON aa.article_id = a.id WHERE aa.author_id = ?1 ${publishedFilter}`)
-					.bind(authorId)
+					.prepare(`SELECT COUNT(*) as count FROM articles a JOIN article_authors aa ON aa.article_id = a.id WHERE aa.author_id = ? ${visibilityFilter}`)
+					.bind(authorId, ...visibilityBinds)
 					.first<{ count: number }>(),
 			]);
 		}

@@ -92,25 +92,34 @@ export class ArticlesController {
 
 		if (!article) return Res.notFound();
 
-		const hasAccess = await ArticlesController.checkAccess(id, user, article.owner_id, c.env.DB);
-		if (!hasAccess) return Res.forbidden();
+		const role = await ArticlesController.resolveArticleRole(id, user, article.owner_id, c.env.DB);
+		if (!role) return Res.forbidden();
 
 		c.set('articleId', id);
+		c.set('articleRole', role);
 		return next();
 	};
 
 	/**
-	 * @description Check if a user has access to an article
+	 * @description Resolve the caller's role on a specific article. Admin
+	 * wins outright; otherwise owner match wins; else check the contributors
+	 * table. Returns null when the caller has no access at all.
 	 * @param { string } id The article ID
 	 * @param { any } user The current user
 	 * @param { string | null } ownerId The article owner ID
 	 * @param { D1Database } db The database binding
-	 * @returns { Promise<boolean> } True if access is granted
+	 * @returns { Promise<'owner' | 'contributor' | 'admin' | null> }
 	 */
-	private static async checkAccess(id: string, user: any, ownerId: string | null, db: D1Database): Promise<boolean> {
-		if (!user) return false;
-		if (user.role === 'admin' || user.sub === ownerId) return true;
-		return new ArticleRepository(db).isContributor(id, user.sub);
+	private static async resolveArticleRole(
+		id: string,
+		user: any,
+		ownerId: string | null,
+		db: D1Database,
+	): Promise<'owner' | 'contributor' | 'admin' | null> {
+		if (!user) return null;
+		if (user.role === 'admin') return 'admin';
+		if (user.sub === ownerId) return 'owner';
+		return (await new ArticleRepository(db).isContributor(id, user.sub)) ? 'contributor' : null;
 	}
 
 	/**
@@ -166,18 +175,24 @@ export class ArticlesController {
 		const authorId = parseInt(c.req.param('authorId') ?? '', 10);
 		if (isNaN(authorId) || authorId < 1) return Res.badRequest('Invalid author ID');
 
-		const authorRow = await c.env.DB
-			.prepare('SELECT user_id FROM authors WHERE id = ?1')
+		const authorExists = await c.env.DB
+			.prepare('SELECT 1 as one FROM authors WHERE id = ?1')
 			.bind(authorId)
-			.first<{ user_id: string | null }>();
+			.first<{ one: number }>();
+		if (!authorExists) return Res.notFound('Author not found');
 
-		if (!authorRow) return Res.notFound('Author not found');
-
+		// Row-level visibility (#19). Admins see everything; a signed-in
+		// caller sees their own drafts + public rows; anyone else sees only
+		// public rows. Ownership is decided by article.owner_id, NOT by which
+		// author IDs happen to be linked to the caller — otherwise a
+		// co-author on a draft they don't own would leak it.
 		const user = c.get('user');
-		const onlyPublished = !(user?.role === 'admin' || (user && authorRow.user_id === user.sub));
-
 		const options = parseListParams(c.req.url);
-		const result = await new ArticleService(new ArticleRepository(c.env.DB)).listByAuthor(authorId, options, onlyPublished);
+		const result = await new ArticleService(new ArticleRepository(c.env.DB)).listByAuthor(
+			authorId,
+			options,
+			{ admin: user?.role === 'admin', viewerUserId: user?.sub ?? null },
+		);
 		return Res.ok(result);
 	}
 
@@ -290,8 +305,23 @@ export class ArticlesController {
 	 */
 	static async update(c: Context<AppEnv>): Promise<Response> {
 		const id = c.get('articleId'); // set by requireWriteAccess
+		const role = c.get('articleRole'); // set by requireWriteAccess
 		try {
 			const body = await getValidBody<any>(c);
+
+			// Field-level ACL (#20). Contributors may only edit editorial
+			// content — never publishing / visibility fields, never the slug,
+			// never the author or tag graph. Reject the request if they try;
+			// silently dropping would be confusing when the API says 200 but
+			// their change didn't apply.
+			if (role === 'contributor') {
+				const ALLOWED_CONTRIBUTOR_FIELDS = new Set(['content', 'description', 'thumbnail']);
+				const rejected = Object.keys(body).filter((k) => !ALLOWED_CONTRIBUTOR_FIELDS.has(k));
+				if (rejected.length > 0) {
+					return Res.forbidden(`Contributors may only update: ${[...ALLOWED_CONTRIBUTOR_FIELDS].join(', ')}. Reserved: ${rejected.join(', ')}`);
+				}
+			}
+
 			const invalid = ArticlesController.normalizeSchedulingFields(body);
 			if (invalid) return invalid;
 			const article = await new ArticleService(new ArticleRepository(c.env.DB)).update(id, body as never);

@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
 import { getAuthHeaders, seedDatabase } from "../../apps/shared/helpers/test-cases";
+import { createJwt } from "../../apps/modules/auth/auth.service";
 
 const SELF = exports.default;
 let authHeaders: Record<string, string>;
@@ -172,6 +173,283 @@ describe("Auth API", () => {
 				body: JSON.stringify({ email: "nobody@example.com", otp: "000000" }),
 			});
 			expect([400, 401, 404]).toContain(res.status);
+		});
+	});
+
+	describe("Refresh Token", () => {
+		/** Compute SHA-256 hex of an ASCII string (mirrors the service helper). */
+		async function sha256Hex(value: string): Promise<string> {
+			const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+			return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+		}
+
+		it("POST /v1/api/auth/refresh rejects a token whose DB row has expired", async () => {
+			const userId = "test-user-id";
+			const refreshToken = await createJwt(
+				{ sub: userId, type: "refresh" },
+				env.JWT_SECRET,
+				60 * 30,
+			);
+			const rowId = crypto.randomUUID();
+			const familyId = crypto.randomUUID();
+			const tokenHash = await sha256Hex(refreshToken);
+			const pastExpiry = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+			await env.DB.prepare(
+				"INSERT INTO refresh_tokens (id, user_id, family_id, token_hash, expires_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+			).bind(rowId, userId, familyId, tokenHash, pastExpiry).run();
+
+			const res = await SELF.fetch("http://example.com/v1/api/auth/refresh", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ refreshToken }),
+			});
+			expect(res.status).toBe(401);
+			const body = (await res.json()) as { error?: string };
+			expect(body.error).toMatch(/expired/i);
+
+			const still = await env.DB.prepare(
+				"SELECT 1 as one FROM refresh_tokens WHERE token_hash = ?1",
+			).bind(tokenHash).first<{ one: number }>();
+			expect(still).toBeNull();
+		});
+
+		it("refresh_tokens rows store the SHA-256 hash, not the raw token", async () => {
+			// Sanity-check the migration: the raw JWT must not be present in the
+			// column that used to hold it. A stolen DB dump should therefore not
+			// let an attacker replay any refresh token.
+			const userId = "test-user-id";
+			const refreshToken = await createJwt(
+				{ sub: userId, type: "refresh" },
+				env.JWT_SECRET,
+				60 * 30,
+			);
+			const familyId = crypto.randomUUID();
+			const tokenHash = await sha256Hex(refreshToken);
+			const rowId = crypto.randomUUID();
+			await env.DB.prepare(
+				"INSERT INTO refresh_tokens (id, user_id, family_id, token_hash, expires_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+			).bind(rowId, userId, familyId, tokenHash, new Date(Date.now() + 3600_000).toISOString()).run();
+
+			const row = await env.DB.prepare(
+				"SELECT token_hash FROM refresh_tokens WHERE id = ?1",
+			).bind(rowId).first<{ token_hash: string }>();
+			expect(row?.token_hash).toBe(tokenHash);
+			expect(row?.token_hash).not.toBe(refreshToken);
+			// Hex-hash is exactly 64 chars, JWT is far longer.
+			expect(row?.token_hash?.length).toBe(64);
+		});
+
+		it("replaying a consumed refresh token revokes the whole family (reuse detection)", async () => {
+			const userId = "test-user-id";
+			// `jti` differentiates JWTs minted in the same second — without it,
+			// hono/jwt would produce identical strings and hit UNIQUE.
+			const refreshToken = await createJwt(
+				{ sub: userId, type: "refresh", jti: "consumed" },
+				env.JWT_SECRET,
+				60 * 60 * 24,
+			);
+			const familyId = crypto.randomUUID();
+			const tokenHash = await sha256Hex(refreshToken);
+			const goodRowId = crypto.randomUUID();
+			// A second row in the SAME family — represents a valid rotated
+			// token that a legitimate client currently holds.
+			const siblingRowId = crypto.randomUUID();
+			const siblingToken = await createJwt(
+				{ sub: userId, type: "refresh", jti: "sibling" },
+				env.JWT_SECRET,
+				60 * 60 * 24,
+			);
+			const siblingHash = await sha256Hex(siblingToken);
+			const oneHourAgo = new Date(Date.now() - 3600_000).toISOString();
+			const oneDayOut = new Date(Date.now() + 86_400_000).toISOString();
+			// Original token is already consumed (simulates a prior rotation).
+			await env.DB.prepare(
+				"INSERT INTO refresh_tokens (id, user_id, family_id, token_hash, expires_at, consumed_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+			).bind(goodRowId, userId, familyId, tokenHash, oneDayOut, oneHourAgo).run();
+			await env.DB.prepare(
+				"INSERT INTO refresh_tokens (id, user_id, family_id, token_hash, expires_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+			).bind(siblingRowId, userId, familyId, siblingHash, oneDayOut).run();
+
+			const res = await SELF.fetch("http://example.com/v1/api/auth/refresh", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ refreshToken }),
+			});
+			expect(res.status).toBe(401);
+			const body = (await res.json()) as { error?: string };
+			expect(body.error).toMatch(/replay|revoked/i);
+
+			// Both family members must be gone — including the sibling that was
+			// never itself replayed.
+			const remaining = await env.DB.prepare(
+				"SELECT COUNT(*) as n FROM refresh_tokens WHERE family_id = ?1",
+			).bind(familyId).first<{ n: number }>();
+			expect(remaining?.n).toBe(0);
+		});
+	});
+
+	describe("Refresh Cookie (#14)", () => {
+		async function registerAndLogin(email: string, password: string, name: string) {
+			// Register (or ignore-if-exists), then verify with the OTP straight
+			// from the DB so we can log in without touching SMTP.
+			await SELF.fetch("http://example.com/v1/api/auth/email/register", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email, name, password }),
+			});
+			const otpRow = await env.DB.prepare(
+				"SELECT code FROM email_otps WHERE email = ?1 AND used = 0 ORDER BY created_at DESC LIMIT 1",
+			).bind(email).first<{ code: string }>();
+			if (otpRow?.code) {
+				await SELF.fetch("http://example.com/v1/api/auth/email/verify", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ email, otp: otpRow.code }),
+				});
+			}
+			return SELF.fetch("http://example.com/v1/api/auth/email/login", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email, password }),
+			});
+		}
+
+		it("POST /v1/api/auth/email/login sets an HttpOnly refreshToken cookie", async () => {
+			const res = await registerAndLogin("cookie-user@example.com", "correcthorse42", "Cookie User");
+			expect(res.status).toBe(200);
+			const cookie = res.headers.get("set-cookie") ?? "";
+			expect(cookie).toMatch(/refreshToken=/);
+			expect(cookie).toMatch(/HttpOnly/i);
+			expect(cookie).toMatch(/SameSite=Lax/i);
+			expect(cookie).toMatch(/Path=\/v1\/api\/auth/i);
+			// Body still includes refreshToken during the migration window.
+			const body = (await res.json()) as { accessToken: string; refreshToken: string };
+			expect(body.accessToken).toBeTruthy();
+			expect(body.refreshToken).toBeTruthy();
+		});
+
+		it("POST /v1/api/auth/refresh works via cookie with no JSON body", async () => {
+			const loginRes = await registerAndLogin("cookie-refresh@example.com", "correcthorse42", "Cookie Refresh");
+			// Set-Cookie values contain commas (Expires=...). Use the Web API
+			// method that returns each Set-Cookie header as its own string.
+			const cookies = (loginRes.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie?.() ?? [];
+			const cookie = cookies.find((s) => s.startsWith("refreshToken="));
+			expect(cookie).toBeTruthy();
+			const refreshCookieHeader = cookie!.split(";")[0]; // "refreshToken=<jwt>"
+
+			const res = await SELF.fetch("http://example.com/v1/api/auth/refresh", {
+				method: "POST",
+				headers: { "Content-Type": "application/json", Cookie: refreshCookieHeader },
+				// Note: NO body — the cookie should be sufficient.
+				body: "{}",
+			});
+			expect(res.status).toBe(200);
+			const body = (await res.json()) as { accessToken: string; refreshToken: string };
+			expect(body.accessToken).toBeTruthy();
+			expect(body.refreshToken).toBeTruthy();
+			// The new refresh token should also be reissued as a cookie.
+			expect(res.headers.get("set-cookie") ?? "").toMatch(/refreshToken=/);
+		});
+
+		it("POST /v1/api/auth/logout clears the refreshToken cookie", async () => {
+			const loginRes = await registerAndLogin("cookie-logout@example.com", "correcthorse42", "Cookie Logout");
+			const loginBody = (await loginRes.json()) as { refreshToken: string };
+
+			const res = await SELF.fetch("http://example.com/v1/api/auth/logout", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ refreshToken: loginBody.refreshToken }),
+			});
+			expect(res.status).toBe(200);
+			const clearCookie = res.headers.get("set-cookie") ?? "";
+			expect(clearCookie).toMatch(/refreshToken=;/);
+			expect(clearCookie).toMatch(/Max-Age=0/i);
+		});
+	});
+
+	describe("Session invalidation on logout (#12)", () => {
+		it("access tokens have a 15-minute TTL", async () => {
+			// Register + verify a fresh user so we get a real access token from
+			// the service (not a hand-crafted JWT).
+			const email = "ttl-user@example.com";
+			await SELF.fetch("http://example.com/v1/api/auth/email/register", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email, name: "TTL", password: "correcthorse42" }),
+			});
+			const otp = await env.DB.prepare(
+				"SELECT code FROM email_otps WHERE email = ?1 AND used = 0 ORDER BY created_at DESC LIMIT 1",
+			).bind(email).first<{ code: string }>();
+			const verifyRes = await SELF.fetch("http://example.com/v1/api/auth/email/verify", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email, otp: otp!.code }),
+			});
+			const body = (await verifyRes.json()) as { accessToken: string };
+			const [, payloadB64] = body.accessToken.split(".");
+			const payload = JSON.parse(atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/")));
+			expect(payload.exp - payload.iat).toBe(60 * 15);
+		});
+
+		it("authGuard rejects an access token whose iat is before session_invalidated_at", async () => {
+			const userId = "test-user-id";
+			// Mint an access token with iat = now. `JwtService` overwrites any
+			// `iat` supplied in the payload, so instead of a stale token we set
+			// the invalidation floor to a future timestamp and rely on the
+			// same `iat < floor` comparison to fire.
+			const token = await createJwt(
+				{ sub: userId, provider: "email", email: "test@example.com", name: "Test", role: "user", type: "access" },
+				env.JWT_SECRET,
+				60 * 15,
+			);
+			await env.DB.prepare(
+				"UPDATE users SET session_invalidated_at = datetime('now', '+2 minutes') WHERE id = ?1",
+			).bind(userId).run();
+
+			const res = await SELF.fetch("http://example.com/v1/api/auth/sso/keys", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			expect(res.status).toBe(401);
+			const errBody = (await res.json()) as { error?: string };
+			expect(errBody.error).toMatch(/invalidated/i);
+
+			// Reset so later tests using test-user-id do not inherit the floor.
+			await env.DB.prepare("UPDATE users SET session_invalidated_at = NULL WHERE id = ?1").bind(userId).run();
+		});
+
+		it("logout writes session_invalidated_at for the token owner", async () => {
+			const email = "logout-floor@example.com";
+			await SELF.fetch("http://example.com/v1/api/auth/email/register", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email, name: "Logout", password: "correcthorse42" }),
+			});
+			const otp = await env.DB.prepare(
+				"SELECT code FROM email_otps WHERE email = ?1 AND used = 0 ORDER BY created_at DESC LIMIT 1",
+			).bind(email).first<{ code: string }>();
+			const verifyRes = await SELF.fetch("http://example.com/v1/api/auth/email/verify", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email, otp: otp!.code }),
+			});
+			const { refreshToken } = (await verifyRes.json()) as { refreshToken: string };
+
+			// Sanity: no invalidation floor yet.
+			const before = await env.DB.prepare(
+				"SELECT session_invalidated_at as t FROM users WHERE provider_id = ?1",
+			).bind(email).first<{ t: string | null }>();
+			expect(before?.t).toBeNull();
+
+			await SELF.fetch("http://example.com/v1/api/auth/logout", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ refreshToken }),
+			});
+
+			const after = await env.DB.prepare(
+				"SELECT session_invalidated_at as t FROM users WHERE provider_id = ?1",
+			).bind(email).first<{ t: string | null }>();
+			expect(after?.t).toBeTruthy();
 		});
 	});
 

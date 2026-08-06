@@ -14,7 +14,16 @@ const API_KEY_LOOKUP_PREFIX_LEN = API_KEY_PREFIX.length + 8; // stored prefix fo
  * @returns { Promise<string> } Hex-encoded hash
  */
 async function hashApiKey(key: string): Promise<string> {
-	const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
+	return sha256Hex(key);
+}
+
+/**
+ * @description SHA-256 hex helper — used for API keys and refresh tokens.
+ * @param { string } value Plaintext value
+ * @returns { Promise<string> } Hex-encoded SHA-256 digest
+ */
+async function sha256Hex(value: string): Promise<string> {
+	const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
 	return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
@@ -33,29 +42,61 @@ function generateApiKeyValue(): { plaintext: string; prefix: string } {
  * JWT helpers (Delegated to JwtService)
  */
 
+const REFRESH_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
+// Access tokens are short-lived so a logout window (or a leaked token) can
+// only be replayed for ~15 min before natural expiry. Combined with the
+// `users.session_invalidated_at` check in authGuard (#12), logout also
+// invalidates in-flight access tokens immediately.
+const ACCESS_TTL_SECONDS = 60 * 15;
+
+// Issuer + audience for access / refresh tokens (#18). Fixed identifiers so
+// tokens minted for one deployment cannot be replayed against a differently
+// configured instance that happens to share the JWT secret.
+const AUTH_JWT_ISS = 'pphat-api';
+const AUTH_JWT_AUD = 'pphat-web';
+
+/** Build a JwtService pre-configured for the auth flow (iss / aud pinned). */
+function authJwt(secret: string): JwtService {
+	return JwtService.create({ secret, iss: AUTH_JWT_ISS, aud: AUTH_JWT_AUD });
+}
+
+export interface TokenPair {
+	accessToken: string;
+	refreshToken: string;
+	/** Refresh token TTL in seconds — controllers use this for cookie Max-Age. */
+	refreshTTL: number;
+}
+
 /**
- * @description Internal: generates access and refresh tokens
+ * @description Internal: generate access + refresh JWTs and persist the
+ * refresh token as its SHA-256 hash. A `familyId` is supplied when rotating
+ * (all rotations of the same login carry the same family_id so reuse of a
+ * consumed token can revoke the whole family). Omit `familyId` for a fresh
+ * login — a new UUID is minted.
  * @param { Omit<JwtPayload, 'iat' | 'exp'> } payload JWT payload
  * @param { IAuthRepository } repo Auth repository
  * @param { string } secret JWT secret
  * @param { number } [accessTTL=3600] Access token TTL in seconds
- * @param { number } [refreshTTL=2592000] Refresh token TTL in seconds
- * @returns { Promise<{ accessToken: string; refreshToken: string }> } Token pair
+ * @param { number } [refreshTTL=REFRESH_TTL_SECONDS] Refresh token TTL in seconds
+ * @param { string } [familyId] Existing family ID (rotation); omit for fresh login
+ * @returns { Promise<{ accessToken: string; refreshToken: string; refreshTTL: number }> } Token pair + TTL
  */
 async function generateTokens(
 	payload: Omit<JwtPayload, 'iat' | 'exp'>,
 	repo: IAuthRepository,
 	secret: string,
-	accessTTL = 60 * 60, // 1 hour
-	refreshTTL = 60 * 60 * 24 * 30, // 30 days
-): Promise<{ accessToken: string; refreshToken: string }> {
-	const jwt = JwtService.create({ secret });
+	accessTTL: number = ACCESS_TTL_SECONDS,
+	refreshTTL: number = REFRESH_TTL_SECONDS,
+	familyId?: string,
+): Promise<{ accessToken: string; refreshToken: string; refreshTTL: number }> {
+	const jwt = authJwt(secret);
 	const { accessToken, refreshToken } = await jwt.generatePair(payload, accessTTL, refreshTTL);
 
 	const expiresAt = new Date(Date.now() + refreshTTL * 1000).toISOString();
-	await repo.saveRefreshToken(payload.sub, refreshToken, expiresAt);
+	const tokenHash = await sha256Hex(refreshToken);
+	await repo.saveRefreshToken(payload.sub, familyId ?? crypto.randomUUID(), tokenHash, expiresAt);
 
-	return { accessToken, refreshToken };
+	return { accessToken, refreshToken, refreshTTL };
 }
 
 /**
@@ -65,7 +106,7 @@ async function generateTokens(
  * @returns { Promise<JwtPayload | null> } Decoded payload or null
  */
 export async function verifyJwt(token: string, secret: string): Promise<JwtPayload | null> {
-	return JwtService.create({ secret }).verify<JwtPayload>(token);
+	return authJwt(secret).verify<JwtPayload>(token);
 }
 
 /**
@@ -76,7 +117,7 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
  * @returns { Promise<string> } Encoded token
  */
 export async function createJwt(payload: Record<string, any>, secret: string, expiresIn?: number): Promise<string> {
-	return JwtService.create({ secret }).generate(payload, expiresIn);
+	return authJwt(secret).generate(payload, expiresIn);
 }
 
 /**
@@ -370,13 +411,13 @@ export class AuthService {
 	 * @param { 'github' | 'google' } provider OAuth provider
 	 * @param { object } userInfo User profile from provider
 	 * @param { string } jwtSecret JWT secret
-	 * @returns { Promise<{ accessToken: string; refreshToken: string }> } Token pair
+	 * @returns { Promise<TokenPair> } Token pair
 	 */
 	async handleOAuthCallback(
 		provider: 'github' | 'google',
 		userInfo: { providerId: string; email: string | null; name: string | null; avatar: string | null },
 		jwtSecret: string,
-	): Promise<{ accessToken: string; refreshToken: string }> {
+	): Promise<TokenPair> {
 		const user = await this.repo.findOrCreateUser(provider, userInfo.providerId, {
 			email: userInfo.email,
 			name: userInfo.name,
@@ -426,9 +467,9 @@ export class AuthService {
 	 * @param { string } email User email
 	 * @param { string } password Raw password
 	 * @param { string } jwtSecret JWT secret
-	 * @returns { Promise<{ accessToken: string; refreshToken: string }> } Token pair
+	 * @returns { Promise<TokenPair> } Token pair
 	 */
-	async loginWithPassword(email: string, password: string, jwtSecret: string): Promise<{ accessToken: string; refreshToken: string }> {
+	async loginWithPassword(email: string, password: string, jwtSecret: string): Promise<TokenPair> {
 		const user = await this.repo.findEmailUser(email);
 		if (!user) throw Object.assign(new Error('Invalid email or password'), { status: 401 });
 		if (!user.email_verified) throw Object.assign(new Error('Email not verified. Complete registration first.'), { status: 403 });
@@ -447,9 +488,9 @@ export class AuthService {
 	 * @param { string } email User email
 	 * @param { string } code The OTP
 	 * @param { string } jwtSecret JWT secret
-	 * @returns { Promise<{ accessToken: string; refreshToken: string }> } Token pair
+	 * @returns { Promise<TokenPair> } Token pair
 	 */
-	async verifyEmailOtp(email: string, code: string, jwtSecret: string): Promise<{ accessToken: string; refreshToken: string }> {
+	async verifyEmailOtp(email: string, code: string, jwtSecret: string): Promise<TokenPair> {
 		const valid = await this.repo.verifyAndConsumeOtp(email, code);
 		if (!valid) throw Object.assign(new Error('Invalid or expired verification code'), { status: 400 });
 		await this.repo.markEmailVerified(email);
@@ -466,19 +507,39 @@ export class AuthService {
 	 * @description Refresh auth tokens using a refresh token
 	 * @param { string } refreshToken The refresh token
 	 * @param { string } jwtSecret JWT secret
-	 * @returns { Promise<{ accessToken: string; refreshToken: string }> } New token pair
+	 * @returns { Promise<TokenPair> } New token pair
 	 */
-	async refresh(refreshToken: string, jwtSecret: string): Promise<{ accessToken: string; refreshToken: string }> {
+	async refresh(refreshToken: string, jwtSecret: string): Promise<TokenPair> {
 		const payload = await verifyJwt(refreshToken, jwtSecret);
 		if (!payload || (payload as any).type !== 'refresh') {
 			throw Object.assign(new Error('Invalid refresh token'), { status: 401 });
 		}
 
-		const stored = await this.repo.findRefreshToken(refreshToken);
+		const tokenHash = await sha256Hex(refreshToken);
+		const stored = await this.repo.findRefreshTokenByHash(tokenHash);
 		if (!stored) throw Object.assign(new Error('Refresh token revoked or not found'), { status: 401 });
 
-		// Optional: Rotate refresh token (delete old, issue new)
-		await this.repo.deleteRefreshToken(refreshToken);
+		// Reuse-detection: a consumed row being re-presented means either the
+		// legitimate client did not receive the previous rotation response, or
+		// an attacker replayed a stolen token. Safest response is to revoke
+		// the entire family and force re-authentication.
+		if (stored.consumed_at) {
+			await this.repo.revokeRefreshTokenFamily(stored.family_id);
+			throw Object.assign(new Error('Refresh token replay detected'), { status: 401 });
+		}
+
+		// Defense-in-depth: reject if the stored row has already expired even
+		// though the JWT claim still validates. A skewed clock or an early
+		// scheduled cleanup would otherwise let a stale token through.
+		if (new Date(stored.expires_at).getTime() < Date.now()) {
+			await this.repo.deleteRefreshTokenByHash(tokenHash);
+			throw Object.assign(new Error('Refresh token expired'), { status: 401 });
+		}
+
+		// Mark the presented token consumed (row stays so replay detection
+		// still catches it), then issue a new pair on the SAME family_id.
+		await this.repo.markRefreshTokenConsumed(tokenHash);
+		await this.repo.deleteExpiredRefreshTokens();
 
 		const user = await this.repo.findUserById(stored.user_id);
 		if (!user) throw Object.assign(new Error('User not found'), { status: 401 });
@@ -486,17 +547,30 @@ export class AuthService {
 		return generateTokens(
 			{ sub: user.id, provider: user.provider, email: user.email, name: user.name, role: user.role ?? 'user' },
 			this.repo,
-			jwtSecret
+			jwtSecret,
+			undefined,
+			undefined,
+			stored.family_id,
 		);
 	}
 
 	/**
-	 * @description Revoke a refresh token (logout)
+	 * @description Revoke a refresh token (logout). Revokes the whole family
+	 * so a stolen rotation cannot outlive the logout.
 	 * @param { string } refreshToken The refresh token to revoke
 	 * @returns { Promise<void> }
 	 */
 	async logout(refreshToken: string): Promise<void> {
-		await this.repo.deleteRefreshToken(refreshToken);
+		const tokenHash = await sha256Hex(refreshToken);
+		const stored = await this.repo.findRefreshTokenByHash(tokenHash);
+		if (stored) {
+			await this.repo.revokeRefreshTokenFamily(stored.family_id);
+			// Access-token revocation floor: any access JWT issued for this
+			// user before now() is rejected by authGuard. Combined with the
+			// 15-min access TTL, this makes logout effectively immediate.
+			await this.repo.invalidateUserSessions(stored.user_id);
+		}
+		await this.repo.deleteExpiredRefreshTokens();
 	}
 
 	/**

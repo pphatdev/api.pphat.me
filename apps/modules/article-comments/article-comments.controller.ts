@@ -43,14 +43,38 @@ export class ArticleCommentsController {
 	}
 
 	/**
-	 * @description Resolve the display name for a comment author from the JWT user
+	 * @description Strip HTML tags and control chars from a raw display string.
+	 * A user's OAuth-provided or self-registered display name can legally
+	 * contain angle brackets; leaving those in place risks XSS in any client
+	 * that dumps `authorName` straight into innerHTML (typical in admin
+	 * dashboards). Stripping — rather than escaping — keeps the JSON payload
+	 * plain text so client renderers do not need to un-escape entities.
+	 * @param { string } value The candidate display string
+	 * @returns { string } Trimmed, tag-free, length-capped string
+	 */
+	private static sanitizeAuthorName(value: string): string {
+		return value
+			.replace(/[\r\n\t\0]+/g, ' ')
+			// Strip anything that looks like an HTML tag (`<...>`) plus any
+			// lone `<` / `>` characters.
+			.replace(/<[^>]*>/g, '')
+			.replace(/[<>]/g, '')
+			.trim()
+			.slice(0, MAX_AUTHOR_NAME_LENGTH);
+	}
+
+	/**
+	 * @description Resolve the display name for a comment author from the JWT
+	 * user. Never trusts a client-supplied `authorName` — the value always
+	 * comes from the JWT identity so a comment cannot claim to be from
+	 * someone else, and is passed through `sanitizeAuthorName` before storage.
 	 * @param { JwtPayload } user The authenticated user
 	 * @returns { string } Display name (falls back to email local part or "User")
 	 */
 	private static resolveAuthorName(user: JwtPayload): string {
-		if (user.name && user.name.trim()) return user.name.trim().slice(0, MAX_AUTHOR_NAME_LENGTH);
-		if (user.email) return user.email.split("@")[0].slice(0, MAX_AUTHOR_NAME_LENGTH);
-		return "User";
+		const primary = user.name?.trim() || user.email?.split("@")[0] || 'User';
+		const sanitized = this.sanitizeAuthorName(primary);
+		return sanitized || 'User';
 	}
 
 	/**

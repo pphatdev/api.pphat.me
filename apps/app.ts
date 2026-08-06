@@ -13,19 +13,14 @@ import { dashboardRoutes } from './modules/dashboard/dashboard.route';
 import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 import { securityMiddleware } from './middlewares/security.middleware';
 import { trafficMiddleware } from './middlewares/traffic.middleware';
+import { resolveAllowedOrigin } from './shared/config/cors';
 
 import packageJson from '../package.json';
 
 const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({
-    origin: (origin) => {
-        if (!origin) return '*';
-        if (origin.endsWith('.vercel.app') || origin.startsWith('http://localhost') || origin === 'https://pphat.me') {
-            return origin;
-        }
-        return 'https://pphat.me';
-    },
+    origin: (origin) => resolveAllowedOrigin(origin),
     allowHeaders: ['*'],
     allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE', 'PATCH'],
 }));

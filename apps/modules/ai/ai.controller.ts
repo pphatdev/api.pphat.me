@@ -1,8 +1,8 @@
 import { Res } from '../../shared/helpers/response';
 import { isObject } from '../../shared/helpers/json';
+import { DEFAULT_AI_MODEL, isAllowedAiModel } from '../../shared/config/ai';
 import type { GeneratePayload, GenerateMode } from './ai.interface';
 
-const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 const MAX_TITLE_LENGTH = 200;
 const MAX_CONTEXT_LENGTH = 10000;
 const ALLOWED_MODES: GenerateMode[] = ['description', 'content', 'both'];
@@ -222,10 +222,14 @@ export class AiController {
 			const error = validatePayload(body as GeneratePayload);
 			if (error) return error;
 
-			if (!env.AI) return Res.internalError('Workers AI binding "AI" is not configured');
-
 			const mode = normalizeMode(body.mode);
-			const model = (body.model || DEFAULT_MODEL).trim();
+			const rawModel = typeof body.model === 'string' && body.model.trim() ? body.model.trim() : DEFAULT_AI_MODEL;
+			if (!isAllowedAiModel(rawModel)) {
+				return Res.unprocessable(`model "${rawModel}" is not permitted`);
+			}
+			const model = rawModel;
+
+			if (!env.AI) return Res.internalError('Workers AI binding "AI" is not configured');
 
 			const response: any = await runAiGeneration(env, model, mode, body);
 
@@ -240,7 +244,7 @@ export class AiController {
 			});
 		} catch (error) {
 			console.error('[AI_GENERATE_ERROR]', error);
-			return Res.internalError(error instanceof Error ? error.message : 'An unexpected error occurred during generation');
+			return Res.internalError('Generation failed');
 		}
 	}
 }

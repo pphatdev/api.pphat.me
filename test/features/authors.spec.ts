@@ -1,13 +1,15 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { getAuthHeaders, seedDatabase } from "../../apps/shared/helpers/test-cases";
+import { getAdminHeaders, getAuthHeaders, seedDatabase } from "../../apps/shared/helpers/test-cases";
 
 const SELF = exports.default;
 let authHeaders: Record<string, string>;
+let adminHeaders: Record<string, string>;
 
 beforeAll(async () => {
 	await seedDatabase(env.DB);
 	authHeaders = await getAuthHeaders(env.JWT_SECRET);
+	adminHeaders = await getAdminHeaders(env.JWT_SECRET);
 });
 
 describe("Authors API", () => {
@@ -51,7 +53,7 @@ describe("Authors API", () => {
 	it("POST /v1/api/authors with valid body creates an author (201)", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/authors", {
 			method: "POST",
-			headers: { ...authHeaders, "Content-Type": "application/json" },
+			headers: { ...adminHeaders, "Content-Type": "application/json" },
 			body: JSON.stringify({
 				name: "New Author",
 				profile: "Engineer",
@@ -67,7 +69,7 @@ describe("Authors API", () => {
 	it("POST /v1/api/authors with missing name returns 422", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/authors", {
 			method: "POST",
-			headers: { ...authHeaders, "Content-Type": "application/json" },
+			headers: { ...adminHeaders, "Content-Type": "application/json" },
 			body: JSON.stringify({ profile: "Developer" }),
 		});
 		expect(res.status).toBe(422);
@@ -76,7 +78,7 @@ describe("Authors API", () => {
 	it("PATCH /v1/api/authors/1 updates an author", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/authors/1", {
 			method: "PATCH",
-			headers: { ...authHeaders, "Content-Type": "application/json" },
+			headers: { ...adminHeaders, "Content-Type": "application/json" },
 			body: JSON.stringify({ profile: "Updated Profile" }),
 		});
 		expect(res.status).toBe(200);
@@ -87,7 +89,7 @@ describe("Authors API", () => {
 	it("PATCH /v1/api/authors/999 returns 404", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/authors/999", {
 			method: "PATCH",
-			headers: { ...authHeaders, "Content-Type": "application/json" },
+			headers: { ...adminHeaders, "Content-Type": "application/json" },
 			body: JSON.stringify({ profile: "Should Not Exist" }),
 		});
 		expect(res.status).toBe(404);
@@ -96,7 +98,7 @@ describe("Authors API", () => {
 	it("DELETE /v1/api/authors/999 returns 404", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/authors/999", {
 			method: "DELETE",
-			headers: authHeaders,
+			headers: adminHeaders,
 		});
 		expect(res.status).toBe(404);
 	});
@@ -104,8 +106,25 @@ describe("Authors API", () => {
 	it("DELETE /v1/api/authors/not-a-number returns 400", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/authors/not-a-number", {
 			method: "DELETE",
-			headers: authHeaders,
+			headers: adminHeaders,
 		});
 		expect(res.status).toBe(400);
+	});
+
+	it("POST /v1/api/authors as a non-admin user returns 403 (#24)", async () => {
+		const res = await SELF.fetch("http://example.com/v1/api/authors", {
+			method: "POST",
+			headers: { ...authHeaders, "Content-Type": "application/json" },
+			body: JSON.stringify({ name: "Should Not Be Created" }),
+		});
+		expect(res.status).toBe(403);
+	});
+
+	it("DELETE /v1/api/authors/1 as a non-admin user returns 403 (#24)", async () => {
+		const res = await SELF.fetch("http://example.com/v1/api/authors/1", {
+			method: "DELETE",
+			headers: authHeaders,
+		});
+		expect(res.status).toBe(403);
 	});
 });

@@ -37,36 +37,76 @@ function extractApiKey(c: Context<any>): string {
 }
 
 /**
- * @description Hono middleware that enforces Bearer JWT or API key authentication
+ * @description Shared auth-resolution used by both authGuard and sseAuthGuard.
+ * Accepts an API key (Authorization: ApiKey / X-API-Key) or a Bearer JWT. When
+ * `allowQueryToken` is true, also accepts a JWT via the `?token=` query param
+ * — intended only for EventSource / SSE clients that cannot set headers.
  * @param { Context } c The Hono context
- * @param { Next } next The next middleware
- * @returns { Promise<Response | void> }
+ * @param { boolean } allowQueryToken Permit `?token=` fallback
+ * @returns { Promise<JwtPayload | Response> } Session payload on success, or an error Response
  */
-export async function authGuard(c: Context<any>, next: Next): Promise<Response | void> {
-	const authHeader = c.req.header("Authorization");
-
-	// API key path
+async function resolveAuth(c: Context<any>, allowQueryToken: boolean): Promise<JwtPayload | Response> {
 	const apiKey = extractApiKey(c);
 	if (apiKey) {
 		const repo = new AuthRepository((c.env as Env).DB);
 		const user = await new AuthService(repo).verifyApiKey(apiKey);
 		if (!user) return json({ error: "Invalid or revoked API key" }, 401);
-		c.set('user', sessionFromUser(user));
-		return next();
+		return sessionFromUser(user);
 	}
 
-	// Bearer JWT path (fallback also allows ?token= for EventSource/SSE)
+	const authHeader = c.req.header("Authorization");
 	let token = '';
 	if (authHeader?.startsWith("Bearer ")) {
 		token = authHeader.slice(7);
-	} else {
+	} else if (allowQueryToken) {
 		token = c.req.query("token") || '';
 	}
 
 	if (!token) return json({ error: "Unauthorized" }, 401);
 	const payload = await verifyJwt(token, (c.env as Env).JWT_SECRET);
 	if (!payload || payload.type === 'refresh') return json({ error: "Invalid or expired token" }, 401);
-	c.set('user', payload as JwtPayload);
+
+	// Access-token revocation floor (#12). If the user has logged out since
+	// this token was minted, its `iat` will be earlier than the floor and we
+	// must reject. `getSessionInvalidatedAt` returns null when the user has
+	// never logged out — skip the check to save a round-trip.
+	const floor = await new AuthRepository((c.env as Env).DB).getSessionInvalidatedAt(payload.sub);
+	if (floor !== null && payload.iat < floor) {
+		return json({ error: "Session invalidated. Please sign in again." }, 401);
+	}
+
+	return payload as JwtPayload;
+}
+
+/**
+ * @description Hono middleware that enforces Bearer JWT or API key authentication.
+ * Does NOT accept `?token=` in the query string — use `sseAuthGuard` for the
+ * one SSE route that needs an EventSource-compatible fallback.
+ * @param { Context } c The Hono context
+ * @param { Next } next The next middleware
+ * @returns { Promise<Response | void> }
+ */
+export async function authGuard(c: Context<any>, next: Next): Promise<Response | void> {
+	const result = await resolveAuth(c, false);
+	if (result instanceof Response) return result;
+	c.set('user', result);
+	return next();
+}
+
+/**
+ * @description Hono middleware for SSE endpoints that must accept `?token=` in
+ * the query string because `EventSource` cannot set request headers. Accepts
+ * everything `authGuard` accepts, plus the query fallback. Do NOT reuse for
+ * non-streaming routes — query tokens leak into referrer headers and server
+ * access logs.
+ * @param { Context } c The Hono context
+ * @param { Next } next The next middleware
+ * @returns { Promise<Response | void> }
+ */
+export async function sseAuthGuard(c: Context<any>, next: Next): Promise<Response | void> {
+	const result = await resolveAuth(c, true);
+	if (result instanceof Response) return result;
+	c.set('user', result);
 	return next();
 }
 
@@ -103,7 +143,15 @@ export async function optionalAuth(c: Context<any>, next: Next): Promise<Respons
 	if (authHeader?.startsWith("Bearer ")) {
 		const token = authHeader.slice(7);
 		const payload = await verifyJwt(token, (c.env as Env).JWT_SECRET);
-		if (payload && payload.type !== 'refresh') c.set('user', payload as JwtPayload);
+		if (payload && payload.type !== 'refresh') {
+			// Same invalidation-floor check as authGuard, but silently drop the
+			// session instead of 401ing — optionalAuth callers treat "no user"
+			// as anonymous, which is the correct behaviour post-logout.
+			const floor = await new AuthRepository((c.env as Env).DB).getSessionInvalidatedAt(payload.sub);
+			if (floor === null || payload.iat >= floor) {
+				c.set('user', payload as JwtPayload);
+			}
+		}
 	}
 	return next();
 }
