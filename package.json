@@ -37,6 +37,7 @@
         "hono": "^4.12.34",
         "nodemailer": "^9.0.3"
     },
+    "//overrides": "See SECURITY.md → Pinned Dependencies for the rationale. Do not remove entries without reading that section first.",
     "overrides": {
         "@esbuild-kit/core-utils": {
             "esbuild": "^0.25.12"

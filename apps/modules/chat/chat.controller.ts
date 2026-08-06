@@ -119,8 +119,15 @@ function validateHistory(raw: unknown): { history: ChatMessage[] } | { error: st
 	return { history };
 }
 
+// Per-user retention cap for chat_history (#34). Enough to keep a useful
+// transcript for the returning user; small enough that a chatty account
+// cannot grow the table unboundedly.
+const CHAT_HISTORY_PER_USER_MAX = 500;
+
 /**
- * @description Saves chat history to the database
+ * @description Saves chat history to the database and trims the user's rows
+ * to the retention cap. Failure is logged but never surfaced — history is a
+ * nice-to-have, not part of the request's success contract.
  * @param { D1Database | undefined } db Database binding
  * @param { string | undefined } userId User ID
  * @param { string } userMessage User's message
@@ -136,6 +143,21 @@ async function saveChatHistory(db: D1Database | undefined, userId: string | unde
 			userId, 'user', userMessage,
 			userId, 'assistant', aiResponse
 		).run();
+
+		// Trim: keep only the newest CHAT_HISTORY_PER_USER_MAX rows for this
+		// user. Runs on every insert so the cap holds tightly without needing
+		// a background cron. The subquery is bounded by the same user_id, so
+		// it's cheap even for the largest offenders.
+		await db.prepare(
+			`DELETE FROM chat_history
+			 WHERE user_id = ?1
+			   AND id NOT IN (
+			     SELECT id FROM chat_history
+			     WHERE user_id = ?1
+			     ORDER BY created_at DESC, id DESC
+			     LIMIT ?2
+			   )`,
+		).bind(userId, CHAT_HISTORY_PER_USER_MAX).run();
 	} catch (dbError) {
 		console.error('[DB_SAVE_CHAT_ERROR]', dbError);
 	}

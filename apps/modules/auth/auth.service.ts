@@ -348,15 +348,20 @@ function otpExpiresAt(ttlMinutes = 10): string {
 }
 
 /**
- * Password helpers (PBKDF2 via Web Crypto)
+ * Password helpers (PBKDF2 via Web Crypto).
+ *
+ * New hashes use the versioned format `pbkdf2$<iters>$<saltHex>$<hashHex>`
+ * (Argon2-style prefix) so the iteration count is part of the record and
+ * we can raise it in future without a data migration. Legacy hashes stored
+ * as `saltHex:hashHex` (100k iterations, no prefix) still verify — on next
+ * successful login the caller opportunistically re-hashes them at the
+ * current strength.
  */
-/**
- * @description Hash a password using PBKDF2
- * @param { string } password Raw password
- * @returns { Promise<string> } Salted hash string
- */
-async function hashPassword(password: string): Promise<string> {
-	const salt = crypto.getRandomValues(new Uint8Array(16));
+const PBKDF2_ITERATIONS_CURRENT = 600_000; // #36 — up from 100k
+const PBKDF2_ITERATIONS_LEGACY = 100_000;
+
+/** Compute the raw PBKDF2 bits for a candidate password + salt + iteration count. */
+async function pbkdf2Bits(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
 	const keyMaterial = await crypto.subtle.importKey(
 		'raw',
 		new TextEncoder().encode(password),
@@ -365,39 +370,82 @@ async function hashPassword(password: string): Promise<string> {
 		['deriveBits'],
 	);
 	const bits = await crypto.subtle.deriveBits(
-		{ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100_000 },
+		{ name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
 		keyMaterial,
 		256,
 	);
-	const saltHex = Array.from(salt).map((b) => b.toString(16).padStart(2, '0')).join('');
-	const hashHex = Array.from(new Uint8Array(bits)).map((b) => b.toString(16).padStart(2, '0')).join('');
-	return `${saltHex}:${hashHex}`;
+	return new Uint8Array(bits);
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+	return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex: string): Uint8Array {
+	const pairs = hex.match(/.{2}/g);
+	if (!pairs) return new Uint8Array();
+	return Uint8Array.from(pairs.map((h) => parseInt(h, 16)));
 }
 
 /**
- * @description Verify a password against a stored hash
+ * @description Hash a password using PBKDF2 with the current iteration count.
+ * @param { string } password Raw password
+ * @returns { Promise<string> } Versioned hash `pbkdf2$<iters>$<salt>$<hash>`
+ */
+async function hashPassword(password: string): Promise<string> {
+	const salt = crypto.getRandomValues(new Uint8Array(16));
+	const bits = await pbkdf2Bits(password, salt, PBKDF2_ITERATIONS_CURRENT);
+	return `pbkdf2$${PBKDF2_ITERATIONS_CURRENT}$${bytesToHex(salt)}$${bytesToHex(bits)}`;
+}
+
+interface ParsedHash {
+	iterations: number;
+	salt: Uint8Array;
+	hashHex: string;
+	legacy: boolean;
+}
+
+function parseStoredHash(stored: string): ParsedHash | null {
+	// Versioned format takes precedence.
+	if (stored.startsWith('pbkdf2$')) {
+		const parts = stored.split('$');
+		if (parts.length !== 4) return null;
+		const iterations = Number.parseInt(parts[1], 10);
+		if (!Number.isFinite(iterations) || iterations <= 0) return null;
+		return { iterations, salt: hexToBytes(parts[2]), hashHex: parts[3], legacy: false };
+	}
+	// Legacy `saltHex:hashHex` — assumed 100k iterations.
+	const [saltHex, hashHex] = stored.split(':');
+	if (!saltHex || !hashHex) return null;
+	return { iterations: PBKDF2_ITERATIONS_LEGACY, salt: hexToBytes(saltHex), hashHex, legacy: true };
+}
+
+/**
+ * @description Verify a password against a stored hash. Accepts both the
+ * versioned `pbkdf2$...` format and the legacy `salt:hash` format so
+ * pre-#36 accounts still log in.
  * @param { string } password Raw password
  * @param { string } stored Stored hash string
  * @returns { Promise<boolean> } True if matches
  */
 async function verifyPassword(password: string, stored: string): Promise<boolean> {
-	const [saltHex, hashHex] = stored.split(':');
-	if (!saltHex || !hashHex) return false;
-	const salt = Uint8Array.from(saltHex.match(/.{2}/g)!.map((h) => parseInt(h, 16)));
-	const keyMaterial = await crypto.subtle.importKey(
-		'raw',
-		new TextEncoder().encode(password),
-		'PBKDF2',
-		false,
-		['deriveBits'],
-	);
-	const bits = await crypto.subtle.deriveBits(
-		{ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100_000 },
-		keyMaterial,
-		256,
-	);
-	const candidate = Array.from(new Uint8Array(bits)).map((b) => b.toString(16).padStart(2, '0')).join('');
-	return candidate === hashHex;
+	const parsed = parseStoredHash(stored);
+	if (!parsed) return false;
+	const bits = await pbkdf2Bits(password, parsed.salt, parsed.iterations);
+	return bytesToHex(bits) === parsed.hashHex;
+}
+
+/**
+ * @description Should the stored hash be re-hashed on next successful login?
+ * True for legacy-format hashes and for any hash whose iteration count is
+ * below the current floor.
+ * @param { string } stored Stored hash string
+ * @returns { boolean } True when a re-hash is warranted
+ */
+function needsRehash(stored: string): boolean {
+	const parsed = parseStoredHash(stored);
+	if (!parsed) return false;
+	return parsed.legacy || parsed.iterations < PBKDF2_ITERATIONS_CURRENT;
 }
 
 /**
@@ -476,6 +524,19 @@ export class AuthService {
 		if (!user.password_hash || !(await verifyPassword(password, user.password_hash))) {
 			throw Object.assign(new Error('Invalid email or password'), { status: 401 });
 		}
+
+		// Opportunistic PBKDF2 upgrade (#36). Legacy hashes verified above
+		// were computed with 100k iterations; re-hash at the current strength
+		// and store. Wrapped so a hash-upgrade failure never blocks the login.
+		if (needsRehash(user.password_hash)) {
+			try {
+				const upgraded = await hashPassword(password);
+				await this.repo.updatePasswordHash(user.id, upgraded);
+			} catch (err) {
+				console.error('[PBKDF2_REHASH_ERROR]', err);
+			}
+		}
+
 		return generateTokens(
 			{ sub: user.id, provider: 'email', email: user.email, name: user.name, role: user.role ?? 'user' },
 			this.repo,

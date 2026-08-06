@@ -81,6 +81,12 @@ export interface IAuthRepository {
 	findPublicUserById(id: string): Promise<PublicUser | null>;
 	findEmailUser(email: string): Promise<User | null>;
 	createEmailUser(email: string, name: string, passwordHash: string): Promise<User>;
+	/**
+	 * Replace an existing user's `password_hash` in-place. Used by the login
+	 * flow to opportunistically upgrade legacy PBKDF2 hashes to the current
+	 * iteration count (#36) without asking the user to reset their password.
+	 */
+	updatePasswordHash(userId: string, passwordHash: string): Promise<void>;
 	createOtp(email: string, code: string, expiresAt: string): Promise<void>;
 	verifyAndConsumeOtp(email: string, code: string): Promise<boolean>;
 	markEmailVerified(email: string): Promise<void>;

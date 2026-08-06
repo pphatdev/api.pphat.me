@@ -153,14 +153,19 @@ export class ArticlesController {
 	 */
 	static async list(c: Context<AppEnv>): Promise<Response> {
 		const repository = new ArticleRepository(c.env.DB);
-		// Lazy self-heal: promote any scheduled rows whose publish_at has elapsed. The
-		// Cloudflare cron does this every 5 min in production, but doesn't fire under
-		// `wrangler dev` — this keeps the `is_public` flag in sync so admin queries and
-		// dashboards see a consistent state without waiting on the cron.
-		await repository.promoteScheduled().catch(() => { /* non-fatal — list still works */ });
 		const options = parseListParams(c.req.url);
 		const user = c.get('user');
 		const isAdmin = user?.role === 'admin';
+
+		// Admin-only lazy self-heal (#32). The Cloudflare cron promotes
+		// scheduled rows every 5 minutes in production; running it here on
+		// every list previously made even a public reader trigger a write.
+		// Keep it for admin dashboards so `wrangler dev` (no cron) still shows
+		// a consistent view; regular list hits are read-only.
+		if (isAdmin) {
+			await repository.promoteScheduled().catch(() => { /* non-fatal — list still works */ });
+		}
+
 		const result = await new ArticleService(repository).list(options, true, { admin: isAdmin });
 		return Res.ok(result);
 	}

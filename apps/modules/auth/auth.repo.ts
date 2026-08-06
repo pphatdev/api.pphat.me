@@ -103,6 +103,20 @@ export class AuthRepository implements IAuthRepository {
 	}
 
 	/**
+	 * @description Replace a user's stored `password_hash`. Used by the
+	 * opportunistic PBKDF2 upgrade path on login (#36).
+	 * @param { string } userId User ID
+	 * @param { string } passwordHash New hash string
+	 * @returns { Promise<void> }
+	 */
+	async updatePasswordHash(userId: string, passwordHash: string): Promise<void> {
+		await this.db
+			.prepare("UPDATE users SET password_hash = ?1, updated_at = datetime('now') WHERE id = ?2")
+			.bind(passwordHash, userId)
+			.run();
+	}
+
+	/**
 	 * @description Create a new verification OTP
 	 * @param { string } email User email
 	 * @param { string } code The OTP code
