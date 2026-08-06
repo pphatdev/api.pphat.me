@@ -28,6 +28,52 @@ async function sha256Hex(value: string): Promise<string> {
 }
 
 /**
+ * HKDF per-context key derivation (#30).
+ *
+ * The single `JWT_SECRET` env var is a master seed; every signing context
+ * derives its own sub-key with a distinct `info` label. Consequences:
+ *  - An `oauth_state` cookie signed with the state key does not verify as
+ *    an access token, and vice versa.
+ *  - Rotating `JWT_SECRET` rotates every derived key at once (existing
+ *    tokens fail verify and users re-authenticate).
+ *  - Adding a new signing context is one more label — no schema change.
+ *
+ * The derived keys are cached per (masterSecret, purpose) so HKDF runs
+ * once per Worker isolate cold-start, not per request.
+ */
+type SigningContext = 'auth-jwt-v1' | 'oauth-state-v1';
+const HKDF_SALT = new TextEncoder().encode('api-pphat-me:hkdf:v1');
+const derivedKeyCache = new Map<string, Promise<string>>();
+
+async function deriveSigningKey(masterSecret: string, context: SigningContext): Promise<string> {
+	const cacheKey = `${masterSecret}::${context}`;
+	const hit = derivedKeyCache.get(cacheKey);
+	if (hit) return hit;
+
+	const promise = (async () => {
+		const encoder = new TextEncoder();
+		const material = await crypto.subtle.importKey(
+			'raw',
+			encoder.encode(masterSecret),
+			'HKDF',
+			false,
+			['deriveBits'],
+		);
+		const bits = await crypto.subtle.deriveBits(
+			{ name: 'HKDF', hash: 'SHA-256', salt: HKDF_SALT, info: encoder.encode(context) },
+			material,
+			256,
+		);
+		// JwtService expects a string secret; HS256 accepts arbitrary byte
+		// strings so hex-encoding the raw HKDF output is fine.
+		return Array.from(new Uint8Array(bits)).map((b) => b.toString(16).padStart(2, '0')).join('');
+	})();
+
+	derivedKeyCache.set(cacheKey, promise);
+	return promise;
+}
+
+/**
  * @description Generate a new random API key value
  * @returns { { plaintext: string; prefix: string } } The key and its display prefix
  */
@@ -56,8 +102,14 @@ const AUTH_JWT_ISS = 'pphat-api';
 const AUTH_JWT_AUD = 'pphat-web';
 
 /** Build a JwtService pre-configured for the auth flow (iss / aud pinned). */
-function authJwt(secret: string): JwtService {
-	return JwtService.create({ secret, iss: AUTH_JWT_ISS, aud: AUTH_JWT_AUD });
+async function authJwt(secret: string): Promise<JwtService> {
+	const key = await deriveSigningKey(secret, 'auth-jwt-v1');
+	return JwtService.create({ secret: key, iss: AUTH_JWT_ISS, aud: AUTH_JWT_AUD });
+}
+
+async function stateJwt(secret: string, expiresIn?: number): Promise<JwtService> {
+	const key = await deriveSigningKey(secret, 'oauth-state-v1');
+	return JwtService.create({ secret: key, expiresIn });
 }
 
 export interface TokenPair {
@@ -89,7 +141,7 @@ async function generateTokens(
 	refreshTTL: number = REFRESH_TTL_SECONDS,
 	familyId?: string,
 ): Promise<{ accessToken: string; refreshToken: string; refreshTTL: number }> {
-	const jwt = authJwt(secret);
+	const jwt = await authJwt(secret);
 	const { accessToken, refreshToken } = await jwt.generatePair(payload, accessTTL, refreshTTL);
 
 	const expiresAt = new Date(Date.now() + refreshTTL * 1000).toISOString();
@@ -106,7 +158,8 @@ async function generateTokens(
  * @returns { Promise<JwtPayload | null> } Decoded payload or null
  */
 export async function verifyJwt(token: string, secret: string): Promise<JwtPayload | null> {
-	return authJwt(secret).verify<JwtPayload>(token);
+	const jwt: JwtService = await authJwt(secret);
+	return jwt.verify<JwtPayload>(token);
 }
 
 /**
@@ -117,7 +170,8 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
  * @returns { Promise<string> } Encoded token
  */
 export async function createJwt(payload: Record<string, any>, secret: string, expiresIn?: number): Promise<string> {
-	return authJwt(secret).generate(payload, expiresIn);
+	const jwt: JwtService = await authJwt(secret);
+	return jwt.generate(payload, expiresIn);
 }
 
 /**
@@ -176,8 +230,8 @@ export async function generateOAuthState(secret: string, provider: OAuthProvider
 	const state = randomToken(24); // nonce sent to provider
 	const codeVerifier = randomToken(48); // PKCE verifier (kept server-side)
 	const codeChallenge = await sha256Base64Url(codeVerifier);
-	const cookieValue = await JwtService.create({ secret, expiresIn: OAUTH_STATE_TTL_SECONDS })
-		.generate({ n: state, cv: codeVerifier, p: provider });
+	const jwt: JwtService = await stateJwt(secret, OAUTH_STATE_TTL_SECONDS);
+	const cookieValue = await jwt.generate({ n: state, cv: codeVerifier, p: provider });
 	return { state, cookieValue, codeVerifier, codeChallenge };
 }
 
@@ -198,7 +252,8 @@ export async function verifyOAuthState(
 	provider: OAuthProvider,
 ): Promise<{ codeVerifier: string } | null> {
 	if (!cookieValue) return null;
-	const payload = await JwtService.create({ secret }).verify<{ n?: string; cv?: string; p?: string }>(cookieValue);
+	const jwt: JwtService = await stateJwt(secret);
+	const payload = await jwt.verify<{ n?: string; cv?: string; p?: string }>(cookieValue);
 	if (!payload?.n || !payload?.cv || !payload?.p) return null;
 	if (payload.p !== provider) return null;
 	// Constant-time-ish equality via encoded length + explicit compare

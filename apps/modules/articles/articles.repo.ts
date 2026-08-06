@@ -52,7 +52,7 @@ export class ArticleRepository implements IArticleRepository {
 		]);
 
 		const total = countRow?.count ?? 0;
-		const data = await Promise.all((dataResult.results as ArticleRow[]).map((row) => this.hydrate(row, { includeContent: false })));
+		const data = await this.hydrateMany(dataResult.results as ArticleRow[], { includeContent: false });
 
 		return {
 			data,
@@ -205,7 +205,7 @@ export class ArticleRepository implements IArticleRepository {
 		}
 
 		const total = countRow?.count ?? 0;
-		const data = await Promise.all((dataResult.results as ArticleRow[]).map((row) => this.hydrate(row, { includeContent: false })));
+		const data = await this.hydrateMany(dataResult.results as ArticleRow[], { includeContent: false });
 
 		return {
 			data,
@@ -499,7 +499,7 @@ export class ArticleRepository implements IArticleRepository {
 			.bind(limit)
 			.all<ArticleRow>();
 
-		return Promise.all((result.results as ArticleRow[]).map(row => this.hydrate(row, { includeContent: false })));
+		return this.hydrateMany(result.results as ArticleRow[], { includeContent: false });
 	}
 
 	/**
@@ -564,46 +564,88 @@ export class ArticleRepository implements IArticleRepository {
 	 * @returns { Promise<Article> }
 	 */
 	public async hydrate(row: ArticleRow, options: { includeContent?: boolean } = { includeContent: true }): Promise<Article> {
+		// Single-row hydrate delegates to the batched path so callsites don't
+		// need to know about the N+1 optimisation (#35).
+		const [article] = await this.hydrateMany([row], options);
+		return article;
+	}
+
+	/**
+	 * @description Hydrate many article rows in two batched queries instead
+	 * of one query per row (#35). Cuts a page of N articles from ~2N DB
+	 * round-trips down to 2 constant queries, whatever the page size.
+	 * @param { ArticleRow[] } rows Article rows to hydrate
+	 * @param { object } [options] Hydration options
+	 * @returns { Promise<Article[]> } Articles in the same order as `rows`
+	 */
+	public async hydrateMany(
+		rows: ArticleRow[],
+		options: { includeContent?: boolean } = { includeContent: true },
+	): Promise<Article[]> {
+		if (rows.length === 0) return [];
+
+		const ids = rows.map((r) => r.id);
+		const placeholders = ids.map((_, i) => `?${i + 1}`).join(', ');
+
 		const [authorsResult, tagsResult] = await Promise.all([
 			this.db
 				.prepare(
-					"SELECT a.id, a.name, a.profile, a.url, ad.bio, ad.avatar_url, ad.social_links, ad.status, ad.created_at, ad.updated_at FROM article_authors aa JOIN authors a ON aa.author_id = a.id LEFT JOIN author_details ad ON a.id = ad.author_id WHERE aa.article_id = ?1"
+					`SELECT aa.article_id, a.id, a.name, a.profile, a.url, ad.bio, ad.avatar_url, ad.social_links, ad.status, ad.created_at, ad.updated_at
+					 FROM article_authors aa
+					 JOIN authors a ON aa.author_id = a.id
+					 LEFT JOIN author_details ad ON a.id = ad.author_id
+					 WHERE aa.article_id IN (${placeholders})`,
 				)
-				.bind(row.id)
-				.all<AuthorRow & AuthorDetailRow>(),
+				.bind(...ids)
+				.all<AuthorRow & AuthorDetailRow & { article_id: string }>(),
 			this.db
-				.prepare("SELECT id, tag, description FROM tags WHERE article_id = ?1")
-				.bind(row.id)
-				.all<Tag>(),
+				.prepare(`SELECT id, tag, description, article_id FROM tags WHERE article_id IN (${placeholders})`)
+				.bind(...ids)
+				.all<Tag & { article_id: string }>(),
 		]);
 
-		const authors: Author[] = authorsResult.results.map((a: any) => mapAuthorRow(a));
-
-		const tags: Tag[] = tagsResult.results;
-
-		const article: Article = {
-			id: row.id,
-			title: row.title,
-			slug: row.slug,
-			description: row.description,
-			tags,
-			authors,
-			thumbnail: row.thumbnail,
-			published: row.published === 1,
-			isPublic: row.is_public === 1,
-			publishAt: formatUtcAsPhnomPenh(row.publish_at),
-			status: this.computeStatus(row),
-			ownerId: row.owner_id,
-			createdAt: row.created_at,
-			updatedAt: row.updated_at,
-			filePath: row.file_path,
-		};
-
-		if (options.includeContent !== false) {
-			article.content = row.content;
+		// Bucket by article_id so the per-row lookup is O(1).
+		const authorsByArticle = new Map<string, Author[]>();
+		for (const raw of authorsResult.results) {
+			const articleId = (raw as any).article_id as string;
+			const bucket = authorsByArticle.get(articleId) ?? [];
+			bucket.push(mapAuthorRow(raw));
+			authorsByArticle.set(articleId, bucket);
+		}
+		const tagsByArticle = new Map<string, Tag[]>();
+		for (const raw of tagsResult.results) {
+			const articleId = (raw as any).article_id as string;
+			const bucket = tagsByArticle.get(articleId) ?? [];
+			// Strip the joined helper column so the response shape matches the
+			// original single-row `Tag` interface.
+			const { article_id: _drop, ...tag } = raw as any;
+			bucket.push(tag as Tag);
+			tagsByArticle.set(articleId, bucket);
 		}
 
-		return article;
+		return rows.map((row) => {
+			const article: Article = {
+				id: row.id,
+				title: row.title,
+				slug: row.slug,
+				description: row.description,
+				tags: tagsByArticle.get(row.id) ?? [],
+				authors: authorsByArticle.get(row.id) ?? [],
+				thumbnail: row.thumbnail,
+				published: row.published === 1,
+				isPublic: row.is_public === 1,
+				publishAt: formatUtcAsPhnomPenh(row.publish_at),
+				status: this.computeStatus(row),
+				ownerId: row.owner_id,
+				createdAt: row.created_at,
+				updatedAt: row.updated_at,
+				filePath: row.file_path,
+			};
+			if (options.includeContent !== false) {
+				article.content = row.content;
+			}
+			return article;
+		});
 	}
 }
 
