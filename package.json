@@ -23,7 +23,7 @@
         "test:all": "npm test && npm run test:fallow"
     },
     "devDependencies": {
-        "@cloudflare/vitest-pool-workers": "^0.18.8",
+        "@cloudflare/vitest-pool-workers": "^0.20.2",
         "@types/node": "^26.1.0",
         "@types/nodemailer": "^8.0.1",
         "drizzle-kit": "^0.31.10",
