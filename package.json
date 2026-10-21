@@ -34,7 +34,7 @@
         "wrangler": "^4.114.0"
     },
     "dependencies": {
-        "hono": "^4.12.34",
+        "hono": "^4.13.11",
         "nodemailer": "^9.0.3"
     },
     "//overrides": "See SECURITY.md → Pinned Dependencies for the rationale. Do not remove entries without reading that section first.",
