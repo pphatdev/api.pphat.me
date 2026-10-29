@@ -28,7 +28,7 @@
         "@types/nodemailer": "^8.0.1",
         "drizzle-kit": "^0.31.10",
         "drizzle-orm": "^0.45.2",
-        "fallow": "^3.14.0",
+        "fallow": "^3.34.0",
         "typescript": "^7.0.2",
         "vitest": "^4.1.9",
         "wrangler": "^4.114.0"
