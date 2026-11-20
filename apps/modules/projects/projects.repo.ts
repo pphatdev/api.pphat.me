@@ -2,7 +2,7 @@ import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 import { Tag } from "../tags/tags.interface";
 import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface";
 
-import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow } from "../../shared/helpers/repo";
+import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow, dedupeTagsByName } from "../../shared/helpers/repo";
 import type { Project, ProjectRow, IProjectRepository, CreateProjectDto, UpdateProjectDto, ProjectDetailEmbed } from "./projects.interface";
 
 export class ProjectRepository implements IProjectRepository {
@@ -14,13 +14,20 @@ export class ProjectRepository implements IProjectRepository {
 	 * @param { boolean } [onlyPublished=true] Published filter
 	 * @returns { Promise<PaginatedResult<Project>> } Paginated projects
 	 */
-	async findAll({ page, limit, search, sort, order }: PaginationParams, onlyPublished = true): Promise<PaginatedResult<Project>> {
+	async findAll(
+		{ page, limit, search, sort, order }: PaginationParams,
+		onlyPublished = true,
+		opts?: { admin?: boolean },
+	): Promise<PaginatedResult<Project>> {
 		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
 		const safeSort = sort?.[0] && ALLOWED_SORT.includes(sort[0]) ? sort[0] : 'created_at';
 		const safeOrder = order === 'desc' ? 'DESC' : 'ASC';
 		const offset = (page - 1) * limit;
 
-		const { conditions, bindings, nextIdx } = buildListConditions(search, onlyPublished);
+		// Admins see every row (including drafts) so the admin dashboard list
+		// reflects everything they just created. Public callers still get the
+		// published-only slice. Mirrors the articles module's bypass (#32).
+		const { conditions, bindings, nextIdx } = buildListConditions(search, onlyPublished && !opts?.admin);
 		const where = conditions.join(' AND ');
 
 		const [dataResult, countRow] = await Promise.all([
@@ -112,9 +119,10 @@ export class ProjectRepository implements IProjectRepository {
 			.run();
 
 		if (dto.tags?.length) {
+			const unique = dedupeTagsByName(dto.tags);
 			await this.db.batch(
-				dto.tags.map((t) =>
-					this.db.prepare("INSERT INTO tags (tag, description, project_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", id)
+				unique.map((t) =>
+					this.db.prepare("INSERT OR IGNORE INTO tags (tag, description, project_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", id)
 				)
 			);
 		}
@@ -176,10 +184,11 @@ export class ProjectRepository implements IProjectRepository {
 	 */
 	private async updateTags(projectId: string, tags: { tag: string; description?: string }[]): Promise<void> {
 		await this.db.prepare("DELETE FROM tags WHERE project_id = ?1").bind(projectId).run();
-		if (tags.length > 0) {
+		const unique = dedupeTagsByName(tags);
+		if (unique.length > 0) {
 			await this.db.batch(
-				tags.map((t) =>
-					this.db.prepare("INSERT INTO tags (tag, description, project_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", projectId)
+				unique.map((t) =>
+					this.db.prepare("INSERT OR IGNORE INTO tags (tag, description, project_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", projectId)
 				)
 			);
 		}

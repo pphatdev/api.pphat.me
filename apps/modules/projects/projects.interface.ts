@@ -74,11 +74,14 @@ export interface UpdateProjectDto {
 // each module scopes its own Variables shape (projectId here, articleId there).
 export interface AppEnv {
 	Bindings: Env;
-	Variables: { projectId: string };
+	Variables: {
+		projectId: string;
+		user?: import('../auth/auth.interface').JwtPayload;
+	};
 }
 
 export interface IProjectRepository {
-	findAll(params: PaginationParams, onlyPublished?: boolean): Promise<PaginatedResult<Project>>;
+	findAll(params: PaginationParams, onlyPublished?: boolean, opts?: { admin?: boolean }): Promise<PaginatedResult<Project>>;
 	findBySlug(slug: string): Promise<Project | null>;
 	create(dto: CreateProjectDto): Promise<Project>;
 	update(slug: string, dto: UpdateProjectDto): Promise<Project | null>;

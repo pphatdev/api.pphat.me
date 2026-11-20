@@ -26,16 +26,18 @@ export class ProjectsController {
 	};
 
 	/**
-	 * @description List all projects
+	 * @description Authenticated: list projects.
+	 *  - Non-admin: only `published=1`. Drafts hidden.
+	 *  - Admin: sees every project regardless of `published`.
 	 * @method GET
-	 * @param { Request } request The incoming request
-	 * @param { Env } env Environment bindings
+	 * @param { Context<AppEnv> } c The Hono context
 	 * @returns { Promise<Response> } Paginated list of projects
 	 */
-	static async list(request: Request, env: Env): Promise<Response> {
-		const repository = new ProjectRepository(env.DB);
-		const options = parseListParams(request.url);
-		const result = await new ProjectService(repository).list(options, true);
+	static async list(c: Context<AppEnv>): Promise<Response> {
+		const repository = new ProjectRepository(c.env.DB);
+		const options = parseListParams(c.req.url);
+		const isAdmin = c.get('user')?.role === 'admin';
+		const result = await new ProjectService(repository).list(options, true, { admin: isAdmin });
 		return Res.ok(result);
 	}
 
