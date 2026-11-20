@@ -47,8 +47,18 @@ export class TagsController {
 			return Res.unprocessable("tag is required");
 		}
 
-		const created = await new TagService(repository).create(body as never);
-		return Res.created(created);
+		try {
+			const created = await new TagService(repository).create(body as never);
+			return Res.created(created);
+		} catch (err) {
+			// Partial unique indexes (migration 0023) prevent the same tag on
+			// the same article/project. Surface that as 409 instead of a 500
+			// so admins get a clean "already exists" instead of a stack trace.
+			if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
+				return Res.conflict("This tag already exists on that article/project");
+			}
+			throw err;
+		}
 	}
 
 	/**

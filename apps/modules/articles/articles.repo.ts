@@ -2,7 +2,7 @@ import { ArticleStatus, PaginatedResult, PaginationParams } from "../../shared/i
 import { Tag } from "../tags/tags.interface";
 import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface";
 
-import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow } from "../../shared/helpers/repo";
+import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow, dedupeTagsByName } from "../../shared/helpers/repo";
 import { formatUtcAsPhnomPenh } from "../../shared/helpers/tz";
 import type { Article, ArticleOwner, IArticleRepository, ArticleRow, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
 
@@ -488,10 +488,11 @@ export class ArticleRepository implements IArticleRepository {
 	 */
 	private async updateTags(articleId: string, tags: { tag: string; description?: string }[]): Promise<void> {
 		await this.db.prepare("DELETE FROM tags WHERE article_id = ?1").bind(articleId).run();
-		if (tags.length > 0) {
+		const unique = dedupeTagsByName(tags);
+		if (unique.length > 0) {
 			await this.db.batch(
-				tags.map((t) =>
-					this.db.prepare("INSERT INTO tags (tag, description, article_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", articleId)
+				unique.map((t) =>
+					this.db.prepare("INSERT OR IGNORE INTO tags (tag, description, article_id) VALUES (?1, ?2, ?3)").bind(t.tag, t.description ?? "", articleId)
 				)
 			);
 		}

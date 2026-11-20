@@ -88,6 +88,30 @@ describe("Articles API", () => {
 			expect((body.authors as any[]).some((a) => a.name === "Test User")).toBe(true);
 		});
 
+		it("dedupes duplicate tags sent on create", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "Dup Tags Article",
+					slug: "dup-tags-article",
+					description: "Same tag sent twice.",
+					tags: [
+						{ tag: "typescript", description: "first" },
+						{ tag: "typescript", description: "second" },
+						{ tag: "node", description: "distinct" },
+					],
+				}),
+			});
+			expect(res.status).toBe(201);
+			const body = await res.json() as any;
+			const tagNames = (body.tags as any[]).map((t) => t.tag);
+			// Both uniqueness guards (app-level dedupe + partial index) must
+			// collapse the two "typescript" entries into one row.
+			expect(tagNames.filter((n: string) => n === "typescript").length).toBe(1);
+			expect(tagNames).toContain("node");
+		});
+
 		it("credits current user as author when no author_ids are sent", async () => {
 			const res = await SELF.fetch("http://example.com/v1/api/articles", {
 				method: "POST",

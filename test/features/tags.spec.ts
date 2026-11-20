@@ -61,6 +61,21 @@ describe("Tags API", () => {
 		expect(body).toHaveProperty("id");
 	});
 
+	it("POST /v1/api/tags for a duplicate (tag, article_id) returns 409", async () => {
+		// Seed already links tag 'javascript' to the seed article. A second
+		// create with the same pair must collide on the partial unique index.
+		const res = await SELF.fetch("http://example.com/v1/api/tags", {
+			method: "POST",
+			headers: adminHeaders,
+			body: JSON.stringify({
+				tag: "javascript",
+				article_id: "00000000-0000-4000-8000-000000000001",
+				description: "Attempt to duplicate.",
+			}),
+		});
+		expect(res.status).toBe(409);
+	});
+
 	it("POST /v1/api/tags missing tag field returns 422", async () => {
 		const res = await SELF.fetch("http://example.com/v1/api/tags", {
 			method: "POST",
