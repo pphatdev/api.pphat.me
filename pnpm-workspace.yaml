@@ -1,0 +1,24 @@
+allowBuilds:
+  esbuild: true
+  workerd: true
+minimumReleaseAgeExclude:
+  - '@fallow-cli/darwin-arm64@3.45.0'
+  - '@fallow-cli/darwin-x64@3.45.0'
+  - '@fallow-cli/linux-arm64-gnu@3.45.0'
+  - '@fallow-cli/linux-arm64-musl@3.45.0'
+  - '@fallow-cli/linux-x64-gnu@3.45.0'
+  - '@fallow-cli/linux-x64-musl@3.45.0'
+  - '@fallow-cli/win32-arm64-msvc@3.45.0'
+  - '@fallow-cli/win32-x64-msvc@3.45.0'
+  - fallow@3.45.0
+permissions:
+  fallow:
+    skills: [fallow, fallow-setup]
+skills:
+  dirs:
+    - .agent/skills
+    - .agents/skills
+    - .claude/skills
+    - .cursor/skills
+    - .gemini/skills
+    - .github/skills
