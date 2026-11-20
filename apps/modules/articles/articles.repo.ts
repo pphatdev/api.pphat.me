@@ -4,7 +4,7 @@ import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface
 
 import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow } from "../../shared/helpers/repo";
 import { formatUtcAsPhnomPenh } from "../../shared/helpers/tz";
-import type { Article, IArticleRepository, ArticleRow, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
+import type { Article, ArticleOwner, IArticleRepository, ArticleRow, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
 
 /**
  * @description Compute estimated reading time in minutes
@@ -587,7 +587,13 @@ export class ArticleRepository implements IArticleRepository {
 		const ids = rows.map((r) => r.id);
 		const placeholders = ids.map((_, i) => `?${i + 1}`).join(', ');
 
-		const [authorsResult, tagsResult] = await Promise.all([
+		// Collect distinct non-null owner_ids so the users lookup is one batched
+		// query, not N. Articles without an owner (legacy rows) are skipped.
+		const ownerIds = Array.from(
+			new Set(rows.map((r) => r.owner_id).filter((v): v is string => typeof v === 'string' && v.length > 0)),
+		);
+
+		const [authorsResult, tagsResult, ownersResult] = await Promise.all([
 			this.db
 				.prepare(
 					`SELECT aa.article_id, a.id, a.name, a.profile, a.url, ad.bio, ad.avatar_url, ad.social_links, ad.status, ad.created_at, ad.updated_at
@@ -602,6 +608,14 @@ export class ArticleRepository implements IArticleRepository {
 				.prepare(`SELECT id, tag, description, article_id FROM tags WHERE article_id IN (${placeholders})`)
 				.bind(...ids)
 				.all<Tag & { article_id: string }>(),
+			ownerIds.length > 0
+				? this.db
+					.prepare(
+						`SELECT id, name, avatar, role FROM users WHERE id IN (${ownerIds.map((_, i) => `?${i + 1}`).join(', ')})`,
+					)
+					.bind(...ownerIds)
+					.all<ArticleOwner>()
+				: Promise.resolve({ results: [] as ArticleOwner[] } as Awaited<ReturnType<D1PreparedStatement['all']>>),
 		]);
 
 		// Bucket by article_id so the per-row lookup is O(1).
@@ -623,6 +637,11 @@ export class ArticleRepository implements IArticleRepository {
 			tagsByArticle.set(articleId, bucket);
 		}
 
+		const ownerById = new Map<string, ArticleOwner>();
+		for (const raw of ownersResult.results as ArticleOwner[]) {
+			ownerById.set(raw.id, { id: raw.id, name: raw.name, avatar: raw.avatar, role: raw.role });
+		}
+
 		return rows.map((row) => {
 			const article: Article = {
 				id: row.id,
@@ -637,6 +656,7 @@ export class ArticleRepository implements IArticleRepository {
 				publishAt: formatUtcAsPhnomPenh(row.publish_at),
 				status: this.computeStatus(row),
 				ownerId: row.owner_id,
+				owner: row.owner_id ? ownerById.get(row.owner_id) ?? null : null,
 				createdAt: row.created_at,
 				updatedAt: row.updated_at,
 				filePath: row.file_path,

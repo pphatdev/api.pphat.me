@@ -74,6 +74,10 @@ describe("Articles API", () => {
 			expect(res.status).toBe(201);
 			const body = await res.json() as Record<string, unknown>;
 			expect(body).toHaveProperty("slug", "new-test-article");
+			// Response must identify the creator — ownerId alone forces the
+			// client into a second round-trip just to render "created by".
+			expect(body).toHaveProperty("ownerId", "test-user-id");
+			expect(body.owner).toMatchObject({ id: "test-user-id", name: "Test User", role: "admin" });
 		});
 
 		it("with missing required fields returns 422", async () => {
