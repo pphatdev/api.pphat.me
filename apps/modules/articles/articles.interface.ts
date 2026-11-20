@@ -120,6 +120,7 @@ export interface IArticleRepository {
 	isContributor(articleId: string, userId: string): Promise<boolean>;
 	addContributor(articleId: string, userId: string): Promise<void>;
 	removeContributor(articleId: string, userId: string): Promise<boolean>;
+	ensureContributorIfNotAuthor(articleId: string, userId: string): Promise<void>;
 	findTop(limit: number): Promise<Article[]>;
 	getStatsSummary(): Promise<{ total: number; published: number; draft: number }>;
 	promoteScheduled(): Promise<number>;

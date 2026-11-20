@@ -275,12 +275,93 @@ export class ArticleRepository implements IArticleRepository {
 
 		await this.insertArticle(id, dto, now);
 
-		if (dto.author_ids?.length) await this.updateAuthors(id, dto.author_ids);
+		// Business rule: the user who creates the article is credited as an
+		// author. Their explicit co-authors (dto.author_ids) stack on top.
+		// Auto-mints an `authors` row for first-time creators so the hydrated
+		// response can render "by <user>" without a separate onboarding step.
+		const explicitIds = dto.author_ids ?? [];
+		const selfId = dto.owner_id ? await this.resolveSelfAuthorId(dto.owner_id) : null;
+		const authorIds = selfId != null ? Array.from(new Set([selfId, ...explicitIds])) : explicitIds;
+		if (authorIds.length > 0) await this.updateAuthors(id, authorIds);
+
 		if (dto.tags?.length) await this.updateTags(id, dto.tags);
 
 		await this.initStats(id, dto.content || "");
 
 		return (await this.findById(id))!;
+	}
+
+	/**
+	 * @description Resolve the `authors` row linked to a user via
+	 * `authors.user_id`. Auto-creates one from the user's name/avatar on
+	 * first article write so the "current user is an author" rule holds for
+	 * users who haven't manually onboarded through the authors admin UI.
+	 * Idempotent and race-safe: the unique partial index on authors(user_id)
+	 * guarantees at most one row per user; a concurrent insert that beats us
+	 * is swallowed and the re-select returns the winner.
+	 * @param { string } userId The user UUID (from JWT sub / owner_id)
+	 * @returns { Promise<number | null> } Linked author id, or null when the user does not exist
+	 */
+	private async resolveSelfAuthorId(userId: string): Promise<number | null> {
+		const existing = await this.db
+			.prepare("SELECT id FROM authors WHERE user_id = ?1")
+			.bind(userId)
+			.first<{ id: number }>();
+		if (existing) return existing.id;
+
+		const user = await this.db
+			.prepare("SELECT name, avatar FROM users WHERE id = ?1")
+			.bind(userId)
+			.first<{ name: string | null; avatar: string | null }>();
+		if (!user) return null;
+
+		try {
+			const result = await this.db
+				.prepare("INSERT INTO authors (name, profile, url, user_id) VALUES (?1, '', '', ?2)")
+				.bind(user.name ?? 'Unnamed', userId)
+				.run();
+			const newId = (result.meta as any)?.last_row_id as number | undefined;
+			if (newId) {
+				const now = new Date().toISOString();
+				await this.db
+					.prepare(
+						"INSERT OR IGNORE INTO author_details (author_id, bio, avatar_url, social_links, status, created_at, updated_at) VALUES (?1, '', ?2, '[]', 1, ?3, ?4)",
+					)
+					.bind(newId, user.avatar ?? '', now, now)
+					.run();
+				return newId;
+			}
+		} catch {
+			// Concurrent insert won — fall through to the re-select below.
+		}
+		const after = await this.db
+			.prepare("SELECT id FROM authors WHERE user_id = ?1")
+			.bind(userId)
+			.first<{ id: number }>();
+		return after?.id ?? null;
+	}
+
+	/**
+	 * @description Record the user as a contributor on the article unless they
+	 * are already linked as an author. Called by the update controller so any
+	 * admin / explicit contributor who touches an article they didn't author
+	 * leaves a trail in `article_contributors`. Idempotent.
+	 * @param { string } articleId The article UUID
+	 * @param { string } userId The user UUID
+	 * @returns { Promise<void> }
+	 */
+	async ensureContributorIfNotAuthor(articleId: string, userId: string): Promise<void> {
+		const isAuthor = await this.db
+			.prepare(
+				"SELECT 1 as one FROM article_authors aa JOIN authors a ON a.id = aa.author_id WHERE aa.article_id = ?1 AND a.user_id = ?2",
+			)
+			.bind(articleId, userId)
+			.first<{ one: number }>();
+		if (isAuthor) return;
+		await this.db
+			.prepare("INSERT OR IGNORE INTO article_contributors (article_id, user_id) VALUES (?1, ?2)")
+			.bind(articleId, userId)
+			.run();
 	}
 
 	/**
