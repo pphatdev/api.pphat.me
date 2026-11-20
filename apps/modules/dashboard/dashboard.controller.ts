@@ -6,6 +6,8 @@ import { DashboardService } from "./dashboard.service";
 import { ArticleRepository } from "../articles/articles.repo";
 import { ProjectRepository } from "../projects/projects.repo";
 import { AuthorRepository } from "../authors/authors.repo";
+import { TechStackRepository } from "../tech-stacks/tech-stacks.repo";
+import { ExperienceRepository } from "../experiences/experiences.repo";
 
 export class DashboardController {
 	/**
@@ -20,8 +22,10 @@ export class DashboardController {
 		const articleRepo = new ArticleRepository(db);
 		const projectRepo = new ProjectRepository(db);
 		const authorRepo = new AuthorRepository(db);
+		const techStackRepo = new TechStackRepository(db);
+		const experienceRepo = new ExperienceRepository(db);
 
-		const repo = new DashboardRepository(db, articleRepo, projectRepo, authorRepo);
+		const repo = new DashboardRepository(db, articleRepo, projectRepo, authorRepo, techStackRepo, experienceRepo);
 		const service = new DashboardService(repo);
 
 		const data = await service.getDashboardInitData();
@@ -42,7 +46,9 @@ export class DashboardController {
 		const articleRepo = new ArticleRepository(db);
 		const projectRepo = new ProjectRepository(db);
 		const authorRepo = new AuthorRepository(db);
-		const repo = new DashboardRepository(db, articleRepo, projectRepo, authorRepo);
+		const techStackRepo = new TechStackRepository(db);
+		const experienceRepo = new ExperienceRepository(db);
+		const repo = new DashboardRepository(db, articleRepo, projectRepo, authorRepo, techStackRepo, experienceRepo);
 
 		const POLL_INTERVAL_MS = 5000;
 		const MAX_STREAM_DURATION_MS = 10 * 60 * 1000; // 10 min hard cap; client reconnects

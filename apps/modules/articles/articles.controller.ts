@@ -235,14 +235,18 @@ export class ArticlesController {
 	}
 
 	/**
-	 * @description Convert incoming Asia/Phnom_Penh timestamps on a DTO to UTC ISO for storage.
-	 * Normalises `publishAt` → `publish_at` and validates:
-	 *   - `publishAt`/`publish_at`: parseable + not in the past (unless `is_public` is explicitly set).
+	 * @description Normalise the request body before it reaches the repo. The
+	 * API accepts both camelCase (public wire format) and snake_case (internal
+	 * DTO format) for a handful of fields; this function collapses them to the
+	 * snake_case shape the repo expects, and validates:
+	 *   - `publishAt`/`publish_at`: parseable + converted to UTC ISO for storage.
 	 *   - `isPublic`/`is_public`: boolean.
+	 *   - `authorIds`/`author_ids`: array of numbers (silently dropped before
+	 *     this normalisation existed — authors wouldn't attach on create).
 	 * @param { any } body The raw request body
 	 * @returns { Response | null } Error response if invalid, null otherwise (mutates body in place)
 	 */
-	private static normalizeSchedulingFields(body: any): Response | null {
+	private static normalizeArticleBody(body: any): Response | null {
 		const rawPublishAt = body.publishAt ?? body.publish_at;
 		if (rawPublishAt !== undefined && rawPublishAt !== null && rawPublishAt !== '') {
 			const utc = parsePhnomPenhToUtc(String(rawPublishAt));
@@ -260,6 +264,15 @@ export class ArticlesController {
 		}
 		delete body.isPublic;
 
+		const rawAuthorIds = body.authorIds ?? body.author_ids;
+		if (rawAuthorIds !== undefined) {
+			if (!Array.isArray(rawAuthorIds) || rawAuthorIds.some((v) => typeof v !== 'number' || !Number.isInteger(v))) {
+				return Res.unprocessable('authorIds must be an array of integers');
+			}
+			body.author_ids = rawAuthorIds;
+		}
+		delete body.authorIds;
+
 		return null;
 	}
 
@@ -274,7 +287,7 @@ export class ArticlesController {
 			const body = await getValidBody<any>(c);
 			validateRequired(body, ['title', 'slug', 'description']);
 
-			const invalid = ArticlesController.normalizeSchedulingFields(body);
+			const invalid = ArticlesController.normalizeArticleBody(body);
 			if (invalid) return invalid;
 
 			const repo = new ArticleRepository(c.env.DB);
@@ -327,10 +340,19 @@ export class ArticlesController {
 				}
 			}
 
-			const invalid = ArticlesController.normalizeSchedulingFields(body);
+			const invalid = ArticlesController.normalizeArticleBody(body);
 			if (invalid) return invalid;
-			const article = await new ArticleService(new ArticleRepository(c.env.DB)).update(id, body as never);
+			const repo = new ArticleRepository(c.env.DB);
+			const article = await new ArticleService(repo).update(id, body as never);
 			if (!article) return Res.notFound();
+
+			// Business rule: anyone who edits an article they didn't author is
+			// recorded as a contributor. Authors (owner or otherwise) and
+			// existing contributors are no-ops thanks to INSERT OR IGNORE and
+			// the author-check inside the helper.
+			const userId = c.get('user')?.sub;
+			if (userId) await repo.ensureContributorIfNotAuthor(id, userId);
+
 			return Res.ok(article);
 		} catch (err) {
 			if (err instanceof Response) return err;

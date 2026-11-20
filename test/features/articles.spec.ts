@@ -74,6 +74,88 @@ describe("Articles API", () => {
 			expect(res.status).toBe(201);
 			const body = await res.json() as Record<string, unknown>;
 			expect(body).toHaveProperty("slug", "new-test-article");
+			// Response must identify the creator — ownerId alone forces the
+			// client into a second round-trip just to render "created by".
+			expect(body).toHaveProperty("ownerId", "test-user-id");
+			expect(body.owner).toMatchObject({ id: "test-user-id", name: "Test User", role: "admin" });
+			// `author_ids` (snake_case) must attach the author to the article on
+			// create. Previously the authors came back empty if the client sent
+			// the camelCase alias instead — see the authorIds test below.
+			expect(Array.isArray(body.authors)).toBe(true);
+			expect((body.authors as any[]).map((a) => a.id)).toContain(1);
+			// Business rule: the creator is automatically credited as an author
+			// alongside any explicit co-authors sent in author_ids.
+			expect((body.authors as any[]).some((a) => a.name === "Test User")).toBe(true);
+		});
+
+		it("dedupes duplicate tags sent on create", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "Dup Tags Article",
+					slug: "dup-tags-article",
+					description: "Same tag sent twice.",
+					tags: [
+						{ tag: "typescript", description: "first" },
+						{ tag: "typescript", description: "second" },
+						{ tag: "node", description: "distinct" },
+					],
+				}),
+			});
+			expect(res.status).toBe(201);
+			const body = await res.json() as any;
+			const tagNames = (body.tags as any[]).map((t) => t.tag);
+			// Both uniqueness guards (app-level dedupe + partial index) must
+			// collapse the two "typescript" entries into one row.
+			expect(tagNames.filter((n: string) => n === "typescript").length).toBe(1);
+			expect(tagNames).toContain("node");
+		});
+
+		it("credits current user as author when no author_ids are sent", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "Solo Article",
+					slug: "solo-article",
+					description: "No explicit authors.",
+				}),
+			});
+			expect(res.status).toBe(201);
+			const body = await res.json() as any;
+			expect(body.authors.length).toBeGreaterThan(0);
+			expect((body.authors as any[]).some((a) => a.name === "Test User")).toBe(true);
+		});
+
+		it("accepts authorIds (camelCase) as alias for author_ids", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "Camel Author Article",
+					slug: "camel-author-article",
+					description: "Uses camelCase authorIds.",
+					authorIds: [1],
+				}),
+			});
+			expect(res.status).toBe(201);
+			const body = await res.json() as any;
+			expect((body.authors as any[]).map((a) => a.id)).toContain(1);
+		});
+
+		it("rejects authorIds that is not an array of integers (422)", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/articles", {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					title: "Bad AuthorIds",
+					slug: "bad-author-ids",
+					description: "Non-integer in authorIds.",
+					authorIds: ["one"],
+				}),
+			});
+			expect(res.status).toBe(422);
 		});
 
 		it("with missing required fields returns 422", async () => {
@@ -148,6 +230,23 @@ describe("Articles API", () => {
 			expect(res.status).toBe(200);
 			const body = await res.json() as Record<string, unknown>;
 			expect(body).toHaveProperty("slug", ARTICLE_SLUG);
+		});
+
+		it("records the editor as a contributor when they aren't an author", async () => {
+			// Seed article is authored by `Test Author` (authors.id=1, user_id=NULL).
+			// admin-user-id is not linked to that author row, so updating must
+			// leave a trail in article_contributors.
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_ID}`, {
+				method: "PATCH",
+				headers: adminHeaders,
+				body: JSON.stringify({ description: "Admin edit." }),
+			});
+			expect(res.status).toBe(200);
+			const row = await env.DB
+				.prepare("SELECT 1 as one FROM article_contributors WHERE article_id = ?1 AND user_id = ?2")
+				.bind(ARTICLE_ID, "admin-user-id")
+				.first<{ one: number }>();
+			expect(row).toBeTruthy();
 		});
 
 		it("returns 400 for invalid UUID", async () => {

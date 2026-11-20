@@ -10,8 +10,12 @@ export class ProjectService {
 	 * @param { boolean } [onlyPublished] Whether to only list published projects
 	 * @returns { Promise<PaginatedResult<Project>> } Paginated projects
 	 */
-	list(params: PaginationParams, onlyPublished?: boolean): Promise<PaginatedResult<Project>> {
-		return this.repo.findAll(params, onlyPublished);
+	list(
+		params: PaginationParams,
+		onlyPublished?: boolean,
+		opts?: { admin?: boolean },
+	): Promise<PaginatedResult<Project>> {
+		return this.repo.findAll(params, onlyPublished, opts);
 	}
 
 	/**

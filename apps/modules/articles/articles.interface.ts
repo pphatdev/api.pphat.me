@@ -3,6 +3,20 @@ import { Tag } from "../tags/tags.interface";
 import { Author } from "../authors/authors.interface";
 
 
+/**
+ * Minimal, non-sensitive view of the user who created an article. Returned on
+ * every article read so clients can render a "created by" card without a
+ * second round-trip. Email / provider_id / password_hash are intentionally
+ * excluded — those are not needed for attribution and would be PII leaks on
+ * public endpoints.
+ */
+export interface ArticleOwner {
+	id: string;
+	name: string | null;
+	avatar: string | null;
+	role: 'user' | 'admin';
+}
+
 export interface Article {
 	id: string;
 	title: string;
@@ -18,6 +32,7 @@ export interface Article {
 	/** Derived from (published, is_public, publish_at). See ArticleStatus. */
 	status: ArticleStatus;
 	ownerId: string | null;
+	owner: ArticleOwner | null;
 	createdAt: string;
 	updatedAt: string;
 	content?: string;
@@ -105,6 +120,7 @@ export interface IArticleRepository {
 	isContributor(articleId: string, userId: string): Promise<boolean>;
 	addContributor(articleId: string, userId: string): Promise<void>;
 	removeContributor(articleId: string, userId: string): Promise<boolean>;
+	ensureContributorIfNotAuthor(articleId: string, userId: string): Promise<void>;
 	findTop(limit: number): Promise<Article[]>;
 	getStatsSummary(): Promise<{ total: number; published: number; draft: number }>;
 	promoteScheduled(): Promise<number>;

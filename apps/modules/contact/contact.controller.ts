@@ -1,4 +1,5 @@
 import { Context } from 'hono';
+import { getClientIp } from '../../shared/helpers/client-ip';
 import { ContactService } from './contact.service';
 import { CreateContactDto } from './contact.interface';
 import { Res } from "../../shared/helpers/response";
@@ -104,7 +105,7 @@ export class ContactController {
             };
 
             const meta = {
-                ip: c.req.header('cf-connecting-ip') || 'unknown',
+                ip: getClientIp(c.req.raw, c.env.ADMIN_PROXY_SECRET) ?? 'unknown',
                 ua: c.req.header('user-agent') || 'unknown'
             };
 

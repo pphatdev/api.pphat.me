@@ -22,6 +22,13 @@ interface __ExtraSecrets {
 	 * brute-forceable against the IPv4 space.
 	 */
 	IP_HASH_SECRET?: string;
+	/**
+	 * Shared secret the admin panel's proxy (admin.pphat.me/backend/*) sends in
+	 * `X-Admin-Proxy-Secret`. When it matches, the API trusts the forwarded
+	 * `X-Admin-Client-IP` for rate limiting and traffic logs. Set with
+	 * `wrangler secret put ADMIN_PROXY_SECRET` (same value on both Workers).
+	 */
+	ADMIN_PROXY_SECRET?: string;
 }
 
 interface Env extends __RateLimiterBindings, __ExtraSecrets {}

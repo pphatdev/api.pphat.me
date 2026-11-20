@@ -51,6 +51,29 @@ describe("Projects API", () => {
 			expect(found).toBeUndefined();
 		});
 
+		it("GET /v1/api/projects returns unpublished projects for admin", async () => {
+			// Admin creates a draft (only admins can POST projects anyway) and
+			// must be able to see it in the list — otherwise the project they
+			// just created appears to vanish from the UI.
+			const slug = "admin-draft-project-" + Date.now();
+			await SELF.fetch("http://example.com/v1/api/projects", {
+				method: "POST",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					title: "Admin Draft",
+					slug,
+					description: "Draft visible to admin.",
+					published: false,
+				}),
+			});
+
+			const res = await SELF.fetch("http://example.com/v1/api/projects?limit=100", { headers: adminHeaders });
+			const body = await res.json() as { data: { slug: string; published: boolean }[] };
+			const found = body.data.find(p => p.slug === slug);
+			expect(found).toBeDefined();
+			expect(found?.published).toBe(false);
+		});
+
 		it(`GET /v1/api/projects/${PROJECT_SLUG} returns project by slug`, async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/projects/${PROJECT_SLUG}`);
 			expect(res.status).toBe(200);

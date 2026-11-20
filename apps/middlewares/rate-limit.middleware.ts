@@ -1,4 +1,5 @@
 import type { Context, Next } from 'hono';
+import { getClientIp } from '../shared/helpers/client-ip';
 
 type ApiType = 'auth' | 'read' | 'write' | 'engagement' | 'contact';
 
@@ -52,12 +53,8 @@ function getApiType(request: Request): ApiType | null {
  * @param { Request } request The incoming request
  * @returns { string } The client identifier
  */
-function getClientIdentity(request: Request): string {
-	const ip = request.headers.get('cf-connecting-ip');
-	if (ip) return ip;
-	const forwarded = request.headers.get('x-forwarded-for');
-	if (forwarded) return forwarded.split(',')[0]?.trim() || 'unknown';
-	return 'unknown';
+function getClientIdentity(request: Request, env: Env): string {
+	return getClientIp(request, env.ADMIN_PROXY_SECRET) ?? 'unknown';
 }
 
 /**
@@ -84,7 +81,7 @@ export async function rateLimitMiddleware(c: Context<{ Bindings: Env }>, next: N
 		return next();
 	}
 
-	const key = getClientIdentity(c.req.raw);
+	const key = getClientIdentity(c.req.raw, c.env);
 	const outcome = await binding.limit({ key });
 
 	if (!outcome.success) {

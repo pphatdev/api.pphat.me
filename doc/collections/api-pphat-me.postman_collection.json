@@ -1131,7 +1131,7 @@
                                         }
                                     ],
                                     "cookie": [],
-                                    "body": "{\n    \"data\": [\n        {\n            \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n            \"title\": \"My Article Title\",\n            \"slug\": \"my-article-slug\",\n            \"description\": \"A short description of the article.\",\n            \"tags\": [\n                {\n                    \"id\": 1,\n                    \"tag\": \"typescript\",\n                    \"description\": \"TypeScript articles\"\n                }\n            ],\n            \"authors\": [\n                {\n                    \"name\": \"PPhat Dev\",\n                    \"profile\": \"Front-End Developer\",\n                    \"url\": \"https://pphat.me\"\n                }\n            ],\n            \"thumbnail\": \"https://example.com/thumbnail.png\",\n            \"published\": true,\n            \"isPublic\": true,\n            \"publishAt\": null,\n            \"status\": \"public\",\n            \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n            \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n            \"updatedAt\": \"2026-04-27T03:46:54.340Z\",\n            \"content\": \"Full article content goes here.\",\n            \"filePath\": \"\"\n        }\n    ],\n    \"pagination\": {\n        \"page\": 1,\n        \"limit\": 10,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+                                    "body": "{\n    \"data\": [\n        {\n            \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n            \"title\": \"My Article Title\",\n            \"slug\": \"my-article-slug\",\n            \"description\": \"A short description of the article.\",\n            \"tags\": [\n                {\n                    \"id\": 1,\n                    \"tag\": \"typescript\",\n                    \"description\": \"TypeScript articles\"\n                }\n            ],\n            \"authors\": [\n                {\n                    \"name\": \"PPhat Dev\",\n                    \"profile\": \"Front-End Developer\",\n                    \"url\": \"https://pphat.me\"\n                }\n            ],\n            \"thumbnail\": \"https://example.com/thumbnail.png\",\n            \"published\": true,\n            \"isPublic\": true,\n            \"publishAt\": null,\n            \"status\": \"public\",\n            \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n            \"owner\": {\n                \"id\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n                \"name\": \"PPhat Dev\",\n                \"avatar\": \"https://avatars.githubusercontent.com/u/1?v=4\",\n                \"role\": \"user\"\n            },\n            \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n            \"updatedAt\": \"2026-04-27T03:46:54.340Z\",\n            \"content\": \"Full article content goes here.\",\n            \"filePath\": \"\"\n        }\n    ],\n    \"pagination\": {\n        \"page\": 1,\n        \"limit\": 10,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
                                 }
                             ]
                         },
@@ -1261,7 +1261,7 @@
                                         }
                                     ],
                                     "cookie": [],
-                                    "body": "{\n    \"data\": {\n        \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n        \"title\": \"My Article Title\",\n        \"slug\": \"my-article-slug\",\n        \"description\": \"A short description of the article.\",\n        \"tags\": [\n            {\n                \"id\": 1,\n                \"tag\": \"typescript\",\n                \"description\": \"TypeScript articles\"\n            }\n        ],\n        \"authors\": [\n            {\n                \"name\": \"PPhat Dev\",\n                \"profile\": \"Front-End Developer\",\n                \"url\": \"https://pphat.me\"\n            }\n        ],\n        \"thumbnail\": \"https://example.com/thumbnail.png\",\n        \"published\": true,\n        \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n        \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n        \"updatedAt\": \"2026-04-27T03:46:54.340Z\",\n        \"content\": \"Full article content goes here.\",\n        \"filePath\": \"\",\n        \"stats\": {\n            \"views\": 0,\n            \"readingMins\": 1\n        }\n    },\n    \"navigation\": {\n        \"next\": null,\n        \"prev\": null\n    }\n}"
+                                    "body": "{\n    \"data\": {\n        \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n        \"title\": \"My Article Title\",\n        \"slug\": \"my-article-slug\",\n        \"description\": \"A short description of the article.\",\n        \"tags\": [\n            {\n                \"id\": 1,\n                \"tag\": \"typescript\",\n                \"description\": \"TypeScript articles\"\n            }\n        ],\n        \"authors\": [\n            {\n                \"name\": \"PPhat Dev\",\n                \"profile\": \"Front-End Developer\",\n                \"url\": \"https://pphat.me\"\n            }\n        ],\n        \"thumbnail\": \"https://example.com/thumbnail.png\",\n        \"published\": true,\n        \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n        \"owner\": {\n            \"id\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n            \"name\": \"PPhat Dev\",\n            \"avatar\": \"https://avatars.githubusercontent.com/u/1?v=4\",\n            \"role\": \"user\"\n        },\n        \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n        \"updatedAt\": \"2026-04-27T03:46:54.340Z\",\n        \"content\": \"Full article content goes here.\",\n        \"filePath\": \"\",\n        \"stats\": {\n            \"views\": 0,\n            \"readingMins\": 1\n        }\n    },\n    \"navigation\": {\n        \"next\": null,\n        \"prev\": null\n    }\n}"
                                 }
                             ]
                         },
@@ -1369,7 +1369,7 @@
                                         }
                                     ],
                                     "cookie": [],
-                                    "body": "{\n    \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"tags\": [\n        {\n            \"id\": 1,\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ],\n    \"authors\": [\n        {\n            \"name\": \"PPhat Dev\",\n            \"profile\": \"Front-End Developer\",\n            \"url\": \"https://pphat.me\"\n        }\n    ],\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"published\": true,\n    \"isPublic\": false,\n    \"publishAt\": \"2026-08-15T09:00:00+07:00\",\n    \"status\": \"queue\",\n    \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n    \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n    \"updatedAt\": \"2026-04-27T03:45:51.505Z\",\n    \"content\": \"Full article content goes here.\",\n    \"filePath\": \"\"\n}"
+                                    "body": "{\n    \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"tags\": [\n        {\n            \"id\": 1,\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ],\n    \"authors\": [\n        {\n            \"name\": \"PPhat Dev\",\n            \"profile\": \"Front-End Developer\",\n            \"url\": \"https://pphat.me\"\n        }\n    ],\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"published\": true,\n    \"isPublic\": false,\n    \"publishAt\": \"2026-08-15T09:00:00+07:00\",\n    \"status\": \"queue\",\n    \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n    \"owner\": {\n        \"id\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n        \"name\": \"PPhat Dev\",\n        \"avatar\": \"https://avatars.githubusercontent.com/u/1?v=4\",\n        \"role\": \"user\"\n    },\n    \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n    \"updatedAt\": \"2026-04-27T03:45:51.505Z\",\n    \"content\": \"Full article content goes here.\",\n    \"filePath\": \"\"\n}"
                                 }
                             ]
                         },
@@ -1479,7 +1479,7 @@
                                         }
                                     ],
                                     "cookie": [],
-                                    "body": "{\n    \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"tags\": [\n        {\n            \"id\": 1,\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ],\n    \"authors\": [\n        {\n            \"name\": \"PPhat Dev\",\n            \"profile\": \"Front-End Developer\",\n            \"url\": \"https://pphat.me\"\n        }\n    ],\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"published\": true,\n    \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n    \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n    \"updatedAt\": \"2026-04-27T03:46:54.340Z\",\n    \"content\": \"Full article content goes here.\",\n    \"filePath\": \"\"\n}"
+                                    "body": "{\n    \"id\": \"c67640b9-dd5c-44a9-93de-4efd8cded2a8\",\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"tags\": [\n        {\n            \"id\": 1,\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ],\n    \"authors\": [\n        {\n            \"name\": \"PPhat Dev\",\n            \"profile\": \"Front-End Developer\",\n            \"url\": \"https://pphat.me\"\n        }\n    ],\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"published\": true,\n    \"ownerId\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n    \"owner\": {\n        \"id\": \"d80d99fd-5237-4751-ad8b-89e7150aa889\",\n        \"name\": \"PPhat Dev\",\n        \"avatar\": \"https://avatars.githubusercontent.com/u/1?v=4\",\n        \"role\": \"user\"\n    },\n    \"createdAt\": \"2026-04-27T03:45:51.505Z\",\n    \"updatedAt\": \"2026-04-27T03:46:54.340Z\",\n    \"content\": \"Full article content goes here.\",\n    \"filePath\": \"\"\n}"
                                 }
                             ]
                         },
@@ -3029,6 +3029,645 @@
             ]
         },
         {
+            "name": "Tech Stacks",
+            "item": [
+                {
+                    "name": "List Tech Stacks",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "description": "JWT access token or an SSO API key via `ApiKey {{apiKey}}`"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/tech-stacks?page=1&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "tech-stacks"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Page number (default: 1)"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Items per page (default: 10, max: 100)"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Search in name, description",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "id",
+                                    "description": "Sort column: id, name, status, created_at, updated_at",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "order",
+                                    "value": "asc",
+                                    "description": "Sort order: asc, desc",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "List tech stacks. Requires auth."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Tech Stack by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/tech-stacks/{{techStackId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "tech-stacks",
+                                "{{techStackId}}"
+                            ]
+                        },
+                        "description": "Get a tech stack by id. Public."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Tech Stack",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "description": "Admin JWT required"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"React\",\n    \"description\": \"A JavaScript library for building user interfaces.\",\n    \"url\": \"https://react.dev\",\n    \"logo_url\": \"https://react.dev/favicon.ico\",\n    \"cover\": \"https://example.com/react-cover.png\",\n    \"status\": 1\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/tech-stacks",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "tech-stacks"
+                            ]
+                        },
+                        "description": "Create a tech stack. Admin only.\n\n**Fields:**\n- `name` (required)\n- `description` (optional, default '')\n- `url` (optional, default '')\n- `logo_url` (optional, default ''). Accepts `logoUrl` camelCase alias.\n- `cover` (optional, nullable)\n- `status` (optional: 0 inactive, 1 active — default 1)"
+                    },
+                    "response": [
+                        {
+                            "name": "Create Tech Stack",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"React\",\n    \"description\": \"A JavaScript library for building user interfaces.\",\n    \"url\": \"https://react.dev\",\n    \"logo_url\": \"https://react.dev/favicon.ico\",\n    \"cover\": \"https://example.com/react-cover.png\",\n    \"status\": 1\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{baseUrl}}/v1/api/tech-stacks",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "v1",
+                                        "api",
+                                        "tech-stacks"
+                                    ]
+                                }
+                            },
+                            "status": "Created",
+                            "code": 201,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"id\": 1,\n    \"name\": \"React\",\n    \"description\": \"A JavaScript library for building user interfaces.\",\n    \"url\": \"https://react.dev\",\n    \"logoUrl\": \"https://react.dev/favicon.ico\",\n    \"cover\": \"https://example.com/react-cover.png\",\n    \"status\": 1,\n    \"createdAt\": \"2026-11-20T08:30:00.000Z\",\n    \"updatedAt\": \"2026-11-20T08:30:00.000Z\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Update Tech Stack",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "description": "Admin JWT required"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"description\": \"Updated description.\",\n    \"status\": 0\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/tech-stacks/{{techStackId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "tech-stacks",
+                                "{{techStackId}}"
+                            ]
+                        },
+                        "description": "Partial update. Admin only. Any subset of create fields is accepted."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Tech Stack",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "description": "Admin JWT required"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/tech-stacks/{{techStackId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "tech-stacks",
+                                "{{techStackId}}"
+                            ]
+                        },
+                        "description": "Delete a tech stack. Admin only. Returns 204."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Experiences",
+            "item": [
+                {
+                    "name": "List Experiences",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "description": "JWT access token or an SSO API key via `ApiKey {{apiKey}}`"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/experiences?page=1&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "experiences"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Page number (default: 1)"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Items per page (default: 10, max: 100)"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Search in title, company, description",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "start_date",
+                                    "description": "Override default sort: id, title, company, start_date, end_date, status, created_at, updated_at",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "order",
+                                    "value": "desc",
+                                    "description": "Sort order: asc, desc",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "List experiences on the resume timeline. Requires auth.\n\n**Default order:** current roles (end_date IS NULL) float to the top, then start_date DESC."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Experience by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/experiences/{{experienceId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "experiences",
+                                "{{experienceId}}"
+                            ]
+                        },
+                        "description": "Get an experience entry by id. Public."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Experience",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "description": "Admin JWT required"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"Senior Software Engineer\",\n    \"company\": \"Acme Co\",\n    \"description\": \"Led the platform team.\",\n    \"start_date\": \"2023-01-01\",\n    \"end_date\": null,\n    \"location\": \"Remote\",\n    \"employment_type\": \"full-time\",\n    \"company_url\": \"https://acme.example\",\n    \"logo_url\": \"https://acme.example/logo.png\",\n    \"cover\": \"https://acme.example/cover.png\",\n    \"status\": 1\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/experiences",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "experiences"
+                            ]
+                        },
+                        "description": "Create an experience timeline entry. Admin only.\n\n**Required:** title, company, start_date.\n**Optional:** description, end_date (null = current role), location, employment_type (full-time | part-time | contract | internship | freelance, default full-time), company_url, logo_url, cover (nullable), status (0 inactive, 1 active — default 1).\n\nCamelCase aliases accepted for: startDate, endDate, employmentType, companyUrl, logoUrl."
+                    },
+                    "response": [
+                        {
+                            "name": "Create Experience",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"title\": \"Senior Software Engineer\",\n    \"company\": \"Acme Co\",\n    \"description\": \"Led the platform team.\",\n    \"start_date\": \"2023-01-01\",\n    \"end_date\": null,\n    \"location\": \"Remote\",\n    \"employment_type\": \"full-time\",\n    \"company_url\": \"https://acme.example\",\n    \"logo_url\": \"https://acme.example/logo.png\",\n    \"cover\": \"https://acme.example/cover.png\",\n    \"status\": 1\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{baseUrl}}/v1/api/experiences",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "v1",
+                                        "api",
+                                        "experiences"
+                                    ]
+                                }
+                            },
+                            "status": "Created",
+                            "code": 201,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"id\": 1,\n    \"title\": \"Senior Software Engineer\",\n    \"company\": \"Acme Co\",\n    \"description\": \"Led the platform team.\",\n    \"startDate\": \"2023-01-01\",\n    \"endDate\": null,\n    \"location\": \"Remote\",\n    \"employmentType\": \"full-time\",\n    \"companyUrl\": \"https://acme.example\",\n    \"logoUrl\": \"https://acme.example/logo.png\",\n    \"cover\": \"https://acme.example/cover.png\",\n    \"status\": 1,\n    \"createdAt\": \"2026-11-20T08:50:00.000Z\",\n    \"updatedAt\": \"2026-11-20T08:50:00.000Z\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Update Experience",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "description": "Admin JWT required"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"description\": \"Updated description.\",\n    \"end_date\": \"2025-04-01\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/experiences/{{experienceId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "experiences",
+                                "{{experienceId}}"
+                            ]
+                        },
+                        "description": "Partial update. Admin only. Any subset of create fields is accepted.\n\nPass `end_date: null` to re-open a role as current."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Experience",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "description": "Admin JWT required"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/experiences/{{experienceId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "experiences",
+                                "{{experienceId}}"
+                            ]
+                        },
+                        "description": "Delete an experience. Admin only. Returns 204."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Resume Timeline",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/experiences/timeline?page=1&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "experiences",
+                                "timeline"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Page number (default: 1)"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Companies per page (default: 10, max: 100)"
+                                }
+                            ]
+                        },
+                        "description": "Public resume timeline. Active experiences (`status = 1`) grouped by company, with roles ordered current-first and tech-stack links mapped to `skills` ({ name, icon: logo_url, url }).\n\nPagination unit is **company** — a page always contains fully-populated companies rather than splitting roles across pages. Response shape: `{ data: TimelineCompany[], pagination: { page, limit, total, totalPages } }`."
+                    },
+                    "response": [
+                        {
+                            "name": "Get Resume Timeline",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{baseUrl}}/v1/api/experiences/timeline?page=1&limit=10",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "v1",
+                                        "api",
+                                        "experiences",
+                                        "timeline"
+                                    ],
+                                    "query": [
+                                        { "key": "page", "value": "1" },
+                                        { "key": "limit", "value": "10" }
+                                    ]
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"data\": [\n        {\n            \"company\": \"TURBOTECH CO., LTD\",\n            \"url\": \"https://turbotech.com.kh\",\n            \"logo\": \"/images/companies/turbotech.png\",\n            \"roles\": [\n                {\n                    \"title\": \"Senior Frontend Developer\",\n                    \"period\": {\n                        \"from\": \"2022, Oct\",\n                        \"isCurrent\": true,\n                        \"to\": \"2026, Nov\"\n                    },\n                    \"skills\": [\n                        {\n                            \"name\": \"Figma\",\n                            \"icon\": \"devicon-figma-plain\",\n                            \"url\": \"https://www.figma.com\"\n                        }\n                    ]\n                }\n            ]\n        }\n    ],\n    \"pagination\": {\n        \"page\": 1,\n        \"limit\": 10,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Replace Experience Skills",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "description": "Admin JWT required"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"tech_stack_ids\": [1, 2]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/experiences/{{experienceId}}/skills",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "experiences",
+                                "{{experienceId}}",
+                                "skills"
+                            ]
+                        },
+                        "description": "Replace the full set of skills (tech stacks) linked to an experience. Admin only. Body accepts `tech_stack_ids` (or camelCase `techStackIds`). Returns 204."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Attach Experience Skill",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "description": "Admin JWT required"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/experiences/{{experienceId}}/skills/{{techStackId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "experiences",
+                                "{{experienceId}}",
+                                "skills",
+                                "{{techStackId}}"
+                            ]
+                        },
+                        "description": "Attach a single tech stack to an experience. Admin only. Idempotent — response `{ attached: true | false }` indicates whether the link was newly created."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Detach Experience Skill",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "description": "Admin JWT required"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/v1/api/experiences/{{experienceId}}/skills/{{techStackId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "api",
+                                "experiences",
+                                "{{experienceId}}",
+                                "skills",
+                                "{{techStackId}}"
+                            ]
+                        },
+                        "description": "Detach a tech stack from an experience. Admin only. Returns 204; 404 if the link does not exist."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
             "name": "Projects",
             "item": [
                 {
@@ -3455,20 +4094,54 @@
                             }
                         ],
                         "url": {
-                            "raw": "{{baseUrl}}/v1/api/dashboard/init",
+                            "raw": "{{baseUrl}}/v1/api/dashboard",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
                                 "v1",
                                 "api",
-                                "dashboard",
-                                "init"
+                                "dashboard"
                             ]
                         },
-                        "description": "Returns a summary of stats, live traffic, top visited items, and newest items for the admin dashboard. Requires Admin role."
+                        "description": "Returns a summary of stats, live traffic, top visited items, and newest items (recent activities feed) for the admin dashboard. Requires Admin role.\n\n**Recent-activities buckets:**\n- `newestPosts` — latest articles\n- `newestProjects` — latest projects\n- `newestContributors` — latest authors\n- `newestTechStacks` — latest tech-stack catalog entries\n- `newestExperiences` — latest resume timeline entries"
                     },
-                    "response": []
+                    "response": [
+                        {
+                            "name": "Get Dashboard Initialize Data",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/v1/api/dashboard",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "v1",
+                                        "api",
+                                        "dashboard"
+                                    ]
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"blogs\": { \"total\": 12, \"published\": 10, \"draft\": 2 },\n    \"projects\": { \"total\": 5, \"published\": 4, \"draft\": 1 },\n    \"liveTraffic\": 3,\n    \"topPosts\": [],\n    \"topProjects\": [],\n    \"newestPosts\": [],\n    \"newestProjects\": [],\n    \"newestContributors\": [],\n    \"newestTechStacks\": [\n        {\n            \"id\": 1,\n            \"name\": \"React\",\n            \"description\": \"A JavaScript library for building user interfaces.\",\n            \"url\": \"https://react.dev\",\n            \"logoUrl\": \"https://react.dev/favicon.ico\",\n            \"cover\": null,\n            \"status\": 1,\n            \"createdAt\": \"2026-11-20T08:30:00.000Z\",\n            \"updatedAt\": \"2026-11-20T08:30:00.000Z\"\n        }\n    ],\n    \"newestExperiences\": [\n        {\n            \"id\": 1,\n            \"title\": \"Senior Software Engineer\",\n            \"company\": \"Acme Co\",\n            \"description\": \"Led the platform team.\",\n            \"startDate\": \"2023-01-01\",\n            \"endDate\": null,\n            \"location\": \"Remote\",\n            \"employmentType\": \"full-time\",\n            \"companyUrl\": \"https://acme.example\",\n            \"logoUrl\": \"https://acme.example/logo.png\",\n            \"cover\": null,\n            \"status\": 1,\n            \"createdAt\": \"2026-11-20T08:50:00.000Z\",\n            \"updatedAt\": \"2026-11-20T08:50:00.000Z\"\n        }\n    ]\n}"
+                        }
+                    ]
                 },
                 {
                     "name": "Live Traffic Stream",
@@ -3793,6 +4466,16 @@
         {
             "key": "tagId",
             "value": "1"
+        },
+        {
+            "key": "techStackId",
+            "value": "1",
+            "description": "Numeric id of a tech stack row"
+        },
+        {
+            "key": "experienceId",
+            "value": "1",
+            "description": "Numeric id of an experience timeline row"
         },
         {
             "key": "commentId",

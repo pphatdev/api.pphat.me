@@ -158,6 +158,22 @@ export async function getStatsSummary(db: D1Database, tableName: string): Promis
 }
 
 /**
+ * @description Dedupe a tag input list by `tag` name, keeping the last
+ * occurrence's `description`. The DB-level unique index (migration 0023)
+ * backs this up, but dedupe before the batch insert so the inserted row
+ * count matches what the client sent — relying on INSERT OR IGNORE alone
+ * would silently drop later occurrences even when they carried an updated
+ * description.
+ * @param { Array<{ tag: string; description?: string }> } tags Input tag list
+ * @returns { Array<{ tag: string; description?: string }> } Deduped list
+ */
+export function dedupeTagsByName<T extends { tag: string }>(tags: T[]): T[] {
+	const byName = new Map<string, T>();
+	for (const t of tags) byName.set(t.tag, t);
+	return Array.from(byName.values());
+}
+
+/**
  * @description Maps database author rows to the Author interface
  * @param { any } a The raw database row
  * @returns { any } The mapped author object

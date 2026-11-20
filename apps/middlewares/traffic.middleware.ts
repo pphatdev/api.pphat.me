@@ -1,4 +1,5 @@
 import { Context, Next } from 'hono';
+import { getClientIp } from '../shared/helpers/client-ip';
 
 // Cache the imported HMAC key per (env instance, secret) so we don't re-run
 // importKey on every request. Workers keep the module scope for the lifetime
@@ -54,7 +55,7 @@ export async function trafficMiddleware(c: Context<{ Bindings: Env }>, next: Nex
 	// Only log GET requests to public pages or API calls to track traffic
 	if (c.req.method !== 'GET') return next();
 
-	const ip = c.req.header('CF-Connecting-IP') || 'unknown';
+	const ip = getClientIp(c.req.raw, c.env.ADMIN_PROXY_SECRET) ?? 'unknown';
 	const path = new URL(c.req.url).pathname;
 	const timestamp = new Date().toISOString();
 

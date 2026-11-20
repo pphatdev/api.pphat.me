@@ -2,13 +2,17 @@ import { IDashboardRepository, DashboardData } from "./dashboard.interface";
 import { IArticleRepository } from "../articles/articles.interface";
 import { IProjectRepository } from "../projects/projects.interface";
 import { IAuthorRepository } from "../authors/authors.interface";
+import { ITechStackRepository } from "../tech-stacks/tech-stacks.interface";
+import { IExperienceRepository } from "../experiences/experiences.interface";
 
 export class DashboardRepository implements IDashboardRepository {
 	constructor(
 		private readonly db: D1Database,
 		private readonly articleRepo: IArticleRepository,
 		private readonly projectRepo: IProjectRepository,
-		private readonly authorRepo: IAuthorRepository
+		private readonly authorRepo: IAuthorRepository,
+		private readonly techStackRepo: ITechStackRepository,
+		private readonly experienceRepo: IExperienceRepository,
 	) {}
 
 	/**
@@ -24,7 +28,9 @@ export class DashboardRepository implements IDashboardRepository {
 			topProjects,
 			newestPosts,
 			newestProjects,
-			newestContributors
+			newestContributors,
+			newestTechStacks,
+			newestExperiences,
 		] = await Promise.all([
 			this.articleRepo.getStatsSummary(),
 			this.projectRepo.getStatsSummary(),
@@ -33,7 +39,9 @@ export class DashboardRepository implements IDashboardRepository {
 			this.projectRepo.findTop(5),
 			this.articleRepo.findAll({ page: 1, limit: 5, sort: ['created_at'], order: 'desc' }, false),
 			this.projectRepo.findAll({ page: 1, limit: 5, sort: ['created_at'], order: 'desc' }, false),
-			this.authorRepo.findAll({ page: 1, limit: 5, sort: ['created_at'], order: 'desc' } as any)
+			this.authorRepo.findAll({ page: 1, limit: 5, sort: ['created_at'], order: 'desc' } as any),
+			this.techStackRepo.findAll({ page: 1, limit: 5, sort: ['created_at'], order: 'desc' } as any),
+			this.experienceRepo.findAll({ page: 1, limit: 5, sort: ['created_at'], order: 'desc' } as any),
 		]);
 
 		return {
@@ -44,7 +52,9 @@ export class DashboardRepository implements IDashboardRepository {
 			topProjects,
 			newestPosts: newestPosts.data,
 			newestProjects: newestProjects.data,
-			newestContributors: newestContributors.data
+			newestContributors: newestContributors.data,
+			newestTechStacks: newestTechStacks.data,
+			newestExperiences: newestExperiences.data,
 		};
 	}
 
