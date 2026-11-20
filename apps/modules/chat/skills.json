@@ -31,7 +31,7 @@
                 "framework",
                 "database"
             ],
-            "response": "The tech stack includes: \n- **Runtime**: Cloudflare Workers\n- **Router**: Hono v4\n- **Database**: Cloudflare D1 (SQLite)\n- **Language**: TypeScript\n- **Testing**: Vitest with @cloudflare/vitest-pool-workers\n- **Tooling**: Wrangler v4"
+            "response": "The tech stack includes: \n- **Runtime**: Cloudflare Workers\n- **Router**: Hono v4\n- **Database**: Cloudflare D1 (SQLite)\n- **Language**: TypeScript\n- **Testing**: Vitest with @cloudflare/vitest-plugin\n- **Tooling**: Wrangler v4"
         },
         {
             "name": "Project Modules",
