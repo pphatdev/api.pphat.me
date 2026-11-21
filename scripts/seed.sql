@@ -476,3 +476,64 @@ VALUES
     ('dashboard', 'a2000000-0000-4000-8000-000000000002', 'Analytics and metrics UI'),
     ('react', 'a2000000-0000-4000-8000-000000000002', 'React components and hooks'),
     ('productivity', 'a3000000-0000-4000-8000-000000000003', 'Task and project management');
+
+-- -----------------------------------------------------------------------------
+-- 8. FAQs (Frequently Asked Questions with rich article answers)
+-- -----------------------------------------------------------------------------
+INSERT INTO faqs (id, question, slug, answer, category, sort_order, status, article_id, created_at, updated_at)
+VALUES
+    (
+        1,
+        'What tech stack powers api.pphat.me?',
+        'what-tech-stack-powers-api-pphat-me',
+        '# Technology Stack Overview
+
+api.pphat.me is engineered for extreme edge performance and sub-10ms response times globally.
+
+### Core Architecture
+- **Runtime**: [Cloudflare Workers](https://workers.cloudflare.com) edge computing platform.
+- **Framework**: [Hono.js](https://hono.dev) — ultra-fast, lightweight Web Standards router.
+- **Database**: [Cloudflare D1](https://developers.cloudflare.com/d1) distributed SQLite at the edge.
+- **Type Safety**: End-to-end strict TypeScript with automated Cloudflare bindings generation.
+
+### Key Performance Benefits
+1. Zero cold-starts across hundreds of global edge data centers.
+2. Built-in rate limiting, security headers, and CORS enforcement.
+3. Automated scheduled crons for article publishing and log retention sweeps.',
+        'Technical',
+        1,
+        1,
+        'c1000000-0000-4000-8000-000000000001',
+        '2024-01-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    ),
+    (
+        2,
+        'How can I get in touch for collaborations or freelance projects?',
+        'how-to-collaborate',
+        '# Collaboration & Contact
+
+I am open to full-stack engineering contracts, technical advisory, and frontend architecture consultation.
+
+### Preferred Channels
+- **Email**: Reach out directly at [info.sophat@gmail.com](mailto:info.sophat@gmail.com).
+- **Contact Form**: Submit a message through the contact endpoint (`POST /v1/api/contact`).
+- **LinkedIn / GitHub**: Connect via profile links on [pphat.me](https://pphat.me).
+
+All inquiries typically receive a response within 24–48 hours.',
+        'General',
+        2,
+        1,
+        NULL,
+        '2024-01-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    )
+ON CONFLICT(id) DO UPDATE SET
+    question = excluded.question,
+    slug = excluded.slug,
+    answer = excluded.answer,
+    category = excluded.category,
+    sort_order = excluded.sort_order,
+    status = excluded.status,
+    article_id = excluded.article_id,
+    updated_at = excluded.updated_at;

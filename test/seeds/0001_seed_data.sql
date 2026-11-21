@@ -65,3 +65,8 @@ VALUES ('javascript', '00000000-0000-4000-8000-000000000001', 'Articles about Ja
 
 INSERT OR IGNORE INTO tags (tag, project_id, description) 
 VALUES ('typescript', '00000000-0000-4000-8000-000000000002', 'Projects using TypeScript.');
+
+-- Seed FAQs
+INSERT OR IGNORE INTO faqs (id, question, slug, answer, category, sort_order, status, article_id, created_at, updated_at)
+VALUES (1, 'What is api.pphat.me?', 'what-is-api-pphat-me', '# What is api.pphat.me?\n\nIt is a high-performance portfolio and blog API built with Cloudflare Workers and Hono.js.', 'General', 1, 1, '00000000-0000-4000-8000-000000000001', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
+
