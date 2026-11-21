@@ -6,9 +6,9 @@ The following versions of the API are currently being supported with security up
 
 | Version | Supported          |
 | ------- | ------------------ |
+| v0.19.x | :white_check_mark: |
 | v0.18.x | :white_check_mark: |
-| v0.17.x | :white_check_mark: |
-| < v0.17 | :x:                |
+| < v0.18 | :x:                |
 
 ## Reporting a Vulnerability
 
