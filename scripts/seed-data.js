@@ -34,9 +34,10 @@ if (r.status !== 0) {
 
 console.log(`\nSeed data successfully applied to ${target} D1 database!`);
 console.log('Entities seeded:');
-console.log('  - tech_stacks (10 technologies)');
-console.log('  - skills (8 proficiencies with levels & years)');
-console.log('  - experiences (3 timeline entries with tech stack links)');
+console.log('  - tech_stacks (37 technologies)');
+console.log('  - skills (15 proficiencies with levels & years)');
+console.log('  - experiences (4 timeline entries: TURBOTECH CO., LTD & Nintrea Labs)');
+console.log('  - experience_tech_stacks (56 skill links across all 4 roles)');
 console.log('  - authors & author_details (Sophat L.)');
 console.log('  - articles (3 published articles with stats & authors)');
 console.log('  - projects & project_details (3 featured portfolio projects)');

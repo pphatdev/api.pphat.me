@@ -8,10 +8,10 @@
 -- -----------------------------------------------------------------------------
 -- 1. Tech Stacks
 -- -----------------------------------------------------------------------------
-INSERT OR IGNORE INTO tech_stacks (id, name, description, url, logo_url, cover, status, created_at, updated_at)
+INSERT INTO tech_stacks (id, name, description, url, logo_url, cover, status, created_at, updated_at)
 VALUES
     (1, 'TypeScript', 'Typed superset of JavaScript that compiles to plain JavaScript.', 'https://www.typescriptlang.org', 'devicon-typescript-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
-    (2, 'Cloudflare Workers', 'Serverless execution environment running on Cloudflares global edge network.', 'https://workers.cloudflare.com', 'devicon-cloudflare-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (2, 'Cloudflare Workers', 'Serverless execution environment running on Cloudflare global edge network.', 'https://workers.cloudflare.com', 'devicon-cloudflare-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
     (3, 'Cloudflare D1', 'Serverless distributed SQLite database with zero-latency edge access.', 'https://developers.cloudflare.com/d1', 'devicon-sqlite-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
     (4, 'Hono', 'Fast, lightweight web framework built on Web Standards for Cloudflare Workers and the edge.', 'https://hono.dev', 'devicon-hono-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
     (5, 'React', 'The library for web and native user interfaces.', 'https://react.dev', 'devicon-react-original', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
@@ -19,47 +19,226 @@ VALUES
     (7, 'Node.js', 'Asynchronous event-driven JavaScript runtime environment.', 'https://nodejs.org', 'devicon-nodejs-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
     (8, 'PostgreSQL', 'Powerful, open-source object-relational database system.', 'https://www.postgresql.org', 'devicon-postgresql-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
     (9, 'Docker', 'Platform for developing, shipping, and running applications in isolated containers.', 'https://www.docker.com', 'devicon-docker-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
-    (10, 'Tailwind CSS', 'Utility-first CSS framework for rapid UI and design system development.', 'https://tailwindcss.com', 'devicon-tailwindcss-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');
+    (10, 'Tailwind CSS', 'Utility-first CSS framework for rapid UI and design system development.', 'https://tailwindcss.com', 'devicon-tailwindcss-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (11, 'Figma', 'Collaborative interface design and prototyping tool.', 'https://www.figma.com', 'devicon-figma-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (12, 'Laravel', 'Web application framework with expressive, elegant syntax for PHP.', 'https://laravel.com', 'devicon-laravel-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (13, 'Express.js', 'Fast, unopinionated, minimalist web framework for Node.js.', 'https://expressjs.com', 'devicon-express-original', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (14, 'MySQL', 'Widely adopted open-source relational database management system.', 'https://www.mysql.com', 'devicon-mysql-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (15, 'JavaScript', 'High-level, interpreted programming language conforming to the ECMAScript specification.', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript', 'devicon-javascript-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (16, 'jQuery', 'Fast, small, and feature-rich JavaScript library.', 'https://jquery.com', 'devicon-jquery-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (17, 'HTML', 'Standard markup language for documents designed to be displayed in a web browser.', 'https://developer.mozilla.org/en-US/docs/Web/HTML', 'devicon-html5-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (18, 'CSS', 'Style sheet language used for describing the presentation of a document.', 'https://developer.mozilla.org/en-US/docs/Web/CSS', 'devicon-css3-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (19, 'Sass', 'CSS extension language with variables, nested rules, and mixins.', 'https://sass-lang.com', 'devicon-sass-original', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (20, 'Bootstrap', 'Powerful, extensible, and feature-packed frontend toolkit.', 'https://getbootstrap.com', 'devicon-bootstrap-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (21, 'PHP', 'General-purpose scripting language especially suited to web development.', 'https://www.php.net', 'devicon-php-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (22, 'Ms.Word', 'Microsoft Word document processor for technical writing and reports.', 'https://www.microsoft.com/word', 'devicon-microsoft-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (23, 'Ms.Excel', 'Microsoft Excel spreadsheet tool for data modeling and calculations.', 'https://www.microsoft.com/excel', 'devicon-microsoft-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (24, 'Ms.Powerpoint', 'Microsoft PowerPoint presentation tool for slide decks and design assets.', 'https://www.microsoft.com/powerpoint', 'devicon-microsoft-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (25, 'Adobe XD', 'Vector-based design tool for web apps and mobile interfaces.', 'https://www.adobe.com/products/xd.html', 'devicon-xd-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (26, 'Nuxt.js', 'The Intuitive Vue Framework for full-stack web applications.', 'https://nuxt.com', 'devicon-nuxtjs-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (27, 'EJS', 'Embedded JavaScript templating engine for Node.js.', 'https://ejs.co', 'devicon-javascript-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (28, 'Vercel', 'Frontend cloud platform for developing, previewing, and shipping web apps.', 'https://vercel.com', 'devicon-vercel-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (29, 'Netlify', 'Cloud platform for building, deploying, and scaling modern web projects.', 'https://www.netlify.com', 'devicon-netlify-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (30, 'GitHub', 'Development platform for version control, collaboration, and CI/CD actions.', 'https://github.com', 'devicon-github-original', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (31, 'Ubuntu', 'Open-source Linux operating system for server infrastructure.', 'https://ubuntu.com', 'devicon-ubuntu-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (32, 'Nginx', 'High-performance HTTP server, reverse proxy, and load balancer.', 'https://nginx.org', 'devicon-nginx-original', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (33, 'C#', 'Modern, innovative, open-source programming language for .NET applications.', 'https://learn.microsoft.com/dotnet/csharp/', 'devicon-csharp-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (34, 'C++', 'High-performance general-purpose systems programming language.', 'https://isocpp.org', 'devicon-cplusplus-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (35, 'Python', 'Versatile programming language suited for scripting, backend, and data science.', 'https://www.python.org', 'devicon-python-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (36, 'Git', 'Distributed version control system for tracking source code changes.', 'https://git-scm.com', 'devicon-git-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (37, 'GitLab', 'DevOps platform delivering software development and source code management.', 'https://about.gitlab.com', 'devicon-gitlab-plain', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z')
+ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    description = excluded.description,
+    url = excluded.url,
+    logo_url = excluded.logo_url,
+    status = excluded.status,
+    updated_at = excluded.updated_at;
 
 -- -----------------------------------------------------------------------------
 -- 2. Skills (Linked to Tech Stacks)
 -- -----------------------------------------------------------------------------
-INSERT OR IGNORE INTO skills (id, tech_stack_id, level, years_of_experience, description, sort_order, status, created_at, updated_at)
+INSERT INTO skills (id, tech_stack_id, level, years_of_experience, description, sort_order, status, created_at, updated_at)
 VALUES
     (1, 1, 'expert', 5.0, 'Type-safe architecture, generics, strict compiler configs, and library design.', 1, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
     (2, 2, 'advanced', 4.0, 'Serverless edge services, KV, D1, R2 storage, Queues, and Workers AI integration.', 2, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
     (3, 4, 'expert', 3.5, 'Modular routing, middleware pipelines, RPC client generation, and streaming responses.', 3, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
-    (4, 5, 'advanced', 5.0, 'Component architecture, custom hooks, performance tuning, and state management.', 4, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (4, 5, 'expert', 5.0, 'Component architecture, custom hooks, performance tuning, and state management.', 4, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
     (5, 3, 'advanced', 3.0, 'Schema design, migration strategies, indexing, and SQLite query optimization.', 5, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
     (6, 6, 'advanced', 4.0, 'App router, server actions, SSR/SSG caching, and SEO optimization.', 6, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
     (7, 9, 'intermediate', 4.0, 'Multi-stage Dockerfiles, Docker Compose environments, and CI container workflows.', 7, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
-    (8, 10, 'expert', 4.0, 'Responsive layouts, dark-mode styling, component abstraction, and animation.', 8, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');
+    (8, 10, 'expert', 4.0, 'Responsive layouts, dark-mode styling, component abstraction, and animation.', 8, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (9, 11, 'advanced', 4.5, 'UI/UX prototyping, design systems, vector assets, and design-to-code handoff.', 9, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (10, 12, 'advanced', 4.0, 'Backend API development, Eloquent ORM, authentication, and MVC patterns.', 10, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (11, 7, 'advanced', 5.0, 'Backend services, async pipelines, REST APIs, and CLI tooling.', 11, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (12, 13, 'advanced', 4.0, 'Microservices, routing, middleware architecture, and HTTP security.', 12, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (13, 8, 'intermediate', 3.5, 'Relational database modeling, complex queries, indexing, and joins.', 13, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (14, 14, 'advanced', 4.0, 'Database normalization, transactions, query optimization, and backups.', 14, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+    (15, 15, 'expert', 6.0, 'Core modern JavaScript, DOM manipulation, asynchronous patterns, and ESNext.', 15, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z')
+ON CONFLICT(id) DO UPDATE SET
+    tech_stack_id = excluded.tech_stack_id,
+    level = excluded.level,
+    years_of_experience = excluded.years_of_experience,
+    description = excluded.description,
+    sort_order = excluded.sort_order,
+    status = excluded.status,
+    updated_at = excluded.updated_at;
 
 -- -----------------------------------------------------------------------------
--- 3. Experiences
+-- 3. Experiences (TURBOTECH CO., LTD & Nintrea Labs)
 -- -----------------------------------------------------------------------------
-INSERT OR IGNORE INTO experiences (id, title, company, description, start_date, end_date, location, employment_type, company_url, logo_url, cover, status, created_at, updated_at)
+INSERT INTO experiences (id, title, company, description, start_date, end_date, location, employment_type, company_url, logo_url, cover, status, created_at, updated_at)
 VALUES
-    (1, 'Senior Full-Stack Engineer', 'TechCorp Solutions', 'Architected and built scalable edge microservices and developer platforms using Cloudflare Workers, Hono, and TypeScript. Improved global API response times by 45%.', '2023-03-01', NULL, 'Phnom Penh, Cambodia (Remote)', 'full-time', 'https://example.com', 'https://cdn-icons-png.flaticon.com/512/3061/3061341.png', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
-    (2, 'Full-Stack Developer', 'Digital Agency Asia', 'Developed high-traffic ecommerce portals and client web apps. Designed performant React/Next.js interfaces backed by Node.js and PostgreSQL databases.', '2021-06-01', '2023-02-28', 'Phnom Penh, Cambodia', 'full-time', 'https://example.com', 'https://cdn-icons-png.flaticon.com/512/2942/2942821.png', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
-    (3, 'Frontend Developer', 'StartUp Lab', 'Engineered interactive dashboards and client-side applications with React and TypeScript. Collaborated closely with UI/UX designers to implement design system tokens.', '2019-09-01', '2021-05-31', 'Phnom Penh, Cambodia', 'full-time', 'https://example.com', 'https://cdn-icons-png.flaticon.com/512/1006/1006771.png', NULL, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');
+    (
+        1,
+        'Senior Frontend Developer',
+        'TURBOTECH CO., LTD',
+        'Leading frontend architecture and web development across key enterprise platforms. Building modern responsive user interfaces with Next.js, React, and TypeScript. Integrating backend APIs built with Laravel, Node.js, and Express, with PostgreSQL and MySQL database management.',
+        '2022-10-01',
+        NULL,
+        'Phnom Penh, Cambodia',
+        'full-time',
+        'https://turbotech.com.kh',
+        '/images/companies/turbotech.png',
+        NULL,
+        1,
+        '2022-10-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    ),
+    (
+        2,
+        'Junior Frontend Developer',
+        'TURBOTECH CO., LTD',
+        'Developed client-facing web portals and UI components with modern HTML5, CSS3, Sass, Tailwind CSS, and Bootstrap. Built interactive dynamic features with JavaScript and jQuery, and integrated with PHP and Laravel backend services backed by MySQL.',
+        '2020-10-01',
+        '2022-10-01',
+        'Phnom Penh, Cambodia',
+        'full-time',
+        'https://turbotech.com.kh',
+        '/images/companies/turbotech.png',
+        NULL,
+        1,
+        '2020-10-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    ),
+    (
+        3,
+        'Content Writing Officer & UI/UX Designer',
+        'TURBOTECH CO., LTD',
+        'Created wireframes, interactive user interface prototypes, and UX flows using Figma and Adobe XD. Authored technical documentation, marketing content, and executive presentations with Microsoft Office suite (Word, Excel, PowerPoint).',
+        '2019-11-01',
+        '2020-10-01',
+        'Phnom Penh, Cambodia',
+        'full-time',
+        'https://turbotech.com.kh',
+        '/images/companies/turbotech.png',
+        NULL,
+        1,
+        '2019-11-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    ),
+    (
+        4,
+        'Creator & Developer of Nintrea',
+        'Nintrea Labs',
+        'Creator and lead engineer of Nintrea open-source projects, developer tools, and full-stack edge web applications. Architected distributed cloud infrastructure and web solutions using TypeScript, React, Next.js, Nuxt.js, Hono, Node.js, PHP, Laravel, and Cloudflare Workers, deployed on Ubuntu, Vercel, and Netlify.',
+        '2021-01-01',
+        NULL,
+        'Phnom Penh, Cambodia',
+        'freelance',
+        'https://github.com/nintrea',
+        '/images/companies/nintrea.png',
+        NULL,
+        1,
+        '2021-01-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    )
+ON CONFLICT(id) DO UPDATE SET
+    title = excluded.title,
+    company = excluded.company,
+    description = excluded.description,
+    start_date = excluded.start_date,
+    end_date = excluded.end_date,
+    location = excluded.location,
+    employment_type = excluded.employment_type,
+    company_url = excluded.company_url,
+    logo_url = excluded.logo_url,
+    cover = excluded.cover,
+    status = excluded.status,
+    updated_at = excluded.updated_at;
 
 -- Junction: Experiences to Tech Stacks
+-- Experience 1: TURBOTECH - Senior Frontend Developer
 INSERT OR IGNORE INTO experience_tech_stacks (experience_id, tech_stack_id)
 VALUES
-    (1, 1), -- TechCorp -> TypeScript
-    (1, 2), -- TechCorp -> Cloudflare Workers
-    (1, 3), -- TechCorp -> Cloudflare D1
-    (1, 4), -- TechCorp -> Hono
-    (1, 5), -- TechCorp -> React
-    (2, 5), -- Digital Agency -> React
-    (2, 6), -- Digital Agency -> Next.js
-    (2, 7), -- Digital Agency -> Node.js
-    (2, 8), -- Digital Agency -> PostgreSQL
-    (2, 10), -- Digital Agency -> Tailwind CSS
-    (3, 1), -- StartUp Lab -> TypeScript
-    (3, 5), -- StartUp Lab -> React
-    (3, 10); -- StartUp Lab -> Tailwind CSS
+    (1, 11), -- Figma
+    (1, 12), -- Laravel
+    (1, 5),  -- React
+    (1, 6),  -- Next.js
+    (1, 10), -- Tailwind CSS
+    (1, 1),  -- TypeScript
+    (1, 7),  -- Node.js
+    (1, 13), -- Express.js
+    (1, 8),  -- PostgreSQL
+    (1, 14); -- MySQL
+
+-- Experience 2: TURBOTECH - Junior Frontend Developer
+INSERT OR IGNORE INTO experience_tech_stacks (experience_id, tech_stack_id)
+VALUES
+    (2, 15), -- JavaScript
+    (2, 16), -- jQuery
+    (2, 17), -- HTML
+    (2, 18), -- CSS
+    (2, 19), -- Sass
+    (2, 10), -- Tailwind CSS
+    (2, 20), -- Bootstrap
+    (2, 21), -- PHP
+    (2, 14), -- MySQL
+    (2, 12); -- Laravel
+
+-- Experience 3: TURBOTECH - Content Writing Officer & UI/UX Designer
+INSERT OR IGNORE INTO experience_tech_stacks (experience_id, tech_stack_id)
+VALUES
+    (3, 22), -- Ms.Word
+    (3, 23), -- Ms.Excel
+    (3, 24), -- Ms.Powerpoint
+    (3, 11), -- Figma
+    (3, 25); -- Adobe XD
+
+-- Experience 4: Nintrea Labs - Creator & Developer of Nintrea
+INSERT OR IGNORE INTO experience_tech_stacks (experience_id, tech_stack_id)
+VALUES
+    (4, 11), -- Figma
+    (4, 17), -- HTML
+    (4, 18), -- CSS
+    (4, 15), -- JavaScript
+    (4, 1),  -- TypeScript
+    (4, 16), -- jQuery
+    (4, 10), -- Tailwind CSS
+    (4, 19), -- Sass
+    (4, 20), -- Bootstrap
+    (4, 5),  -- React
+    (4, 6),  -- Next.js
+    (4, 26), -- Nuxt.js
+    (4, 27), -- EJS
+    (4, 21), -- PHP
+    (4, 12), -- Laravel
+    (4, 7),  -- Node.js
+    (4, 13), -- Express.js
+    (4, 4),  -- Hono
+    (4, 8),  -- PostgreSQL
+    (4, 14), -- MySQL
+    (4, 28), -- Vercel
+    (4, 29), -- Netlify
+    (4, 2),  -- Cloudflare Workers
+    (4, 30), -- GitHub
+    (4, 31), -- Ubuntu
+    (4, 32), -- Nginx
+    (4, 33), -- C#
+    (4, 34), -- C++
+    (4, 35), -- Python
+    (4, 36), -- Git
+    (4, 37); -- GitLab
 
 -- -----------------------------------------------------------------------------
 -- 4. Authors and Author Details
