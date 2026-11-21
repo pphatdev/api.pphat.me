@@ -1282,7 +1282,7 @@
                                 ],
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"content\": \"Full article content goes here.\",\n    \"file_path\": \"\",\n    \"published\": true,\n    \"isPublic\": false,\n    \"publishAt\": \"2026-08-15 09:00\",\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ]\n}",
+                                    "raw": "{\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"content\": \"Full article content goes here.\",\n    \"file_path\": \"\",\n    \"published\": true,\n    \"isPublic\": false,\n    \"publishAt\": \"2026-08-15 09:00\",\n    \"tags\": [\n        {\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ]\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1320,7 +1320,7 @@
                                         ],
                                         "body": {
                                             "mode": "raw",
-                                            "raw": "{\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"content\": \"Full article content goes here.\",\n    \"file_path\": \"\",\n    \"published\": true,\n    \"isPublic\": false,\n    \"publishAt\": \"2026-08-15 09:00\",\n    \"author_ids\": [\n        1\n    ],\n    \"tags\": [\n        {\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ]\n}",
+                                            "raw": "{\n    \"title\": \"My Article Title\",\n    \"slug\": \"my-article-slug\",\n    \"description\": \"A short description of the article.\",\n    \"thumbnail\": \"https://example.com/thumbnail.png\",\n    \"content\": \"Full article content goes here.\",\n    \"file_path\": \"\",\n    \"published\": true,\n    \"isPublic\": false,\n    \"publishAt\": \"2026-08-15 09:00\",\n    \"tags\": [\n        {\n            \"tag\": \"typescript\",\n            \"description\": \"TypeScript articles\"\n        }\n    ]\n}",
                                             "options": {
                                                 "raw": {
                                                     "language": "json"

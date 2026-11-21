@@ -23,17 +23,21 @@
 
 ```json
 {
-  "title": "My Article",
-  "slug": "my-article",
-  "description": "A short description.",
+  "title": "My Article Title",
+  "slug": "my-article-slug",
+  "description": "A short description of the article.",
   "thumbnail": "https://example.com/thumbnail.png",
-  "content": "Full article content.",
+  "content": "Full article content goes here.",
   "file_path": "",
-  "published": false,
+  "published": true,
   "isPublic": false,
   "publishAt": "2026-08-15 09:00",
-  "author_ids": [1],
-  "tag_ids": []
+  "tags": [
+    {
+      "tag": "typescript",
+      "description": "TypeScript articles"
+    }
+  ]
 }
 ```
 

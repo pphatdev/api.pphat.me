@@ -74,7 +74,6 @@ export interface CreateArticleDto {
 	/** Asia/Phnom_Penh timestamp (ISO with +07:00 offset or `YYYY-MM-DD HH:mm` local) — when reached, the cron promotes is_public=1 */
 	publish_at?: string | null;
 	owner_id?: string;
-	author_ids?: number[];
 	tags?: { tag: string; description?: string }[];
 }
 

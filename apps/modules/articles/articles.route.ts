@@ -37,7 +37,6 @@ app.get(
  * @param { String } thumbnail      Thumbnail of Articles
  * @param { String } file_path      File Path of Articles
  * @param { Boolean } published     Published Status of Articles
- * @param { String[] } [author_ids] Author IDs of Articles
  * @param { String[] } [tags]       Tags of Articles
  */
 app.post(

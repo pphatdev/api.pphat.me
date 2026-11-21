@@ -271,21 +271,16 @@ export class ArticleRepository implements IArticleRepository {
 	 * @returns { Promise<Article> } The created article
 	 */
 	async create(dto: CreateArticleDto): Promise<Article> {
-		if (dto.author_ids?.length) await this.assertAuthorsExist(dto.author_ids);
-
 		const id = crypto.randomUUID();
 		const now = new Date().toISOString();
 
 		await this.insertArticle(id, dto, now);
 
 		// Business rule: the user who creates the article is credited as an
-		// author. Their explicit co-authors (dto.author_ids) stack on top.
-		// Auto-mints an `authors` row for first-time creators so the hydrated
+		// author. Auto-mints an `authors` row for first-time creators so the hydrated
 		// response can render "by <user>" without a separate onboarding step.
-		const explicitIds = dto.author_ids ?? [];
 		const selfId = dto.owner_id ? await this.resolveSelfAuthorId(dto.owner_id) : null;
-		const authorIds = selfId != null ? Array.from(new Set([selfId, ...explicitIds])) : explicitIds;
-		if (authorIds.length > 0) await this.updateAuthors(id, authorIds);
+		if (selfId != null) await this.updateAuthors(id, [selfId]);
 
 		if (dto.tags?.length) await this.updateTags(id, dto.tags);
 
