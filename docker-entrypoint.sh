@@ -4,6 +4,11 @@ set -e
 # Ensure wrangler config / log directory exists in container
 mkdir -p /root/.config/.wrangler /tmp/.wrangler
 
+# If custom command arguments are provided, execute them directly
+if [ $# -gt 0 ]; then
+    exec "$@"
+fi
+
 echo "Applying pending D1 migrations (local)..."
 if command -v pnpm >/dev/null 2>&1; then
     echo "y" | pnpm exec wrangler d1 migrations apply api --local -y || true

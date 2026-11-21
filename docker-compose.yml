@@ -24,6 +24,27 @@ services:
       - ./scripts:/app/scripts
       - ./wrangler.jsonc:/app/wrangler.jsonc
 
+  studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-pphat-me-studio
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    ports:
+      - "4983:4983"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - d1_data:/app/.wrangler/state/v3/d1
+      - ./drizzle:/app/drizzle
+      - ./scripts:/app/scripts
+      - ./drizzle.config.ts:/app/drizzle.config.ts
+    command: ["node", "scripts/db-studio.js", "--host", "0.0.0.0", "--port", "4983"]
+    depends_on:
+      - api
+
 volumes:
   d1_data:
     name: api_pphat_d1_data

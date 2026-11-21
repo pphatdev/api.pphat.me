@@ -5,16 +5,24 @@ const { spawnSync, spawn } = require('child_process');
 const D1_DIR = path.join('.wrangler', 'state', 'v3', 'd1', 'miniflare-D1DatabaseObject');
 const SCHEMA_FILE = path.join('drizzle', 'schema.ts');
 
-if (!fs.existsSync(D1_DIR)) {
-    console.error(`Local D1 directory not found: ${D1_DIR}`);
-    console.error('Run `npm run migrate:local` first.');
-    process.exit(1);
+function findSqliteFile() {
+    if (!fs.existsSync(D1_DIR)) return null;
+    return fs.readdirSync(D1_DIR).find((f) => f.endsWith('.sqlite'));
 }
 
-const sqliteFile = fs.readdirSync(D1_DIR).find((f) => f.endsWith('.sqlite'));
+let sqliteFile = findSqliteFile();
 if (!sqliteFile) {
-    console.error(`No .sqlite file found in ${D1_DIR}`);
-    console.error('Run `npm run migrate:local` to initialize the database.');
+    console.log('Waiting for local D1 database to be initialized...');
+    for (let i = 0; i < 30; i++) {
+        spawnSync(process.execPath, ['-e', 'setTimeout(() => {}, 500)']);
+        sqliteFile = findSqliteFile();
+        if (sqliteFile) break;
+    }
+}
+
+if (!sqliteFile) {
+    console.error(`Local D1 directory or .sqlite file not found in ${D1_DIR}`);
+    console.error('Run `npm run migrate:local` first to initialize the database.');
     process.exit(1);
 }
 
@@ -54,5 +62,6 @@ if (!fs.existsSync(SCHEMA_FILE)) {
 sanitizeSchema(SCHEMA_FILE);
 
 console.log('Launching Drizzle Studio (Ctrl+C to stop) ...');
-const proc = spawn(process.execPath, [DRIZZLE_BIN, 'studio'], { stdio: 'inherit' });
+const extraArgs = process.argv.slice(2);
+const proc = spawn(process.execPath, [DRIZZLE_BIN, 'studio', ...extraArgs], { stdio: 'inherit' });
 proc.on('exit', (code) => process.exit(code ?? 0));
