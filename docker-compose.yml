@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     container_name: api-pphat-me
     restart: unless-stopped
+    stdin_open: true
+    tty: true
     ports:
       - "8787:8787"
     env_file:
@@ -12,6 +14,7 @@ services:
         required: false
     environment:
       - NODE_ENV=development
+      - WRANGLER_SEND_METRICS=false
     volumes:
       # Persist local D1 SQLite database across container restarts
       - d1_data:/app/.wrangler/state/v3/d1
