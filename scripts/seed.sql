@@ -478,51 +478,101 @@ VALUES
     ('productivity', 'a3000000-0000-4000-8000-000000000003', 'Task and project management');
 
 -- -----------------------------------------------------------------------------
--- 8. FAQs (Frequently Asked Questions with rich article answers)
+-- 8. FAQs (Frequently Asked Questions - About Sophat LEAT)
 -- -----------------------------------------------------------------------------
 INSERT INTO faqs (id, question, slug, answer, category, sort_order, status, article_id, created_at, updated_at)
 VALUES
     (
         1,
-        'What tech stack powers api.pphat.me?',
-        'what-tech-stack-powers-api-pphat-me',
-        '# Technology Stack Overview
-
-api.pphat.me is engineered for extreme edge performance and sub-10ms response times globally.
-
-### Core Architecture
-- **Runtime**: [Cloudflare Workers](https://workers.cloudflare.com) edge computing platform.
-- **Framework**: [Hono.js](https://hono.dev) — ultra-fast, lightweight Web Standards router.
-- **Database**: [Cloudflare D1](https://developers.cloudflare.com/d1) distributed SQLite at the edge.
-- **Type Safety**: End-to-end strict TypeScript with automated Cloudflare bindings generation.
-
-### Key Performance Benefits
-1. Zero cold-starts across hundreds of global edge data centers.
-2. Built-in rate limiting, security headers, and CORS enforcement.
-3. Automated scheduled crons for article publishing and log retention sweeps.',
-        'Technical',
+        'Who is Sophat LEAT?',
+        'who-is-sophat-leat',
+        'Sophat LEAT also known as PPhat or LEAT Sophat (if you can read Khmer: លាត សុផាត) is a Senior Front-end Developer and Freelance UI/UX Designer based in Phnom Penh, Cambodia. He is the creator of pphat.me and specializes in building modern, performant web applications with a focus on user experience.',
+        'About',
         1,
         1,
-        'c1000000-0000-4000-8000-000000000001',
+        NULL,
         '2024-01-01T00:00:00.000Z',
         '2024-01-01T00:00:00.000Z'
     ),
     (
         2,
-        'How can I get in touch for collaborations or freelance projects?',
-        'how-to-collaborate',
-        '# Collaboration & Contact
-
-I am open to full-stack engineering contracts, technical advisory, and frontend architecture consultation.
-
-### Preferred Channels
-- **Email**: Reach out directly at [info.sophat@gmail.com](mailto:info.sophat@gmail.com).
-- **Contact Form**: Submit a message through the contact endpoint (`POST /v1/api/contact`).
-- **LinkedIn / GitHub**: Connect via profile links on [pphat.me](https://pphat.me).
-
-All inquiries typically receive a response within 24–48 hours.',
-        'General',
+        'What does Sophat LEAT do professionally?',
+        'what-does-sophat-leat-do-professionally',
+        'Sophat LEAT works as a Senior Front-end Developer at TURBOTECH CO., LTD and operates as a Freelance UI/UX Designer. He builds responsive, accessible web interfaces and designs intuitive digital experiences for clients, combining technical expertise with a strong design background.',
+        'About',
         2,
+        1,
+        NULL,
+        '2024-01-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    ),
+    (
+        3,
+        'What technologies does Sophat LEAT specialize in?',
+        'what-technologies-does-sophat-leat-specialize-in',
+        'Sophat LEAT specializes in React, Next.js, TypeScript, and Tailwind CSS on the front-end. He also works with Node.js, Express, PostgreSQL, and MongoDB on the back-end. For design he uses Figma and the Adobe Creative Suite, and he deploys projects on Netlify and Vercel.',
+        'About',
+        3,
+        1,
+        NULL,
+        '2024-01-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    ),
+    (
+        4,
+        'Where is Sophat LEAT based?',
+        'where-is-sophat-leat-based',
+        'Sophat LEAT is based in Phnom Penh, Cambodia. He works both on-site at TURBOTECH CO., LTD and remotely as a freelancer for clients around the world.',
+        'About',
+        4,
+        1,
+        NULL,
+        '2024-01-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    ),
+    (
+        5,
+        'How many years of experience does Sophat LEAT have?',
+        'how-many-years-of-experience-does-sophat-leat-have',
+        'Sophat LEAT started his career as a Front-end Developer in 2021, giving him 5+ years of professional experience in web development and UI/UX design. He has worked on a wide range of projects from productivity tools to creative web experiments.',
+        'About',
+        5,
+        1,
+        NULL,
+        '2024-01-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    ),
+    (
+        6,
+        'Where did Sophat LEAT study?',
+        'where-did-sophat-leat-study',
+        'Sophat LEAT studied at Royal University of Phnom Penh. His academic background combined with self-driven learning and real-world project experience has shaped him into a well-rounded developer and designer.',
+        'About',
+        6,
+        1,
+        NULL,
+        '2024-01-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    ),
+    (
+        7,
+        'What is PPhat.me?',
+        'what-is-pphat-me',
+        'PPhat.me is the personal portfolio website of Sophat LEAT (PPhat). It showcases his projects, skills, blog posts, and career journey as a Senior Front-end Developer and UI/UX Designer. The site is built with Next.js and deployed on Netlify.',
+        'About',
+        7,
+        1,
+        NULL,
+        '2024-01-01T00:00:00.000Z',
+        '2024-01-01T00:00:00.000Z'
+    ),
+    (
+        8,
+        'How can I contact Sophat LEAT?',
+        'how-can-i-contact-sophat-leat',
+        'You can contact Sophat LEAT via email at info.sophat@gmail.com, connect with him on LinkedIn at https://kh.linkedin.com/in/pphatdev, or explore his open-source work on GitHub at https://github.com/pphatdev. You can also reach out directly through the contact page at https://pphat.me/contact.',
+        'About',
+        8,
         1,
         NULL,
         '2024-01-01T00:00:00.000Z',

@@ -42,4 +42,4 @@ console.log('  - authors & author_details (Sophat L.)');
 console.log('  - articles (3 published articles with stats & authors)');
 console.log('  - projects & project_details (3 featured portfolio projects)');
 console.log('  - tags (12 article and project scoped tags)');
-console.log('  - faqs (frequently asked questions with article-supported answers)');
+console.log('  - faqs (8 FAQs: About Sophat LEAT)');
