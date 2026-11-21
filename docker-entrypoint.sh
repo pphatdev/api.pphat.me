@@ -22,6 +22,12 @@ if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
     node scripts/create-admin.js || echo "Admin creation step skipped or already exists."
 fi
 
+# Optional: seed portfolio data if SEED_DATA=true
+if [ "$SEED_DATA" = "true" ] || [ "$SEED_DATA" = "1" ]; then
+    echo "Seeding portfolio data..."
+    node scripts/seed-data.js || echo "Seed step skipped or already exists."
+fi
+
 WRANGLER_FLAGS="--ip 0.0.0.0 --port 8787"
 
 # If CLOUDFLARE_API_TOKEN is not configured, run with --local to prevent

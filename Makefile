@@ -1,4 +1,4 @@
-.PHONY: help dev test migrate-local create-admin studio build up down restart logs ps status sh shell clean docker-dev docker-studio
+.PHONY: help dev test migrate-local create-admin seed studio build up down restart logs ps status sh shell clean docker-dev docker-studio docker-seed
 
 # Default target: display help
 help:
@@ -7,6 +7,7 @@ help:
 	@echo "  Local Development (pnpm):"
 	@echo "    make dev             Start local dev server (pnpm dev)"
 	@echo "    make studio          Launch Drizzle Studio for local D1 (pnpm run db:studio)"
+	@echo "    make seed            Apply portfolio seed data (pnpm run db:seed)"
 	@echo "    make test            Run test suite (pnpm test)"
 	@echo "    make migrate-local   Apply local D1 migrations (pnpm run migrate:local)"
 	@echo "    make create-admin    Seed default admin in local D1 (pnpm run db:create-admin)"
@@ -15,6 +16,7 @@ help:
 	@echo "    make up              Start all containers in background (api + studio)"
 	@echo "    make docker-dev      Start containers in foreground (docker compose up)"
 	@echo "    make docker-studio   Start Drizzle Studio in Docker (docker compose up studio)"
+	@echo "    make docker-seed     Run seed script inside api container"
 	@echo "    make build           Build or rebuild Docker images (docker compose build)"
 	@echo "    make down            Stop and remove containers (docker compose down)"
 	@echo "    make restart         Restart running containers (docker compose restart)"
@@ -35,6 +37,10 @@ dev:
 # Open Drizzle Studio for local D1 database
 studio:
 	pnpm run db:studio
+
+# Apply portfolio seed data
+seed:
+	pnpm run db:seed
 
 # Run test suite
 test:
@@ -63,6 +69,10 @@ docker-dev:
 # Start Drizzle Studio in Docker
 docker-studio:
 	docker compose up studio
+
+# Run seed script inside api container
+docker-seed:
+	docker compose exec api node scripts/seed-data.js
 
 # Build or rebuild images
 build:
