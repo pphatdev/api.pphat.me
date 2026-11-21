@@ -256,6 +256,7 @@ export class ExperienceRepository implements IExperienceRepository {
 		for (const row of rows) {
 			const role: TimelineRole = {
 				title: row.title,
+				description: row.description,
 				period: buildPeriod(row.start_date, row.end_date, now),
 				skills: skillsByExperience.get(row.id) ?? [],
 			};

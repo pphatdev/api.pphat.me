@@ -1,42 +1,41 @@
-# Experiences & Resume Timeline API
+# Experiences API
 
 ## Base Path
 `/v1/api/experiences`
 
----
-
 ## Endpoints
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/v1/api/experiences` | **User / Admin** | List flat experiences (paginated, searchable, sorted) |
-| `GET` | `/v1/api/experiences/:id` | **Public** | Get single experience entry by ID |
-| `GET` | `/v1/api/experiences/timeline` | **Public** | Get resume timeline grouped by company with nested roles & skills |
-| `POST` | `/v1/api/experiences` | **Admin** | Create new experience entry |
-| `PATCH` | `/v1/api/experiences/:id` | **Admin** | Update experience entry |
-| `DELETE` | `/v1/api/experiences/:id` | **Admin** | Delete experience entry |
-| `PUT` | `/v1/api/experiences/:id/skills` | **Admin** | Replace all linked tech stack skills for an experience |
-| `POST` | `/v1/api/experiences/:id/skills/:techStackId` | **Admin** | Attach a single tech stack skill to an experience |
-| `DELETE` | `/v1/api/experiences/:id/skills/:techStackId` | **Admin** | Detach a single tech stack skill from an experience |
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/api/experiences` | List experiences (paginated, timeline-ordered) — **requires auth** |
+| `GET` | `/v1/api/experiences/timeline` | **Get Resume Timeline (public)** — grouped by company |
+| `GET` | `/v1/api/experiences/:id` | Get experience by ID (public) |
+| `POST` | `/v1/api/experiences` | Create experience — **admin only** |
+| `PUT` / `PATCH` | `/v1/api/experiences/:id` | Update experience — **admin only** |
+| `DELETE` | `/v1/api/experiences/:id` | Delete experience — **admin only** |
+| `PUT` | `/v1/api/experiences/:id/skills` | Replace all linked skills/tech stacks — **admin only** |
+| `POST` | `/v1/api/experiences/:id/skills/:techStackId` | Attach single skill — **admin only** |
+| `DELETE` | `/v1/api/experiences/:id/skills/:techStackId` | Detach single skill — **admin only** |
+
+### Sortable columns
+`id`, `title`, `company`, `start_date`, `end_date`, `status`, `created_at`, `updated_at`
+
+### Search fields
+`title`, `company`, `description`
 
 ---
 
 ## Get Resume Timeline (Public)
 
-### `GET /v1/api/experiences/timeline`
+`GET /v1/api/experiences/timeline?page=1&limit=10`
 
-Returns active experiences (`status = 1`) grouped by company, with roles ordered current-first and tech-stack links mapped to skills. Designed specifically for CV and portfolio timeline visualizations.
+Returns active experiences (`status = 1`) grouped by company in timeline order (current/ongoing roles bubble to the top).
 
-#### Query Parameters
+### Query Parameters
+- `page` (number, default: 1): Page number.
+- `limit` (number, default: 10): Companies per page (max: 100).
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `page` | integer | `1` | 1-based page number |
-| `limit` | integer | `10` | Number of **companies** per page (max: 100) |
-
-> **Note on Pagination**: The pagination unit is **company**, not individual experience rows. This guarantees that all roles held at a given company are returned together in the same response page without being split across page boundaries.
-
-#### Response Format (`200 OK`)
+### Response Schema
 
 ```json
 {
@@ -44,10 +43,11 @@ Returns active experiences (`status = 1`) grouped by company, with roles ordered
     {
       "company": "TechCorp Solutions",
       "url": "https://example.com",
-      "logo": "https://example.com/logo.png",
+      "logo": "https://cdn-icons-png.flaticon.com/512/3061/3061341.png",
       "roles": [
         {
           "title": "Senior Full-Stack Engineer",
+          "description": "Architected and built scalable edge microservices and developer platforms using Cloudflare Workers, Hono, and TypeScript.",
           "period": {
             "from": "2023, Mar",
             "isCurrent": true,
@@ -55,14 +55,14 @@ Returns active experiences (`status = 1`) grouped by company, with roles ordered
           },
           "skills": [
             {
-              "name": "TypeScript",
-              "icon": "devicon-typescript-plain",
-              "url": "https://www.typescriptlang.org"
-            },
-            {
               "name": "Cloudflare Workers",
               "icon": "devicon-cloudflare-plain",
               "url": "https://workers.cloudflare.com"
+            },
+            {
+              "name": "TypeScript",
+              "icon": "devicon-typescript-plain",
+              "url": "https://www.typescriptlang.org"
             }
           ]
         }
@@ -78,36 +78,30 @@ Returns active experiences (`status = 1`) grouped by company, with roles ordered
 }
 ```
 
-#### Field Explanations
-
-- `period.from`: Role start date formatted as `"YYYY, Mmm"` (e.g., `"2023, Mar"`).
-- `period.to`: Role end date formatted as `"YYYY, Mmm"`. When `isCurrent` is `true`, this automatically reflects the current month and year so client applications can display a live date badge or timeline range.
-- `period.isCurrent`: Boolean flag indicating whether the role is ongoing (`end_date IS NULL`).
-- `skills`: Array of `{ name, icon, url }` populated from the `tech_stacks` table via the `experience_tech_stacks` junction table.
+> **Note**: Each role object inside `roles` contains:
+> - `title` (string): Job title / role name.
+> - `description` (string): Responsibilities and achievements for that role.
+> - `period` (object): Formatted timeline range `{ from, isCurrent, to }`.
+> - `skills` (array): Associated tech stacks `{ name, icon, url }`.
 
 ---
 
-## Experience Management (Admin)
+## Request Body (Create / Update Experience)
 
-### Create Experience (`POST /v1/api/experiences`)
-
-#### Request Body
 ```json
 {
-  "title": "Senior Software Engineer",
-  "company": "TechCorp Solutions",
-  "description": "Led backend architecture and edge services.",
-  "start_date": "2023-03-01",
+  "title": "Senior Engineer",
+  "company": "Acme Co",
+  "description": "Built scalable cloud services.",
+  "start_date": "2023-01-01",
   "end_date": null,
-  "location": "Phnom Penh, Cambodia (Remote)",
+  "location": "Remote",
   "employment_type": "full-time",
-  "company_url": "https://example.com",
-  "logo_url": "https://example.com/logo.png",
+  "company_url": "https://acme.com",
+  "logo_url": "https://acme.com/logo.png",
   "cover": null,
   "status": 1
 }
 ```
 
-- **Required**: `title`, `company`, `start_date`
-- **Optional**: `description`, `end_date` (`null` = current role), `location`, `employment_type` (`full-time`, `part-time`, `contract`, `internship`, `freelance`), `company_url`, `logo_url`, `cover`, `status` (`0` inactive, `1` active — default `1`)
-- CamelCase aliases accepted (`startDate`, `endDate`, `employmentType`, `companyUrl`, `logoUrl`).
+**Allowed `employment_type` values:** `full-time`, `part-time`, `contract`, `internship`, `freelance`
