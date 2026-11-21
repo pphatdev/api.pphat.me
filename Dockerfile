@@ -6,13 +6,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# Enable corepack and install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
 
-# Copy dependency manifests
-COPY package.json package-lock.json ./
+# Ensure directories for wrangler logs & state exist
+RUN mkdir -p /root/.config/.wrangler /tmp/.wrangler
 
-# Install all dependencies (including devDependencies required for wrangler & typescript)
-RUN npm ci
+# Copy dependency manifests
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* package-lock.json* ./
+
+
+# Install dependencies using pnpm (or npm fallback)
+RUN if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else npm ci; fi
 
 # Copy project files
 COPY . .
@@ -24,7 +31,7 @@ RUN chmod +x /app/docker-entrypoint.sh
 EXPOSE 8787
 
 # Healthcheck
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+HEALTHCHECK --interval=20s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8787/ || exit 1
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
