@@ -47,6 +47,20 @@ app.post(
 );
 
 /**
+ * @description Replace the admin-controlled article display order
+ * @method PUT
+ * @body `{ ids: string[] }` Article IDs (UUIDs) in the desired order
+ *
+ * Declared before `/:slug` so the literal segment "reorder" isn't swallowed
+ * by the slug catch-all (Hono matches by declaration order).
+ */
+app.put(
+    '/v1/api/articles/reorder',
+    authGuard,
+    ArticlesController.reorder
+);
+
+/**
  * @description List articles by author (owner | admin — includes drafts)
  * @method GET
  * @param { Number } authorId Author ID

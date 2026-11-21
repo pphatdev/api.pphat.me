@@ -67,10 +67,13 @@ export class ArticleRepository implements IArticleRepository {
 	 * @returns { string } The SQL ORDER BY clause
 	 */
 	private buildOrderBy(sort: string[] | undefined, order: 'asc' | 'desc' | undefined): string {
-		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
+		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'position', 'created_at', 'updated_at'];
+		// `position` is the admin-controlled order (migration 0027); callers
+		// that don't pin a sort get `position ASC` then `created_at DESC` as a
+		// deterministic tiebreak, so new rows at position 0 cluster by age.
+		if (!sort?.length) return 'position ASC, created_at DESC';
 		const safeOrder = order === 'asc' ? 'ASC' : 'DESC';
-		const sortCols = (sort?.length ? sort : ['created_at']);
-		return sortCols
+		return sort
 			.map(col => `${ALLOWED_SORT.includes(col) ? col : 'created_at'} ${safeOrder}`)
 			.join(', ');
 	}
@@ -611,6 +614,30 @@ export class ArticleRepository implements IArticleRepository {
 	}
 
 	/**
+	 * @description Replace the admin-controlled sort order. Writes
+	 * `position = 0..N-1` for the given ids and leaves other rows alone.
+	 * Unknown ids are silently skipped (so a stale client list doesn't fail
+	 * the whole batch).
+	 * @param { string[] } orderedIds Article ids in the desired display order
+	 * @returns { Promise<number> } Number of rows actually updated
+	 */
+	async reorder(orderedIds: string[]): Promise<number> {
+		if (orderedIds.length === 0) return 0;
+		// Dedupe while preserving the first occurrence so a buggy client
+		// with a repeated id doesn't produce the same position twice.
+		const seen = new Set<string>();
+		const unique = orderedIds.filter((id) => (seen.has(id) ? false : seen.add(id).size > 0));
+
+		const stmts = unique.map((id, index) =>
+			this.db
+				.prepare("UPDATE articles SET position = ?1 WHERE id = ?2")
+				.bind(index, id),
+		);
+		const results = await this.db.batch(stmts);
+		return results.reduce((sum, r) => sum + (r.meta?.changes ?? 0), 0);
+	}
+
+	/**
 	 * @description Internal: hydrate article with stats and reactions
 	 * @param { ArticleRow } row The database row
 	 * @returns { Promise<Article> }
@@ -739,6 +766,7 @@ export class ArticleRepository implements IArticleRepository {
 				status: this.computeStatus(row),
 				ownerId: row.owner_id,
 				owner: row.owner_id ? ownerById.get(row.owner_id) ?? null : null,
+				position: row.position ?? 0,
 				createdAt: row.created_at,
 				updatedAt: row.updated_at,
 				filePath: row.file_path,

@@ -78,4 +78,13 @@ export class ArticleService {
 	removeContributor(articleId: string, userId: string): Promise<boolean> {
 		return this.repo.removeContributor(articleId, userId);
 	}
+
+	/**
+	 * @description Replace the admin-controlled display order of articles.
+	 * @param { string[] } orderedIds Article ids in the desired display order
+	 * @returns { Promise<number> } Rows updated
+	 */
+	reorder(orderedIds: string[]): Promise<number> {
+		return this.repo.reorder(orderedIds);
+	}
 }
