@@ -8,6 +8,7 @@ import { ProjectRepository } from "../projects/projects.repo";
 import { AuthorRepository } from "../authors/authors.repo";
 import { TechStackRepository } from "../tech-stacks/tech-stacks.repo";
 import { ExperienceRepository } from "../experiences/experiences.repo";
+import { SkillRepository } from "../skills/skills.repo";
 
 export class DashboardController {
 	/**
@@ -24,8 +25,9 @@ export class DashboardController {
 		const authorRepo = new AuthorRepository(db);
 		const techStackRepo = new TechStackRepository(db);
 		const experienceRepo = new ExperienceRepository(db);
+		const skillRepo = new SkillRepository(db);
 
-		const repo = new DashboardRepository(db, articleRepo, projectRepo, authorRepo, techStackRepo, experienceRepo);
+		const repo = new DashboardRepository(db, articleRepo, projectRepo, authorRepo, techStackRepo, experienceRepo, skillRepo);
 		const service = new DashboardService(repo);
 
 		const data = await service.getDashboardInitData();
@@ -48,7 +50,8 @@ export class DashboardController {
 		const authorRepo = new AuthorRepository(db);
 		const techStackRepo = new TechStackRepository(db);
 		const experienceRepo = new ExperienceRepository(db);
-		const repo = new DashboardRepository(db, articleRepo, projectRepo, authorRepo, techStackRepo, experienceRepo);
+		const skillRepo = new SkillRepository(db);
+		const repo = new DashboardRepository(db, articleRepo, projectRepo, authorRepo, techStackRepo, experienceRepo, skillRepo);
 
 		const POLL_INTERVAL_MS = 5000;
 		const MAX_STREAM_DURATION_MS = 10 * 60 * 1000; // 10 min hard cap; client reconnects
