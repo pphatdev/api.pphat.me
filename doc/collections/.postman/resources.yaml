@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: c0598ccb-8380-4034-8f48-27cd190d75aa
+
+localResources:
+  collections:
+    - ../api-pphat-me-1
