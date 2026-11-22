@@ -1,0 +1,21 @@
+$kind: http-request
+description: Update an existing service. Admin only.
+url: "{{baseUrl}}/v1/api/services/{{serviceId}}"
+method: PUT
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Full-Stack Web Development",
+      "description": "Enterprise-ready full-stack applications built with modern frameworks and edge infrastructure.",
+      "icon": "terminal",
+      "category": "Development",
+      "status": 1
+    }
+order: 8000

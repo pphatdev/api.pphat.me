@@ -1,0 +1,36 @@
+$kind: http-request
+description: List services with pagination, search, category, and status filters. Public callers see active; admin sees all.
+url: "{{baseUrl}}/v1/api/services?page=1&limit=10"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Optional Bearer token (admin sees inactive services)
+queryParams:
+  - key: page
+    value: "1"
+    description: Page number
+  - key: limit
+    value: "10"
+    description: Items per page (-1 for all)
+  - key: search
+    value: ""
+    disabled: true
+    description: Match title, description, category, or features
+  - key: category
+    value: Development
+    disabled: true
+    description: Filter by category
+  - key: status
+    value: "1"
+    disabled: true
+    description: "0 (inactive), 1 (active), or 'all' (admin only)"
+  - key: sort
+    value: sort_order
+    disabled: true
+    description: sort_order, id, title, category, created_at, updated_at
+  - key: order
+    value: asc
+    disabled: true
+    description: asc | desc
+order: 4000

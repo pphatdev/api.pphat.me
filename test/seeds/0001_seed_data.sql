@@ -174,4 +174,49 @@ INSERT OR IGNORE INTO gallery (
     '2026-11-22T14:20:00.000Z'
 );
 
+-- Seed Service Section Header
+INSERT OR IGNORE INTO service_sections (
+    id, badge, title, description, status, created_at, updated_at
+) VALUES (
+    1,
+    'Feature',
+    'What I can do for you',
+    'I can help you build your next project from scratch. I have experience in web development, design, and cloud hosting. I can help you with everything from the initial design to the final deployment.',
+    1,
+    '2026-01-01T00:00:00.000Z',
+    '2026-01-01T00:00:00.000Z'
+);
+
+-- Seed Services
+INSERT OR IGNORE INTO services (
+    id, title, description, icon, category, features, link_url, sort_order, status, created_at, updated_at
+) VALUES 
+(
+    1,
+    'Web Development',
+    'Built with the latest and greatest technologies.',
+    'terminal',
+    'Development',
+    '["Full-Stack Web Apps", "High Performance APIs", "Edge Computing"]',
+    '',
+    1,
+    1,
+    '2026-01-01T00:00:00.000Z',
+    '2026-01-01T00:00:00.000Z'
+),
+(
+    2,
+    'Web Hosting',
+    'Hosted on the cloud with 99.9% uptime.',
+    'cloud',
+    'Infrastructure',
+    '["Cloudflare Edge Workers", "D1 SQLite Database", "SSL & DDoS Protection"]',
+    '',
+    2,
+    1,
+    '2026-01-01T00:00:00.000Z',
+    '2026-01-01T00:00:00.000Z'
+);
+
+
 
