@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/api/tags"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tag": "javascript",
+      "description": "Articles about JavaScript."
+    }
+order: 3000

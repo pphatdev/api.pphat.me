@@ -1,0 +1,17 @@
+$kind: http-request
+description: Submit a message via the contact form. Public endpoint with rate limiting. Returns 422 if the email format is invalid.
+url: "{{baseUrl}}/v1/api/contact"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "subject": "Inquiry about your services",
+      "message": "Hello, I am interested in collaborating on a project."
+    }
+examples: ./.resources/Submit Contact Form.resources/examples
+order: 1000

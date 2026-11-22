@@ -1,0 +1,9 @@
+$kind: http-request
+description: Decrements the count for a specific reaction type.
+url: "{{baseUrl}}/v1/api/articles/{{slug}}/reactions/like"
+method: DELETE
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — authenticated users only
+order: 4000

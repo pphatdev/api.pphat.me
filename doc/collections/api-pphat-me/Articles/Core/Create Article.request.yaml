@@ -1,0 +1,38 @@
+$kind: http-request
+description: |-
+  Creates a new article. The authenticated user becomes the owner (owner_id). Returns 201 with the created article.
+
+  **Publish scheduling (Asia/Phnom_Penh, +07:00):**
+  - `published: true, isPublic: false, publishAt: '2026-08-15 09:00'` → hidden until the cron promotes it at that Phnom_Penh local time.
+  - `published: true, isPublic: true` → visible immediately.
+  - `publishAt` accepts either bare `YYYY-MM-DD HH:mm` (interpreted as Phnom_Penh local) or a full ISO with any offset. Past times auto-promote on create.
+url: "{{baseUrl}}/v1/api/articles"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — authenticated users only
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "title": "My Article Title",
+        "slug": "my-article-slug",
+        "description": "A short description of the article.",
+        "thumbnail": "https://example.com/thumbnail.png",
+        "content": "Full article content goes here.",
+        "file_path": "",
+        "published": true,
+        "isPublic": false,
+        "publishAt": "2026-08-15 09:00",
+        "tags": [
+            {
+                "tag": "typescript",
+                "description": "TypeScript articles"
+            }
+        ]
+    }
+examples: ./.resources/Create Article.resources/examples
+order: 4000

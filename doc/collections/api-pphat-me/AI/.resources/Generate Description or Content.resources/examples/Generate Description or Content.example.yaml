@@ -1,0 +1,53 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/ai/generate"
+  method: POST
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: JWT token — authenticated users only
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "title": "Hello World",
+        "context": "API for blog and project management.",
+        "tone": "professional and friendly",
+        "language": "English",
+        "mode": "both",
+        "model": "@cf/meta/llama-3.1-8b-instruct"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "60"
+    X-RateLimit-Remaining: "59"
+    X-RateLimit-Reset: "60"
+  body:
+    type: text
+    content: |-
+      {
+          "model": "@cf/meta/llama-3.1-8b-instruct",
+          "mode": "both",
+          "data": {
+              "description": "A basic 'Hello World' example for the API, demonstrating a successful request.",
+              "content": "# Hello World\n\n## Overview\n\nThis is a basic example of a successful request to the API.\n\n## Request\n\n### HTTP Method\n\n* `GET`\n\n### Endpoint\n\n* `/hello`\n\n### Request Body\n\n* None\n\n## Response\n\n### Status Code\n\n* `200 OK`\n\n### Response Body\n\n* `Hello World!`\n\n## Example Use Case\n\nYou can use this endpoint to test your API connection and ensure it's working as expected."
+          },
+          "usage": {
+              "tokens": {
+                  "prompt_tokens": 235,
+                  "completion_tokens": 138,
+                  "total_tokens": 373,
+                  "prompt_tokens_details": {
+                      "cached_tokens": 0
+                  }
+              }
+          }
+      }
+order: 1000

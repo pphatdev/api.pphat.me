@@ -1,0 +1,12 @@
+$kind: http-request
+description: Exchanges the GitHub authorization code for a JWT pair. Returns { accessToken, refreshToken }.
+url: "{{baseUrl}}/v1/api/auth/github/callback?code=GITHUB_CODE&state=OAUTH_STATE"
+method: GET
+queryParams:
+  - key: code
+    value: GITHUB_CODE
+    description: Authorization code returned by GitHub
+  - key: state
+    value: OAUTH_STATE
+    description: State value returned by GitHub (CSRF token)
+order: 2000

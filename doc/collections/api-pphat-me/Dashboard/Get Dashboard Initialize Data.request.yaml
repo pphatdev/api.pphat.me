@@ -1,0 +1,18 @@
+$kind: http-request
+description: |-
+  Returns a summary of stats, live traffic, top visited items, and newest items (recent activities feed) for the admin dashboard. Requires Admin role.
+
+  **Recent-activities buckets:**
+  - `newestPosts` — latest articles
+  - `newestProjects` — latest projects
+  - `newestContributors` — latest authors
+  - `newestTechStacks` — latest tech-stack catalog entries
+  - `newestExperiences` — latest resume timeline entries
+url: "{{baseUrl}}/v1/api/dashboard"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+examples: ./.resources/Get Dashboard Initialize Data.resources/examples
+order: 1000

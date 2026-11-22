@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/api/authors/{{authorId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+        "name": "Jane Doe",
+        "profile": "Senior Engineer",
+        "url": "https://janedoe.com",
+        "bio": "Updated bio.",
+        "avatar_url": "https://example.com/new-avatar.png",
+        "social_links": [
+            "https://twitter.com/janedoe"
+        ],
+        "status": 1
+    }
+order: 4000

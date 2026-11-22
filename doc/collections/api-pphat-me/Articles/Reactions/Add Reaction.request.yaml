@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/api/articles/{{slug}}/reactions"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — authenticated users only
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "type": "like"
+    }
+examples: ./.resources/Add Reaction.resources/examples
+order: 2000

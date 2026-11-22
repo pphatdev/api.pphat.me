@@ -1,0 +1,22 @@
+$kind: http-request
+description: Update project order sequence with explicit sequence index numbers. Admin only.
+url: "{{baseUrl}}/v1/api/projects/order-sequence"
+method: PATCH
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "sequence": [
+        {
+          "id": "{{projectId}}",
+          "sequence": 0
+        }
+      ]
+    }
+order: 3000

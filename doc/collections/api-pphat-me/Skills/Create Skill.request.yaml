@@ -1,0 +1,33 @@
+$kind: http-request
+description: |-
+  Create a skill. Admin only.
+
+  **Required:** tech_stack_id (FK into tech_stacks).
+  **Optional:** level (beginner | intermediate | advanced | expert, default intermediate), years_of_experience (number, nullable), description, sort_order (integer, default 0), status (0 inactive, 1 active, default 1).
+
+  CamelCase aliases accepted for: techStackId, yearsOfExperience, sortOrder.
+
+  **Conflicts:**
+  - 409 if a skill already references the same tech_stack_id (unique index).
+  - 422 if tech_stack_id does not exist.
+url: "{{baseUrl}}/v1/api/skills"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "tech_stack_id": {{techStackId}},
+        "level": "advanced",
+        "years_of_experience": 3.5,
+        "description": "Server-rendered React with RSC.",
+        "sort_order": 10,
+        "status": 1
+    }
+examples: ./.resources/Create Skill.resources/examples
+order: 3000

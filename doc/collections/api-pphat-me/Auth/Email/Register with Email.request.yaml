@@ -1,0 +1,16 @@
+$kind: http-request
+description: Creates a new email account and sends a 6-digit OTP to verify the email. Password must be at least 8 characters. Returns 201 on success.
+url: "{{baseUrl}}/v1/api/auth/email/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "info.sophat@gmail.com",
+      "name": "John Doe",
+      "password": "mypassword123"
+    }
+examples: ./.resources/Register with Email.resources/examples
+order: 1000

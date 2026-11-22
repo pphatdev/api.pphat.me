@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/api/articles/{{slug}}/comments"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — authenticated users only
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "authorName": "John Doe",
+      "content": "Great article!"
+    }
+examples: ./.resources/Create Comment.resources/examples
+order: 2000

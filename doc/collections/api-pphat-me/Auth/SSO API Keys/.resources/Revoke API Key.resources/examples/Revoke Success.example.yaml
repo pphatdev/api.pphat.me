@@ -1,0 +1,20 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/auth/sso/keys/{{ssoKeyId}}"
+  method: DELETE
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: JWT access token
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "message": "API key revoked"
+      }
+order: 1000

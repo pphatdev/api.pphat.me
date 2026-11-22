@@ -1,0 +1,10 @@
+$kind: http-request
+description: Increments the count for a specific reaction type (like, love, haha, sad, angry).
+url: "{{baseUrl}}/v1/api/articles/{{slug}}/reactions/like"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — authenticated users only
+examples: ./.resources/Increment Reaction by Type.resources/examples
+order: 3000

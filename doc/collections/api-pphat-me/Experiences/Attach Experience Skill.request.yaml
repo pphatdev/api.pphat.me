@@ -1,0 +1,9 @@
+$kind: http-request
+description: "Attach a single tech stack to an experience. Admin only. Idempotent — response `{ attached: true | false }` indicates whether the link was newly created."
+url: "{{baseUrl}}/v1/api/experiences/{{experienceId}}/skills/{{techStackId}}"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+order: 8000

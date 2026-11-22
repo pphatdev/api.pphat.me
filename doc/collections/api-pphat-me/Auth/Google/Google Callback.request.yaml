@@ -1,0 +1,12 @@
+$kind: http-request
+description: Exchanges the Google authorization code for a JWT pair. Returns { accessToken, refreshToken }.
+url: "{{baseUrl}}/v1/api/auth/google/callback?code=GOOGLE_CODE&state=OAUTH_STATE"
+method: GET
+queryParams:
+  - key: code
+    value: GOOGLE_CODE
+    description: Authorization code returned by Google
+  - key: state
+    value: OAUTH_STATE
+    description: State value returned by Google (CSRF token)
+order: 2000

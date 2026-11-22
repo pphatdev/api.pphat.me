@@ -1,0 +1,31 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/auth/email/verify"
+  method: POST
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "info.sophat@gmail.com",
+        "otp": "506102"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "20"
+    X-RateLimit-Remaining: "18"
+    X-RateLimit-Reset: "24"
+  body:
+    type: text
+    content: |-
+      {
+          "accessToken": "<ACCESS_TOKEN>",
+          "refreshToken": "<REFRESH_TOKEN>"
+      }
+order: 1000

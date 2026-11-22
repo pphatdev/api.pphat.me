@@ -1,0 +1,5 @@
+$kind: http-request
+description: Redirects to GitHub OAuth authorization page. Open this URL in a browser; after approving, GitHub will redirect to the callback URL with a code.
+url: "{{baseUrl}}/v1/api/auth/github"
+method: GET
+order: 1000

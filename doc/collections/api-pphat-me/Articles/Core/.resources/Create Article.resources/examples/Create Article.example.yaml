@@ -1,0 +1,80 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/articles"
+  method: POST
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: JWT token — authenticated users only
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "title": "My Article Title",
+          "slug": "my-article-slug",
+          "description": "A short description of the article.",
+          "thumbnail": "https://example.com/thumbnail.png",
+          "content": "Full article content goes here.",
+          "file_path": "",
+          "published": true,
+          "isPublic": false,
+          "publishAt": "2026-08-15 09:00",
+          "tags": [
+              {
+                  "tag": "typescript",
+                  "description": "TypeScript articles"
+              }
+          ]
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "60"
+    X-RateLimit-Remaining: "59"
+    X-RateLimit-Reset: "60"
+  body:
+    type: text
+    content: |-
+      {
+          "id": "c67640b9-dd5c-44a9-93de-4efd8cded2a8",
+          "title": "My Article Title",
+          "slug": "my-article-slug",
+          "description": "A short description of the article.",
+          "tags": [
+              {
+                  "id": 1,
+                  "tag": "typescript",
+                  "description": "TypeScript articles"
+              }
+          ],
+          "authors": [
+              {
+                  "name": "PPhat Dev",
+                  "profile": "Front-End Developer",
+                  "url": "https://pphat.me"
+              }
+          ],
+          "thumbnail": "https://example.com/thumbnail.png",
+          "published": true,
+          "isPublic": false,
+          "publishAt": "2026-08-15T09:00:00+07:00",
+          "status": "queue",
+          "ownerId": "d80d99fd-5237-4751-ad8b-89e7150aa889",
+          "owner": {
+              "id": "d80d99fd-5237-4751-ad8b-89e7150aa889",
+              "name": "PPhat Dev",
+              "avatar": "https://avatars.githubusercontent.com/u/1?v=4",
+              "role": "user"
+          },
+          "createdAt": "2026-04-27T03:45:51.505Z",
+          "updatedAt": "2026-04-27T03:45:51.505Z",
+          "content": "Full article content goes here.",
+          "filePath": ""
+      }
+order: 1000

@@ -1,0 +1,42 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/faqs"
+  method: POST
+  headers:
+    Authorization: Bearer {{token}}
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "question": "What tech stack powers api.pphat.me?",
+          "answer": "# Technology Stack Overview\n\napi.pphat.me is engineered for extreme edge performance.",
+          "category": "Technical",
+          "sort_order": 1,
+          "status": 1
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "id": 1,
+          "question": "What tech stack powers api.pphat.me?",
+          "slug": "what-tech-stack-powers-api-pphat-me",
+          "answer": "# Technology Stack Overview\n\napi.pphat.me is engineered for extreme edge performance.",
+          "content": "# Technology Stack Overview\n\napi.pphat.me is engineered for extreme edge performance.",
+          "category": "Technical",
+          "sortOrder": 1,
+          "status": 1,
+          "articleId": null,
+          "article": null,
+          "readingMins": 1,
+          "wordCount": 12,
+          "createdAt": "2026-11-21T10:00:00.000Z",
+          "updatedAt": "2026-11-21T10:00:00.000Z"
+      }
+order: 1000

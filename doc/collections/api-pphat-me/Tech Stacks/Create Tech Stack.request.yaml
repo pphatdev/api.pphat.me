@@ -1,0 +1,32 @@
+$kind: http-request
+description: |-
+  Create a tech stack. Admin only.
+
+  **Fields:**
+  - `name` (required)
+  - `description` (optional, default '')
+  - `url` (optional, default '')
+  - `logo_url` (optional, default ''). Accepts `logoUrl` camelCase alias.
+  - `cover` (optional, nullable)
+  - `status` (optional: 0 inactive, 1 active — default 1)
+url: "{{baseUrl}}/v1/api/tech-stacks"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "name": "React",
+        "description": "A JavaScript library for building user interfaces.",
+        "url": "https://react.dev",
+        "logo_url": "https://react.dev/favicon.ico",
+        "cover": "https://example.com/react-cover.png",
+        "status": 1
+    }
+examples: ./.resources/Create Tech Stack.resources/examples
+order: 3000

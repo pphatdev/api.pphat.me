@@ -1,0 +1,48 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/authors"
+  method: POST
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "name": "PPhat Dev",
+          "profile": "Front-End Developer",
+          "url": "https://pphat.me",
+          "bio": "A passionate writer and developer.",
+          "avatar_url": "https://example.com/avatar.png",
+          "social_links": [
+              "https://pphat.me"
+          ],
+          "status": 1
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "60"
+    X-RateLimit-Remaining: "59"
+    X-RateLimit-Reset: "60"
+  body:
+    type: text
+    content: |-
+      {
+          "id": 1,
+          "name": "PPhat Dev",
+          "profile": "Front-End Developer",
+          "url": "https://pphat.me",
+          "bio": "A passionate writer and developer.",
+          "avatarUrl": "https://example.com/avatar.png",
+          "socialLinks": [
+              "https://pphat.me"
+          ],
+          "status": 1,
+          "createdAt": "2026-04-27T03:44:09.952Z",
+          "updatedAt": "2026-04-27T03:44:09.952Z"
+      }
+order: 1000

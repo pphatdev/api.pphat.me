@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/api/projects"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "My Project",
+      "slug": "my-project",
+      "description": "A short description of the project.",
+      "thumbnail": "https://example.com/thumbnail.png",
+      "published": false,
+      "tag_ids": [],
+      "contributor_ids": [],
+      "languages": ["TypeScript"],
+      "content": "Full project description in markdown.",
+      "demoUrl": "https://demo.example.com",
+      "repoUrl": "https://github.com/example/project",
+      "techStack": ["TypeScript", "Cloudflare Workers", "D1"],
+      "status": "in-progress"
+    }
+order: 3000

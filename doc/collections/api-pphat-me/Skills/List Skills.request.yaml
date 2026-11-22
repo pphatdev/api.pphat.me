@@ -1,0 +1,28 @@
+$kind: http-request
+description: List skills. Each row embeds its `techStack` ({ id, name, icon, image, url }) sourced from the tech_stacks catalog.
+url: "{{baseUrl}}/v1/api/skills?page=1&limit=10"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT access token or an SSO API key via `ApiKey {{apiKey}}`
+queryParams:
+  - key: page
+    value: "1"
+    description: "Page number (default: 1)"
+  - key: limit
+    value: "10"
+    description: "Items per page (default: 10, max: 100)"
+  - key: search
+    value: ""
+    disabled: true
+    description: Match against tech-stack name or skill description
+  - key: sort
+    value: sort_order
+    disabled: true
+    description: "id, name, level, sort_order, status, created_at, updated_at (default: sort_order ASC, name ASC)"
+  - key: order
+    value: asc
+    disabled: true
+    description: asc | desc
+order: 1000

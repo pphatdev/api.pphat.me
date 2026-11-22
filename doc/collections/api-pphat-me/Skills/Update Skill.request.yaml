@@ -1,0 +1,19 @@
+$kind: http-request
+description: Partial update. Admin only. Any subset of create fields is accepted.
+url: "{{baseUrl}}/v1/api/skills/{{skillId}}"
+method: PATCH
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "level": "expert",
+        "years_of_experience": 5,
+        "sort_order": 1
+    }
+order: 4000

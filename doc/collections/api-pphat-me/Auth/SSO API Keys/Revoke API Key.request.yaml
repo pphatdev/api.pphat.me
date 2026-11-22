@@ -1,0 +1,10 @@
+$kind: http-request
+description: Revokes the specified API key. Subsequent requests using that key will return 401.
+url: "{{baseUrl}}/v1/api/auth/sso/keys/{{ssoKeyId}}"
+method: DELETE
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT access token
+examples: ./.resources/Revoke API Key.resources/examples
+order: 3000

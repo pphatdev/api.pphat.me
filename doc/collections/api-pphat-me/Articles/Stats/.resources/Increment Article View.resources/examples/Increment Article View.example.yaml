@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/articles/{{slug}}/stats/view"
+  method: POST
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: JWT token — authenticated users only
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "120"
+    X-RateLimit-Remaining: "119"
+    X-RateLimit-Reset: "60"
+  body:
+    type: text
+    content: |-
+      {
+          "articleId": "c67640b9-dd5c-44a9-93de-4efd8cded2a8",
+          "views": 1,
+          "readingMins": 1
+      }
+order: 1000

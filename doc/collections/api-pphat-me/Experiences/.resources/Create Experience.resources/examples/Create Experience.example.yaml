@@ -1,0 +1,48 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/experiences"
+  method: POST
+  headers:
+    Authorization: Bearer {{token}}
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "title": "Senior Software Engineer",
+          "company": "Acme Co",
+          "description": "Led the platform team.",
+          "start_date": "2023-01-01",
+          "end_date": null,
+          "location": "Remote",
+          "employment_type": "full-time",
+          "company_url": "https://acme.example",
+          "logo_url": "https://acme.example/logo.png",
+          "cover": "https://acme.example/cover.png",
+          "status": 1
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "id": 1,
+          "title": "Senior Software Engineer",
+          "company": "Acme Co",
+          "description": "Led the platform team.",
+          "startDate": "2023-01-01",
+          "endDate": null,
+          "location": "Remote",
+          "employmentType": "full-time",
+          "companyUrl": "https://acme.example",
+          "logoUrl": "https://acme.example/logo.png",
+          "cover": "https://acme.example/cover.png",
+          "status": 1,
+          "createdAt": "2026-11-20T08:50:00.000Z",
+          "updatedAt": "2026-11-20T08:50:00.000Z"
+      }
+order: 1000

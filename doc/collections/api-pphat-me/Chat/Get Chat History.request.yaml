@@ -1,0 +1,9 @@
+$kind: http-request
+description: Returns the chat history for the authenticated user.
+url: "{{baseUrl}}/v1/api/chat/history"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token required
+order: 2000

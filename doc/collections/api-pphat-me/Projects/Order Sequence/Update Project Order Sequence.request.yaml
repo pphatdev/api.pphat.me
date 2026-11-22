@@ -1,0 +1,19 @@
+$kind: http-request
+description: "Update the project order sequence. Admin only. Accepts `{ ids: string[] }`, `{ sequence: string[] }`, bare array `string[]`, or explicit assignments `{ sequence: [{ id, sequence }] }`."
+url: "{{baseUrl}}/v1/api/projects/order-sequence"
+method: PUT
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "ids": [
+        "{{projectId}}"
+      ]
+    }
+order: 2000

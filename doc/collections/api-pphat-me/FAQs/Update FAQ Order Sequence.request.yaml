@@ -1,0 +1,19 @@
+$kind: http-request
+description: "Update FAQ order sequence. Admin only. Accepts `{ ids: number[] }`, `{ sequence: number[] }`, bare array `number[]`, or explicit assignments `{ sequence: [{ id, sequence }] }`."
+url: "{{baseUrl}}/v1/api/faqs/order-sequence"
+method: PUT
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "ids": [
+        1
+      ]
+    }
+order: 8000

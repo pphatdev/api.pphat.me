@@ -1,0 +1,39 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/articles/{{slug}}/comments"
+  method: POST
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: JWT token — authenticated users only
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "authorName": "John Doe",
+        "content": "Great article!"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "120"
+    X-RateLimit-Remaining: "117"
+    X-RateLimit-Reset: "25"
+  body:
+    type: text
+    content: |-
+      {
+          "id": 1,
+          "articleId": "c67640b9-dd5c-44a9-93de-4efd8cded2a8",
+          "authorName": "John Doe",
+          "content": "Great article!",
+          "createdAt": "2026-04-27T03:52:57.288Z",
+          "updatedAt": "2026-04-27T03:52:57.288Z"
+      }
+order: 1000

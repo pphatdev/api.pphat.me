@@ -1,0 +1,37 @@
+$kind: http-request
+description: Obtains a new accessToken and a fresh refreshToken using an existing valid refreshToken. The old refreshToken is invalidated after use (token rotation).
+url: "{{baseUrl}}/v1/api/auth/refresh"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "refreshToken": "{{refreshToken}}"
+    }
+scripts:
+  - type: afterResponse
+    code: "if(pm.response.code === 200){\r
+
+      \r
+
+      \    const response = pm.response.json();\r
+
+      \r
+
+      \    pm.environment.set(\"token\", response.accessToken);\r
+
+      \    pm.environment.set(\"refreshToken\", response.refreshToken);\r
+
+      \    pm.variables.set(\"token\", response.accessToken);\r
+
+      \    pm.variables.set(\"refreshToken\", response.refreshToken);\r
+
+      \    pm.collectionVariables.set(\"token\", response.accessToken);\r
+
+      \    pm.collectionVariables.set(\"refreshToken\", response.refreshToken);\r
+
+      }"
+    language: text/javascript
+order: 5000

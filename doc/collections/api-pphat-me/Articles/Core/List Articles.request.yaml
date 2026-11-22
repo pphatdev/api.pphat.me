@@ -1,0 +1,50 @@
+$kind: http-request
+description: |-
+  Returns articles. Requires authentication (Bearer JWT or `ApiKey <key>`).
+
+  **Visibility**
+  - Non-admin caller: only `status=public` articles (published + is_public).
+  - Admin caller: sees every article regardless of status and can filter with `?status=public,draft,queue,private` (comma-separated; any subset).
+
+  Every item in the response includes a derived `status` field: `public | draft | queue | private`.
+
+  Also supports filtering by tags (`?tags=tag1,tag2`) and authors (`?authors=author1,author2`), multi-column sort (`?sort=title,created_at`), and a single order direction (`?order=asc`).
+url: "{{baseUrl}}/v1/api/articles?page=1&limit=10"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT access token or an SSO API key via `ApiKey {{apiKey}}`
+queryParams:
+  - key: page
+    value: "1"
+    description: "Page number (default: 1)"
+  - key: limit
+    value: "10"
+    description: "Items per page (default: 10, max: 100)"
+  - key: search
+    value: ""
+    disabled: true
+    description: Search in title, slug, description
+  - key: sort
+    value: title,created_at
+    disabled: true
+    description: "Comma-separated sort columns: id, title, slug, description, published, created_at, updated_at"
+  - key: order
+    value: desc
+    disabled: true
+    description: "Sort direction applied to all sort columns: asc, desc"
+  - key: tags
+    value: tag1,tag2
+    disabled: true
+    description: Comma-separated tag names to filter by
+  - key: authors
+    value: author1,author2
+    disabled: true
+    description: Comma-separated author names to filter by
+  - key: status
+    value: public,queue,draft,private
+    disabled: true
+    description: Admin only. Comma-separated statuses. Ignored for non-admin callers.
+examples: ./.resources/List Articles.resources/examples
+order: 1000

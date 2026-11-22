@@ -1,0 +1,9 @@
+$kind: http-request
+description: Get details of a specific contact message. Admin only.
+url: "{{baseUrl}}/v1/api/contact/{{contactId}}"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+order: 3000

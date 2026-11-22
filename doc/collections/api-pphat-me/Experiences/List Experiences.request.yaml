@@ -1,0 +1,31 @@
+$kind: http-request
+description: |-
+  List experiences on the resume timeline. Requires auth.
+
+  **Default order:** current roles (end_date IS NULL) float to the top, then start_date DESC.
+url: "{{baseUrl}}/v1/api/experiences?page=1&limit=10"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT access token or an SSO API key via `ApiKey {{apiKey}}`
+queryParams:
+  - key: page
+    value: "1"
+    description: "Page number (default: 1)"
+  - key: limit
+    value: "10"
+    description: "Items per page (default: 10, max: 100)"
+  - key: search
+    value: ""
+    disabled: true
+    description: Search in title, company, description
+  - key: sort
+    value: start_date
+    disabled: true
+    description: "Override default sort: id, title, company, start_date, end_date, status, created_at, updated_at"
+  - key: order
+    value: desc
+    disabled: true
+    description: "Sort order: asc, desc"
+order: 1000

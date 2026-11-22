@@ -1,0 +1,35 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/auth/sso/keys"
+  method: POST
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: JWT access token
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "name": "CI Bot",
+        "expiresInDays": 30
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "id": "e2d1a4fa-6b2c-4a9c-9b3d-1f0e8c7a5d21",
+          "name": "CI Bot",
+          "prefix": "ppk_9f3c1a2b",
+          "expires_at": "2026-08-26T04:12:33.911Z",
+          "created_at": "2026-07-27T04:12:33.911Z",
+          "key": "ppk_9f3c1a2b7d5e6f10112233445566778899aabbccddeeff00",
+          "warning": "Store this key securely. It will not be shown again."
+      }
+order: 1000

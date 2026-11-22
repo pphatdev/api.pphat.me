@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get a tech stack by id. Public.
+url: "{{baseUrl}}/v1/api/tech-stacks/{{techStackId}}"
+method: GET
+order: 2000

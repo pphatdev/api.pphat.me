@@ -1,0 +1,33 @@
+$kind: http-request
+description: |-
+  Create an FAQ. Admin only.
+
+  **Required:** `question` (string), and `answer` (or `content` alias) or `article_id`.
+  **Optional:** `slug` (unique string, auto-generated from question if omitted), `category` (default: 'General'), `sort_order` / `sortOrder` (default: 0), `status` (0 inactive, 1 active, default: 1), `article_id` / `articleId` (UUID linking to an existing article).
+
+  **Article Content Support:**
+  - `answer` supports full Markdown article formatting, code blocks, and headers.
+  - `content` can be passed as an alias for `answer`.
+  - Response includes `readingMins` and `wordCount`.
+  - If `article_id` is linked and `answer` is omitted, the answer inherits content from the referenced article.
+url: "{{baseUrl}}/v1/api/faqs"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "question": "What tech stack powers api.pphat.me?",
+        "answer": "# Technology Stack Overview\n\napi.pphat.me is engineered for extreme edge performance and sub-10ms response times globally.\n\n### Core Architecture\n- **Runtime**: Cloudflare Workers edge computing platform\n- **Framework**: Hono.js Web Standards router\n- **Database**: Cloudflare D1 distributed SQLite\n- **Type Safety**: End-to-end strict TypeScript",
+        "category": "Technical",
+        "sort_order": 1,
+        "status": 1,
+        "article_id": "{{articleId}}"
+    }
+examples: ./.resources/Create FAQ.resources/examples
+order: 4000

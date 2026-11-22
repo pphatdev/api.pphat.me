@@ -1,0 +1,20 @@
+$kind: http-request
+description: Send a message to the portfolio chatbot. If authenticated, chat history will be saved.
+url: "{{baseUrl}}/v1/api/chat"
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Authorization
+    value: Bearer {{token}}
+    disabled: true
+    description: Optional JWT token
+body:
+  type: json
+  content: |-
+    {
+      "message": "Hello! What is this portfolio about?",
+      "history": [],
+      "model": "@cf/meta/llama-3.1-8b-instruct"
+    }
+order: 1000

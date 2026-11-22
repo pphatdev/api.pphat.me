@@ -1,0 +1,38 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/contact?page=1&limit=10"
+  method: GET
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: Admin JWT required
+  queryParams:
+    page: "1"
+    limit: "10"
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": [
+              {
+                  "id": "...",
+                  "name": "Jane Doe",
+                  "email": "jane@example.com",
+                  "subject": "Inquiry",
+                  "message": "...",
+                  "createdAt": "..."
+              }
+          ],
+          "pagination": {
+              "page": 1,
+              "limit": 10,
+              "total": 1,
+              "totalPages": 1
+          }
+      }
+order: 1000

@@ -1,0 +1,36 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/articles/{{slug}}/reactions"
+  method: POST
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: JWT token — authenticated users only
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "type": "like"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "120"
+    X-RateLimit-Remaining: "119"
+    X-RateLimit-Reset: "60"
+  body:
+    type: text
+    content: |-
+      {
+          "id": 1,
+          "articleId": "c67640b9-dd5c-44a9-93de-4efd8cded2a8",
+          "type": "like",
+          "count": 1
+      }
+order: 1000

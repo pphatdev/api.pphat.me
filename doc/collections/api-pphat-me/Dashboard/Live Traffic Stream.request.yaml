@@ -1,0 +1,9 @@
+$kind: http-request
+description: SSE stream that sends real-time updates for live traffic. Polled from D1 every 5 seconds. Requires Admin role.
+url: "{{baseUrl}}/v1/api/dashboard/live-traffic"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+order: 2000

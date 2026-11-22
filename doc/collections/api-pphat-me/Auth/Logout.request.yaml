@@ -1,0 +1,31 @@
+$kind: http-request
+description: Logs out the user and invalidates the provided refresh token in the database.
+url: "{{baseUrl}}/v1/api/auth/logout"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "refreshToken": "{{refreshToken}}"
+    }
+scripts:
+  - type: afterResponse
+    code: "if(pm.response.code === 200){\r
+
+      \    pm.environment.set(\"token\", \"\");\r
+
+      \    pm.environment.set(\"refreshToken\",\"\");\r
+
+      \    pm.variables.set(\"token\", \"\");\r
+
+      \    pm.variables.set(\"refreshToken\", \"\");\r
+
+      \    pm.collectionVariables.set(\"token\", \"\");\r
+
+      \    pm.collectionVariables.set(\"refreshToken\", \"\");\r
+
+      }"
+    language: text/javascript
+order: 6000

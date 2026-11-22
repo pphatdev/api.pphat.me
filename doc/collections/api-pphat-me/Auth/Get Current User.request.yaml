@@ -1,0 +1,10 @@
+$kind: http-request
+description: Returns the currently authenticated user. Requires a valid Bearer JWT in the Authorization header.
+url: "{{baseUrl}}/v1/api/auth/me"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token obtained from the login callback
+examples: ./.resources/Get Current User.resources/examples
+order: 7000

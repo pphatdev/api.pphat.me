@@ -1,0 +1,35 @@
+$kind: http-request
+description: |-
+  Updates an article by UUID. Requires owner, contributor, or admin. The :id parameter must be a UUID (not a slug).
+
+  Set `isPublic: true, publishAt: null` to release a scheduled draft immediately. Set `publishAt: '<Phnom_Penh timestamp>'` to reschedule; the cron will re-evaluate on the next tick.
+url: "{{baseUrl}}/v1/api/articles/{{articleId}}"
+method: PATCH
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — owner, contributor, or admin
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "title": "Updated Title",
+        "description": "Updated description.",
+        "thumbnail": "https://example.com/new-thumbnail.png",
+        "content": "Updated content.",
+        "published": true,
+        "isPublic": true,
+        "publishAt": null,
+        "author_ids": [
+            1
+        ],
+        "tags": [
+            {
+                "tag": "typescript"
+            }
+        ]
+    }
+examples: ./.resources/Update Article.resources/examples
+order: 5000

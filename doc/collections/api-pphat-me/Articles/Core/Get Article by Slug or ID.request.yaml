@@ -1,0 +1,6 @@
+$kind: http-request
+description: Accepts either a URL slug or a UUID. Public — no auth required.
+url: "{{baseUrl}}/v1/api/articles/{{slug}}"
+method: GET
+examples: ./.resources/Get Article by Slug or ID.resources/examples
+order: 3000

@@ -1,0 +1,9 @@
+$kind: http-request
+description: Detach a tech stack from an experience. Admin only. Returns 204; 404 if the link does not exist.
+url: "{{baseUrl}}/v1/api/experiences/{{experienceId}}/skills/{{techStackId}}"
+method: DELETE
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+order: 9000
