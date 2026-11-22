@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get the active About Me profile for public portfolio presentation.
+url: "{{baseUrl}}/v1/api/about-me/active"
+method: GET
+order: 1000

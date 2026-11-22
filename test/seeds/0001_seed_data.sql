@@ -70,3 +70,108 @@ VALUES ('typescript', '00000000-0000-4000-8000-000000000002', 'Projects using Ty
 INSERT OR IGNORE INTO faqs (id, question, slug, answer, category, sort_order, status, article_id, created_at, updated_at)
 VALUES (1, 'What is api.pphat.me?', 'what-is-api-pphat-me', '# What is api.pphat.me?\n\nIt is a high-performance portfolio and blog API built with Cloudflare Workers and Hono.js.', 'General', 1, 1, '00000000-0000-4000-8000-000000000001', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
 
+-- Seed About Me
+INSERT OR IGNORE INTO about_me (
+    id, badge, title, description, button_text, button_url, images,
+    name, nickname, role, location, sort_order, status, created_at, updated_at
+) VALUES (
+    1,
+    'About me!',
+    'Who the hell am I ?',
+    'My name is Leat Sophat, my relegien name is LEAT Sophat, and I''m known online as PPhat. I''m a Senior Front-end Developer at TURBOTECH CO., LTD, and as a Freelance UI/UX Designer. I''m from Phnom Penh, Cambodia.
+I started my career as a Front-end Developer in 2021, and I have a passion for creating beautiful and functional user interfaces. I love to learn new technologies and improve my skills every day. I am also a big fan of open-source projects and I enjoy contributing to the community. I believe that sharing knowledge is the key to success in this field.',
+    'Gallery',
+    'https://pphat.me/gallery',
+    '["https://example.com/about-1.jpg","https://example.com/about-2.jpg","https://example.com/about-3.jpg"]',
+    'Leat Sophat',
+    'PPhat',
+    'Senior Front-end Developer',
+    'Phnom Penh, Cambodia',
+    0,
+    1,
+    '2026-01-01T00:00:00.000Z',
+    '2026-01-01T00:00:00.000Z'
+);
+
+-- Seed Gallery Items
+INSERT OR IGNORE INTO gallery (
+    id, title, caption, alt_text, media_path, category, tags,
+    is_public, is_featured, sort_order, aspect_ratio, created_at, updated_at
+) VALUES 
+(
+    1,
+    'Phnom Penh Skyline Dusk',
+    'Sunset panorama over the Mekong river and urban landscape of Phnom Penh.',
+    'Phnom Penh skyline at twilight',
+    'blogs/media/cover-phnom-penh.webp',
+    'photography',
+    '["cambodia", "cityscape", "sunset"]',
+    1,
+    1,
+    1,
+    '16/9',
+    '2026-11-20T10:00:00.000Z',
+    '2026-11-20T10:00:00.000Z'
+),
+(
+    2,
+    'Developer Workspace & Desk Setup',
+    'Minimalist dual-monitor workstation with ambient warm lighting.',
+    'Clean workstation desk setup',
+    'blogs/media/workspace-setup.webp',
+    'setup',
+    '["workspace", "minimalism", "productivity"]',
+    1,
+    1,
+    2,
+    '16/9',
+    '2026-11-21T08:30:00.000Z',
+    '2026-11-21T08:30:00.000Z'
+),
+(
+    3,
+    'Admin Console Design System',
+    'Color tokens, typography scale, and dark mode interface elements.',
+    'Design system components preview',
+    'blogs/media/design-system-preview.webp',
+    'design',
+    '["design-system", "ui", "dark-mode"]',
+    1,
+    0,
+    3,
+    '4/3',
+    '2026-11-21T12:00:00.000Z',
+    '2026-11-21T12:00:00.000Z'
+),
+(
+    4,
+    'Cloudflare Edge Infrastructure',
+    'Distributed network routing and edge worker latency benchmarks.',
+    'Global edge network architecture map',
+    'blogs/media/cloudflare-architecture.webp',
+    'projects',
+    '["cloud", "architecture", "edge"]',
+    1,
+    0,
+    4,
+    '16/9',
+    '2026-11-22T09:15:00.000Z',
+    '2026-11-22T09:15:00.000Z'
+),
+(
+    5,
+    'Khmer Typography & Font Pairings',
+    'Exploring contemporary digital typefaces for Khmer and Latin scripts.',
+    'Khmer typography specimen board',
+    'blogs/media/khmer-typography-showcase.webp',
+    'design',
+    '["typography", "khmer", "branding"]',
+    0,
+    0,
+    5,
+    '1/1',
+    '2026-11-22T14:20:00.000Z',
+    '2026-11-22T14:20:00.000Z'
+);
+
+

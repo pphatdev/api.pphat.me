@@ -24,6 +24,10 @@ export interface Faq {
 	content: string;
 	category: string;
 	sortOrder: number;
+	/** Alias for sortOrder */
+	position?: number;
+	/** Alias for sortOrder */
+	sequence?: number;
 	status: 0 | 1;
 	articleId: string | null;
 	article: FaqArticleRef | null;
@@ -31,6 +35,17 @@ export interface Faq {
 	wordCount: number;
 	createdAt: string;
 	updatedAt: string;
+}
+
+export interface FaqOrderSequenceItem {
+	id: number;
+	question: string;
+	slug: string;
+	category: string;
+	sortOrder: number;
+	position: number;
+	sequence: number;
+	status: 0 | 1;
 }
 
 export interface FaqRow {
@@ -86,6 +101,9 @@ export interface IFaqRepository {
 	create(dto: CreateFaqDto): Promise<Faq>;
 	update(id: number, dto: UpdateFaqDto): Promise<Faq | null>;
 	delete(id: number): Promise<boolean>;
+	reorder(orderedIds: (number | string)[]): Promise<number>;
+	updateOrderSequence(items: { id: number | string; sequence: number }[]): Promise<number>;
+	getOrderSequence(): Promise<FaqOrderSequenceItem[]>;
 }
 
 /**

@@ -3,7 +3,7 @@ import { Tag } from "../tags/tags.interface";
 import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface";
 
 import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow, dedupeTagsByName } from "../../shared/helpers/repo";
-import type { Project, ProjectRow, IProjectRepository, CreateProjectDto, UpdateProjectDto, ProjectDetailEmbed } from "./projects.interface";
+import type { Project, ProjectRow, IProjectRepository, CreateProjectDto, UpdateProjectDto, ProjectDetailEmbed, ProjectOrderSequenceItem } from "./projects.interface";
 
 export class ProjectRepository implements IProjectRepository {
 	constructor(private readonly db: D1Database) { }
@@ -19,9 +19,12 @@ export class ProjectRepository implements IProjectRepository {
 		onlyPublished = true,
 		opts?: { admin?: boolean },
 	): Promise<PaginatedResult<Project>> {
-		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'created_at', 'updated_at'];
-		const safeSort = sort?.[0] && ALLOWED_SORT.includes(sort[0]) ? sort[0] : 'created_at';
+		const ALLOWED_SORT = ['id', 'title', 'slug', 'description', 'published', 'position', 'created_at', 'updated_at'];
+		const rawSort = sort?.[0];
+		const mappedSort = (rawSort === 'sequence' || rawSort === 'sort_order' || rawSort === 'sortOrder') ? 'position' : rawSort;
+		const safeSort = mappedSort && ALLOWED_SORT.includes(mappedSort) ? mappedSort : null;
 		const safeOrder = order === 'desc' ? 'DESC' : 'ASC';
+		const orderBy = safeSort ? `${safeSort} ${safeOrder}` : 'position ASC, created_at DESC';
 		const offset = (page - 1) * limit;
 
 		// Admins see every row (including drafts) so the admin dashboard list
@@ -32,7 +35,7 @@ export class ProjectRepository implements IProjectRepository {
 
 		const [dataResult, countRow] = await Promise.all([
 			this.db
-				.prepare(`SELECT * FROM projects WHERE ${where} ORDER BY ${safeSort} ${safeOrder} LIMIT ?${nextIdx} OFFSET ?${nextIdx + 1}`)
+				.prepare(`SELECT * FROM projects WHERE ${where} ORDER BY ${orderBy} LIMIT ?${nextIdx} OFFSET ?${nextIdx + 1}`)
 				.bind(...bindings, limit, offset)
 				.all<ProjectRow>(),
 			this.db
@@ -110,12 +113,13 @@ export class ProjectRepository implements IProjectRepository {
 	async create(dto: CreateProjectDto): Promise<Project> {
 		const id = crypto.randomUUID();
 		const now = new Date().toISOString();
+		const position = dto.position ?? dto.sequence ?? 0;
 
 		await this.db
 			.prepare(
-				"INSERT INTO projects (id, title, slug, description, thumbnail, published, languages, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+				"INSERT INTO projects (id, title, slug, description, thumbnail, published, languages, position, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
 			)
-			.bind(id, dto.title, dto.slug, dto.description, dto.thumbnail ?? "", dto.published ? 1 : 0, JSON.stringify(dto.languages ?? []), now, now)
+			.bind(id, dto.title, dto.slug, dto.description, dto.thumbnail ?? "", dto.published ? 1 : 0, JSON.stringify(dto.languages ?? []), position, now, now)
 			.run();
 
 		if (dto.tags?.length) {
@@ -151,6 +155,10 @@ export class ProjectRepository implements IProjectRepository {
 		const existing = await this.findBySlug(slug);
 		if (!existing) return null;
 
+		if (dto.position === undefined && dto.sequence !== undefined) {
+			dto.position = dto.sequence;
+		}
+
 		const mappings: [keyof UpdateProjectDto, string, ((v: any) => any)?][] = [
 			['title', 'title'],
 			['slug', 'slug'],
@@ -158,6 +166,7 @@ export class ProjectRepository implements IProjectRepository {
 			['thumbnail', 'thumbnail'],
 			['published', 'published', (v) => (v ? 1 : 0)],
 			['languages', 'languages', (v) => JSON.stringify(v)],
+			['position', 'position'],
 		];
 
 		const { fields, values, nextIdx } = buildUpdateFields(dto, mappings);
@@ -430,8 +439,73 @@ export class ProjectRepository implements IProjectRepository {
 			languages: JSON.parse(row.languages || '[]'),
 			thumbnail: row.thumbnail,
 			published: row.published === 1,
+			position: row.position ?? 0,
+			sequence: row.position ?? 0,
 			createdAt: row.created_at,
 			updatedAt: row.updated_at,
+		}));
+	}
+
+	/**
+	 * @description Replace the admin-controlled sort order. Writes
+	 * `position = 0..N-1` for the given ids and leaves other rows alone.
+	 * Unknown ids are silently skipped (so a stale client list doesn't fail
+	 * the whole batch).
+	 * @param { string[] } orderedIds Project ids in the desired display order
+	 * @returns { Promise<number> } Number of rows actually updated
+	 */
+	async reorder(orderedIds: string[]): Promise<number> {
+		if (orderedIds.length === 0) return 0;
+		const seen = new Set<string>();
+		const unique = orderedIds.filter((id) => (seen.has(id) ? false : seen.add(id).size > 0));
+
+		const stmts = unique.map((id, index) =>
+			this.db
+				.prepare("UPDATE projects SET position = ?1 WHERE id = ?2")
+				.bind(index, id),
+		);
+		const results = await this.db.batch(stmts);
+		return results.reduce((sum, r) => sum + (r.meta?.changes ?? 0), 0);
+	}
+
+	/**
+	 * @description Update project order sequence with explicit sequence numbers.
+	 * @param { { id: string; sequence: number }[] } items Items with id and sequence
+	 * @returns { Promise<number> } Number of rows updated
+	 */
+	async updateOrderSequence(items: { id: string; sequence: number }[]): Promise<number> {
+		if (items.length === 0) return 0;
+		const map = new Map<string, number>();
+		for (const item of items) {
+			map.set(item.id, item.sequence);
+		}
+
+		const stmts = Array.from(map.entries()).map(([id, sequence]) =>
+			this.db
+				.prepare("UPDATE projects SET position = ?1 WHERE id = ?2")
+				.bind(sequence, id),
+		);
+		const results = await this.db.batch(stmts);
+		return results.reduce((sum, r) => sum + (r.meta?.changes ?? 0), 0);
+	}
+
+	/**
+	 * @description Get project order sequence list
+	 * @returns { Promise<ProjectOrderSequenceItem[]> } Projects in display order
+	 */
+	async getOrderSequence(): Promise<ProjectOrderSequenceItem[]> {
+		const result = await this.db
+			.prepare("SELECT id, title, slug, thumbnail, published, position FROM projects ORDER BY position ASC, created_at DESC")
+			.all<{ id: string; title: string; slug: string; thumbnail: string; published: number; position: number }>();
+
+		return (result.results ?? []).map((r) => ({
+			id: r.id,
+			title: r.title,
+			slug: r.slug,
+			thumbnail: r.thumbnail,
+			published: r.published === 1,
+			position: r.position ?? 0,
+			sequence: r.position ?? 0,
 		}));
 	}
 }

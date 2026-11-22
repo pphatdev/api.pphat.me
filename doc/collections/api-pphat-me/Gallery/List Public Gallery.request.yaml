@@ -1,0 +1,16 @@
+$kind: http-request
+description: List public gallery items. Only displays published items (isPublic = true).
+url: "{{baseUrl}}/v1/api/gallery/public?page=1&limit=10"
+method: GET
+queryParams:
+  - key: page
+    value: "1"
+    description: Page number
+  - key: limit
+    value: "10"
+    description: Items per page
+  - key: category
+    value: photography
+    disabled: true
+    description: photography, projects, setup, travel, design, architecture
+order: 1000

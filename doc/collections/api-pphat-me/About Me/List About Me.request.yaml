@@ -1,0 +1,32 @@
+$kind: http-request
+description: List About Me profiles with pagination, search, and status filters. Public callers see active profiles; admins see all or filter by ?status=.
+url: "{{baseUrl}}/v1/api/about-me?page=1&limit=10"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Optional bearer token (admin sees inactive profiles)
+queryParams:
+  - key: page
+    value: "1"
+    description: "Page number (default: 1)"
+  - key: limit
+    value: "10"
+    description: "Items per page (default: 10, -1 for all)"
+  - key: search
+    value: ""
+    disabled: true
+    description: Match title, description, name, nickname, role, location
+  - key: status
+    value: "1"
+    disabled: true
+    description: "0 (inactive), 1 (active), or 'all' (admin only)"
+  - key: sort
+    value: sort_order
+    disabled: true
+    description: sort_order, id, title, created_at, updated_at
+  - key: order
+    value: asc
+    disabled: true
+    description: asc | desc
+order: 2000

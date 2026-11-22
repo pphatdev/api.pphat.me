@@ -8,13 +8,49 @@
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/v1/api/projects` | List projects (paginated) — **requires auth** (Bearer JWT or SSO API key) |
+| `GET` | `/v1/api/projects/order-sequence` | Get project order sequence list — **requires auth** |
+| `PUT` | `/v1/api/projects/order-sequence` | Update project order sequence — **requires admin** |
+| `PATCH` | `/v1/api/projects/order-sequence` | Update project order sequence — **requires admin** |
 | `GET` | `/v1/api/projects/:slug` | Get project by slug (includes `details` if set) |
 | `POST` | `/v1/api/projects` | Create project |
 | `PATCH` | `/v1/api/projects/:slug` | Update project |
 | `DELETE` | `/v1/api/projects/:slug` | Delete project |
 
 ### Sortable columns
-`id`, `title`, `slug`, `description`, `published`, `created_at`, `updated_at`
+`id`, `title`, `slug`, `description`, `published`, `position`, `sequence`, `created_at`, `updated_at`
+
+### Default Order
+When `sort` is omitted, projects sort by `position ASC, created_at DESC`.
+
+### Project Order Sequence Endpoints & Aliases
+- `GET /v1/api/projects/order-sequence` (alias: `GET /v1/api/projects/sequence`)
+- `PUT /v1/api/projects/order-sequence` (aliases: `/v1/api/projects/sequence`, `/v1/api/projects/reorder`)
+- `PATCH /v1/api/projects/order-sequence` (aliases: `/v1/api/projects/sequence`, `/v1/api/projects/reorder`)
+
+**Reorder Request Body Formats:**
+1. UUID list:
+```json
+{
+  "ids": ["00000000-0000-4000-8000-000000000002", "00000000-0000-4000-8000-000000000003"]
+}
+```
+or
+```json
+{
+  "sequence": ["00000000-0000-4000-8000-000000000002", "00000000-0000-4000-8000-000000000003"]
+}
+```
+or bare array `["00000000-0000-4000-8000-000000000002", "00000000-0000-4000-8000-000000000003"]`.
+
+2. Explicit sequence assignments:
+```json
+{
+  "sequence": [
+    { "id": "00000000-0000-4000-8000-000000000002", "sequence": 0 },
+    { "id": "00000000-0000-4000-8000-000000000003", "sequence": 1 }
+  ]
+}
+```
 
 ### Search fields
 `title`, `slug`, `description`

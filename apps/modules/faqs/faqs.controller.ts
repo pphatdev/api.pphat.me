@@ -183,4 +183,79 @@ export class FaqsController {
 		if (!deleted) return Res.notFound("FAQ not found");
 		return Res.noContent();
 	}
+
+	/**
+	 * @description Get FAQ order sequence list
+	 * @method GET
+	 */
+	static async getOrderSequence(_request: Request, env: Env): Promise<Response> {
+		const repository = new FaqRepository(env.DB);
+		const list = await new FaqService(repository).getOrderSequence();
+		return Res.ok(list);
+	}
+
+	/**
+	 * @description Admin: update the FAQ order sequence.
+	 * Accepts:
+	 *   - `{ ids: (number | string)[] }` or `{ sequence: (number | string)[] }` or `(number | string)[]`
+	 *   - `{ sequence: { id: number | string; sequence?: number; position?: number; sort_order?: number; sortOrder?: number }[] }`
+	 *   - `Array<{ id: number | string; sequence?: number; position?: number }>`
+	 * @method PUT, PATCH
+	 */
+	static async updateOrderSequence(request: Request, env: Env): Promise<Response> {
+		const body = await request.json().catch(() => null);
+		if (!body || typeof body !== 'object') {
+			return Res.unprocessable('Invalid JSON body');
+		}
+
+		let items: unknown = body;
+		if (!Array.isArray(body)) {
+			items = (body as any).sequence ?? (body as any).ids ?? (body as any).faq_ids ?? (body as any).faqIds ?? (body as any).order ?? (body as any).items;
+		}
+
+		if (!Array.isArray(items) || items.length === 0) {
+			return Res.unprocessable('Payload must be a non-empty array or an object containing an ids/sequence array');
+		}
+
+		const repository = new FaqRepository(env.DB);
+		const service = new FaqService(repository);
+
+		// Case 1: Array of IDs (numbers or numeric strings): [1, 2, 3] or ["1", "2", "3"]
+		if (typeof items[0] === 'number' || (typeof items[0] === 'string' && /^\d+$/.test(items[0]))) {
+			const idList: number[] = [];
+			for (const raw of items) {
+				const num = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+				if (isNaN(num) || num <= 0) {
+					return Res.unprocessable('All IDs must be valid positive integers');
+				}
+				idList.push(num);
+			}
+			const updated = await service.reorder(idList);
+			return Res.ok({ updated, message: 'FAQ order sequence updated successfully' });
+		}
+
+		// Case 2: Array of objects: [{ id, sequence?, position?, sortOrder?, sort_order? }, ...]
+		if (typeof items[0] === 'object' && items[0] !== null) {
+			const sequenceItems: { id: number; sequence: number }[] = [];
+			for (let i = 0; i < items.length; i++) {
+				const item = items[i] as any;
+				const rawId = item?.id ?? item?.faq_id ?? item?.faqId;
+				const idNum = typeof rawId === 'number' ? rawId : parseInt(String(rawId), 10);
+				if (isNaN(idNum) || idNum <= 0) {
+					return Res.unprocessable('Each item must include a valid numeric FAQ id');
+				}
+				const rawSeq = item?.sequence ?? item?.position ?? item?.sortOrder ?? item?.sort_order ?? item?.order;
+				const seqNum = (rawSeq !== undefined && rawSeq !== null) ? Number(rawSeq) : i;
+				if (!Number.isInteger(seqNum) || seqNum < 0) {
+					return Res.unprocessable('Sequence numbers must be non-negative integers');
+				}
+				sequenceItems.push({ id: idNum, sequence: seqNum });
+			}
+
+			const updated = await service.updateOrderSequence(sequenceItems);
+			return Res.ok({ updated, message: 'FAQ order sequence updated successfully' });
+		}
+
+		return Res.unprocessable('Invalid sequence item format');
+	}
 }

@@ -326,4 +326,139 @@ const token = await createJwt(payload, secret);
 		});
 		expect(res.status).toBe(404);
 	});
+
+	// ==================== ORDER SEQUENCE ====================
+	describe("FAQ Order Sequence", () => {
+		it("GET /v1/api/faqs/order-sequence without auth returns 401", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/faqs/order-sequence");
+			expect(res.status).toBe(401);
+		});
+
+		it("GET /v1/api/faqs/order-sequence returns ordered list of FAQs", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/faqs/order-sequence", { headers: authHeaders });
+			expect(res.status).toBe(200);
+			const list = await res.json() as any[];
+			expect(Array.isArray(list)).toBe(true);
+			if (list.length > 0) {
+				expect(list[0]).toHaveProperty("id");
+				expect(list[0]).toHaveProperty("question");
+				expect(list[0]).toHaveProperty("slug");
+				expect(list[0]).toHaveProperty("sortOrder");
+				expect(list[0]).toHaveProperty("position");
+				expect(list[0]).toHaveProperty("sequence");
+			}
+		});
+
+		it("PUT /v1/api/faqs/order-sequence as regular user returns 403", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/faqs/order-sequence", {
+				method: "PUT",
+				headers: { ...authHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: [1] }),
+			});
+			expect(res.status).toBe(403);
+		});
+
+		it("PUT /v1/api/faqs/order-sequence with invalid body returns 422", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/faqs/order-sequence", {
+				method: "PUT",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: ["invalid-id"] }),
+			});
+			expect(res.status).toBe(422);
+		});
+
+		it("PUT /v1/api/faqs/order-sequence with array of IDs updates sequence (admin)", async () => {
+			const ts = Date.now();
+			const createA = await SELF.fetch("http://example.com/v1/api/faqs", {
+				method: "POST",
+				headers: adminHeaders,
+				body: JSON.stringify({
+					question: `Seq FAQ A ${ts}`,
+					answer: "FAQ Answer A",
+				}),
+			});
+			const faqA = await createA.json() as any;
+
+			const createB = await SELF.fetch("http://example.com/v1/api/faqs", {
+				method: "POST",
+				headers: adminHeaders,
+				body: JSON.stringify({
+					question: `Seq FAQ B ${ts}`,
+					answer: "FAQ Answer B",
+				}),
+			});
+			const faqB = await createB.json() as any;
+
+			// Reorder putting B before A
+			const reorderRes = await SELF.fetch("http://example.com/v1/api/faqs/order-sequence", {
+				method: "PUT",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: [faqB.id, faqA.id] }),
+			});
+			expect(reorderRes.status).toBe(200);
+			const reorderBody = await reorderRes.json() as any;
+			expect(reorderBody.updated).toBeGreaterThanOrEqual(2);
+
+			// Check sequence GET endpoint
+			const getSeqRes = await SELF.fetch("http://example.com/v1/api/faqs/order-sequence", { headers: authHeaders });
+			expect(getSeqRes.status).toBe(200);
+			const list = await getSeqRes.json() as any[];
+			const itemB = list.find((f) => f.id === faqB.id);
+			const itemA = list.find((f) => f.id === faqA.id);
+			expect(itemB).toBeDefined();
+			expect(itemA).toBeDefined();
+			expect(itemB.sortOrder).toBe(0);
+			expect(itemA.sortOrder).toBe(1);
+
+			// Verify FAQs list reflects this ordering
+			const listRes = await SELF.fetch("http://example.com/v1/api/faqs?limit=50", { headers: authHeaders });
+			const listBody = await listRes.json() as { data: any[] };
+			const idxB = listBody.data.findIndex((f) => f.id === faqB.id);
+			const idxA = listBody.data.findIndex((f) => f.id === faqA.id);
+			expect(idxB).toBeLessThan(idxA);
+		});
+
+		it("PATCH /v1/api/faqs/order-sequence with explicit sequence assignments updates sequence (admin)", async () => {
+			const ts = Date.now();
+			const createRes = await SELF.fetch("http://example.com/v1/api/faqs", {
+				method: "POST",
+				headers: adminHeaders,
+				body: JSON.stringify({
+					question: `Explicit FAQ ${ts}`,
+					answer: "Explicit FAQ Answer",
+				}),
+			});
+			const faq = await createRes.json() as any;
+
+			const patchRes = await SELF.fetch("http://example.com/v1/api/faqs/order-sequence", {
+				method: "PATCH",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ sequence: [{ id: faq.id, sequence: 77 }] }),
+			});
+			expect(patchRes.status).toBe(200);
+
+			const getSeqRes = await SELF.fetch("http://example.com/v1/api/faqs/order-sequence", { headers: authHeaders });
+			const list = await getSeqRes.json() as any[];
+			const found = list.find((f) => f.id === faq.id);
+			expect(found?.sortOrder).toBe(77);
+			expect(found?.position).toBe(77);
+			expect(found?.sequence).toBe(77);
+		});
+
+		it("PUT /v1/api/faqs/sequence and /reorder aliases work as expected", async () => {
+			const resSeq = await SELF.fetch("http://example.com/v1/api/faqs/sequence", {
+				method: "PUT",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: [1] }),
+			});
+			expect(resSeq.status).toBe(200);
+
+			const resReorder = await SELF.fetch("http://example.com/v1/api/faqs/reorder", {
+				method: "PUT",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: [1] }),
+			});
+			expect(resReorder.status).toBe(200);
+		});
+	});
 });

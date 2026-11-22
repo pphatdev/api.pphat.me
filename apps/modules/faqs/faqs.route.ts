@@ -46,6 +46,27 @@ app.get('/v1/api/faqs/public', (c) => FaqsController.list(c.req.raw, c.env, fals
 app.post('/v1/api/faqs', authGuard, requireAdmin, (c) => FaqsController.create(c.req.raw, c.env));
 
 /**
+ * @description Get FAQ Order Sequence
+ * @method GET
+*/
+app.get('/v1/api/faqs/order-sequence', authGuard, (c) => FaqsController.getOrderSequence(c.req.raw, c.env));
+app.get('/v1/api/faqs/sequence', authGuard, (c) => FaqsController.getOrderSequence(c.req.raw, c.env));
+
+/**
+ * @description Update FAQ Order Sequence (admin-only)
+ * @method PUT, PATCH
+ * @body `{ ids: number[] }` or `{ sequence: number[] }` or `{ sequence: { id: number, sequence: number }[] }`
+ *
+ * Declared before `/:idOrSlug` so literal segments aren't swallowed by the catch-all.
+*/
+app.put('/v1/api/faqs/order-sequence', authGuard, requireAdmin, (c) => FaqsController.updateOrderSequence(c.req.raw, c.env));
+app.patch('/v1/api/faqs/order-sequence', authGuard, requireAdmin, (c) => FaqsController.updateOrderSequence(c.req.raw, c.env));
+app.put('/v1/api/faqs/sequence', authGuard, requireAdmin, (c) => FaqsController.updateOrderSequence(c.req.raw, c.env));
+app.patch('/v1/api/faqs/sequence', authGuard, requireAdmin, (c) => FaqsController.updateOrderSequence(c.req.raw, c.env));
+app.put('/v1/api/faqs/reorder', authGuard, requireAdmin, (c) => FaqsController.updateOrderSequence(c.req.raw, c.env));
+app.patch('/v1/api/faqs/reorder', authGuard, requireAdmin, (c) => FaqsController.updateOrderSequence(c.req.raw, c.env));
+
+/**
  * @description Get FAQ by id or slug (public).
  * Inactive FAQs (status=0) require admin authentication.
  * @method GET

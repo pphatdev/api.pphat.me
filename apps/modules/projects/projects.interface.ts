@@ -13,6 +13,10 @@ export interface Project {
 	languages: string[];
 	thumbnail: string;
 	published: boolean;
+	/** Admin-controlled display order / sequence. Lower sorts first. */
+	position: number;
+	/** Alias for position */
+	sequence?: number;
 	createdAt: string;
 	updatedAt: string;
 	details?: ProjectDetailEmbed;
@@ -34,6 +38,7 @@ export interface ProjectRow {
 	thumbnail: string;
 	published: number;
 	languages: string;
+	position: number;
 	created_at: string;
 	updated_at: string;
 }
@@ -44,6 +49,8 @@ export interface CreateProjectDto {
 	description: string;
 	thumbnail?: string;
 	published?: boolean;
+	position?: number;
+	sequence?: number;
 	tags?: { tag: string; description?: string }[];
 	contributor_ids?: number[];
 	languages?: string[];
@@ -60,6 +67,8 @@ export interface UpdateProjectDto {
 	description?: string;
 	thumbnail?: string;
 	published?: boolean;
+	position?: number;
+	sequence?: number;
 	tags?: { tag: string; description?: string }[];
 	contributor_ids?: number[];
 	languages?: string[];
@@ -68,6 +77,16 @@ export interface UpdateProjectDto {
 	repoUrl?: string;
 	techStack?: string[];
 	status?: 'in-progress' | 'completed' | 'archived';
+}
+
+export interface ProjectOrderSequenceItem {
+	id: string;
+	title: string;
+	slug: string;
+	thumbnail: string;
+	published: boolean;
+	position: number;
+	sequence: number;
 }
 
 // Intentionally shares the AppEnv name with articles.interface.ts —
@@ -89,4 +108,7 @@ export interface IProjectRepository {
 	incrementViews(projectId: string): Promise<void>;
 	findTop(limit: number): Promise<Project[]>;
 	getStatsSummary(): Promise<{ total: number; published: number; draft: number }>;
+	reorder(orderedIds: string[]): Promise<number>;
+	updateOrderSequence(items: { id: string; sequence: number }[]): Promise<number>;
+	getOrderSequence(): Promise<ProjectOrderSequenceItem[]>;
 }

@@ -1,0 +1,17 @@
+$kind: http-request
+description: Update gallery item order sequence. Admin only.
+url: "{{baseUrl}}/v1/api/gallery/order-sequence"
+method: PUT
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "ids": [2, 1, 3, 4, 5]
+    }
+order: 11000

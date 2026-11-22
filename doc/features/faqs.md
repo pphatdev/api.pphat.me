@@ -9,10 +9,42 @@
 |--------|------|-------------|------|
 | `GET` | `/v1/api/faqs` | List FAQs (paginated, searchable) | **Bearer token required** (admin sees all; user sees active) |
 | `GET` | `/v1/api/faqs/public` | Public list of active (`status = 1`) FAQs | None (Public) |
+| `GET` | `/v1/api/faqs/order-sequence` | Get FAQ order sequence list | **Bearer token required** |
+| `PUT` / `PATCH` | `/v1/api/faqs/order-sequence` | Update FAQ order sequence | **Admin only** |
 | `GET` | `/v1/api/faqs/:idOrSlug` | Get FAQ by numeric ID or string slug | None (Public; inactive FAQs require admin) |
 | `POST` | `/v1/api/faqs` | Create FAQ | **Admin only** |
 | `PUT` / `PATCH` | `/v1/api/faqs/:id` | Update FAQ (by ID or slug) | **Admin only** |
 | `DELETE` | `/v1/api/faqs/:id` | Delete FAQ (by ID or slug) | **Admin only** (returns 204) |
+
+### Order Sequence Endpoints & Aliases
+- `GET /v1/api/faqs/order-sequence` (alias: `GET /v1/api/faqs/sequence`)
+- `PUT /v1/api/faqs/order-sequence` (aliases: `/v1/api/faqs/sequence`, `/v1/api/faqs/reorder`)
+- `PATCH /v1/api/faqs/order-sequence` (aliases: `/v1/api/faqs/sequence`, `/v1/api/faqs/reorder`)
+
+**Reorder Request Body Formats:**
+1. ID list:
+```json
+{
+  "ids": [1, 2, 3]
+}
+```
+or
+```json
+{
+  "sequence": [1, 2, 3]
+}
+```
+or bare array `[1, 2, 3]`.
+
+2. Explicit sequence assignments:
+```json
+{
+  "sequence": [
+    { "id": 1, "sequence": 0 },
+    { "id": 2, "sequence": 1 }
+  ]
+}
+```
 
 ---
 

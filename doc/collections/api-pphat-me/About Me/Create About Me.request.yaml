@@ -1,0 +1,36 @@
+$kind: http-request
+description: |-
+  Create a new About Me profile. Admin only.
+
+  **Required:** `title` (string), `description` (or `content`/`bio` alias).
+  **Optional:** `badge` (default: 'About me!'), `button_text` / `buttonText` (default: 'Gallery'), `button_url` / `buttonUrl` (default: ''), `images` (array of string URLs, default: []), `name`, `nickname`, `role`, `location`, `sort_order` / `sortOrder` (default: 0), `status` (0 or 1, default: 1).
+url: "{{baseUrl}}/v1/api/about-me"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "badge": "About me!",
+      "title": "Who the hell am I ?",
+      "description": "My name is Leat Sophat, my relegien name is LEAT Sophat, and I'm known online as PPhat. I'm a Senior Front-end Developer at TURBOTECH CO., LTD, and as a Freelance UI/UX Designer. I'm from Phnom Penh, Cambodia.\nI started my career as a Front-end Developer in 2021, and I have a passion for creating beautiful and functional user interfaces. I love to learn new technologies and improve my skills every day. I am also a big fan of open-source projects and I enjoy contributing to the community. I believe that sharing knowledge is the key to success in this field.",
+      "button_text": "Gallery",
+      "button_url": "https://pphat.me/gallery",
+      "images": [
+        "https://example.com/about-1.jpg",
+        "https://example.com/about-2.jpg",
+        "https://example.com/about-3.jpg"
+      ],
+      "name": "Leat Sophat",
+      "nickname": "PPhat",
+      "role": "Senior Front-end Developer",
+      "location": "Phnom Penh, Cambodia",
+      "sort_order": 0,
+      "status": 1
+    }
+order: 4000

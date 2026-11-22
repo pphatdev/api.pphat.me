@@ -1,0 +1,36 @@
+$kind: http-request
+description: List gallery items with pagination, search, category, and visibility filters. Admin sees all items; public callers see published items only.
+url: "{{baseUrl}}/v1/api/gallery?page=1&limit=10"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Optional Bearer token (admin sees hidden items)
+queryParams:
+  - key: page
+    value: "1"
+    description: Page number
+  - key: limit
+    value: "10"
+    description: Items per page (-1 for all)
+  - key: search
+    value: ""
+    disabled: true
+    description: Match title, caption, altText, mediaPath, or tags
+  - key: category
+    value: photography
+    disabled: true
+    description: photography, projects, setup, travel, design, architecture, all
+  - key: visibility
+    value: all
+    disabled: true
+    description: all, public, hidden, featured
+  - key: sort
+    value: sort_order
+    disabled: true
+    description: sort_order, id, title, category, created_at, updated_at
+  - key: order
+    value: asc
+    disabled: true
+    description: asc | desc
+order: 4000

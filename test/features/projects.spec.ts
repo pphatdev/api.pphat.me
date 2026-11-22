@@ -209,4 +209,142 @@ describe("Projects API", () => {
 			expect(Array.isArray(body)).toBe(true);
 		});
 	});
+
+	describe("Project Order Sequence", () => {
+		it("GET /v1/api/projects/order-sequence without auth returns 401", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/projects/order-sequence");
+			expect(res.status).toBe(401);
+		});
+
+		it("GET /v1/api/projects/order-sequence returns ordered list of projects", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/projects/order-sequence", { headers: authHeaders });
+			expect(res.status).toBe(200);
+			const list = await res.json() as any[];
+			expect(Array.isArray(list)).toBe(true);
+			if (list.length > 0) {
+				expect(list[0]).toHaveProperty("id");
+				expect(list[0]).toHaveProperty("title");
+				expect(list[0]).toHaveProperty("slug");
+				expect(list[0]).toHaveProperty("position");
+				expect(list[0]).toHaveProperty("sequence");
+			}
+		});
+
+		it("PUT /v1/api/projects/order-sequence as regular user returns 403", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/projects/order-sequence", {
+				method: "PUT",
+				headers: { ...authHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: ["00000000-0000-4000-8000-000000000002"] }),
+			});
+			expect(res.status).toBe(403);
+		});
+
+		it("PUT /v1/api/projects/order-sequence with invalid body returns 422", async () => {
+			const res = await SELF.fetch("http://example.com/v1/api/projects/order-sequence", {
+				method: "PUT",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: ["not-a-valid-uuid"] }),
+			});
+			expect(res.status).toBe(422);
+		});
+
+		it("PUT /v1/api/projects/order-sequence with array of UUIDs updates sequence (admin)", async () => {
+			const ts = Date.now();
+			const createA = await SELF.fetch("http://example.com/v1/api/projects", {
+				method: "POST",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					title: `Seq Project A ${ts}`,
+					slug: `seq-proj-a-${ts}`,
+					description: "Project A",
+					published: true,
+				}),
+			});
+			const projA = await createA.json() as any;
+
+			const createB = await SELF.fetch("http://example.com/v1/api/projects", {
+				method: "POST",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					title: `Seq Project B ${ts}`,
+					slug: `seq-proj-b-${ts}`,
+					description: "Project B",
+					published: true,
+				}),
+			});
+			const projB = await createB.json() as any;
+
+			// Reorder putting B before A
+			const reorderRes = await SELF.fetch("http://example.com/v1/api/projects/order-sequence", {
+				method: "PUT",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: [projB.id, projA.id] }),
+			});
+			expect(reorderRes.status).toBe(200);
+			const reorderBody = await reorderRes.json() as any;
+			expect(reorderBody.updated).toBeGreaterThanOrEqual(2);
+
+			// Check sequence GET endpoint
+			const getSeqRes = await SELF.fetch("http://example.com/v1/api/projects/order-sequence", { headers: authHeaders });
+			expect(getSeqRes.status).toBe(200);
+			const list = await getSeqRes.json() as any[];
+			const itemB = list.find((p) => p.id === projB.id);
+			const itemA = list.find((p) => p.id === projA.id);
+			expect(itemB).toBeDefined();
+			expect(itemA).toBeDefined();
+			expect(itemB.position).toBe(0);
+			expect(itemA.position).toBe(1);
+
+			// Verify projects list also reflects this ordering
+			const listRes = await SELF.fetch("http://example.com/v1/api/projects?limit=50", { headers: authHeaders });
+			const listBody = await listRes.json() as { data: any[] };
+			const idxB = listBody.data.findIndex((p) => p.id === projB.id);
+			const idxA = listBody.data.findIndex((p) => p.id === projA.id);
+			expect(idxB).toBeLessThan(idxA);
+		});
+
+		it("PATCH /v1/api/projects/order-sequence with explicit sequence assignments updates sequence (admin)", async () => {
+			const ts = Date.now();
+			const createRes = await SELF.fetch("http://example.com/v1/api/projects", {
+				method: "POST",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					title: `Explicit Seq ${ts}`,
+					slug: `explicit-seq-${ts}`,
+					description: "Explicit Seq",
+					published: true,
+				}),
+			});
+			const proj = await createRes.json() as any;
+
+			const patchRes = await SELF.fetch("http://example.com/v1/api/projects/order-sequence", {
+				method: "PATCH",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ sequence: [{ id: proj.id, sequence: 42 }] }),
+			});
+			expect(patchRes.status).toBe(200);
+
+			const getSeqRes = await SELF.fetch("http://example.com/v1/api/projects/order-sequence", { headers: authHeaders });
+			const list = await getSeqRes.json() as any[];
+			const found = list.find((p) => p.id === proj.id);
+			expect(found?.position).toBe(42);
+			expect(found?.sequence).toBe(42);
+		});
+
+		it("PUT /v1/api/projects/sequence and /reorder aliases work as expected", async () => {
+			const resSeq = await SELF.fetch("http://example.com/v1/api/projects/sequence", {
+				method: "PUT",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: ["00000000-0000-4000-8000-000000000002"] }),
+			});
+			expect(resSeq.status).toBe(200);
+
+			const resReorder = await SELF.fetch("http://example.com/v1/api/projects/reorder", {
+				method: "PUT",
+				headers: { ...adminHeaders, "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: ["00000000-0000-4000-8000-000000000002"] }),
+			});
+			expect(resReorder.status).toBe(200);
+		});
+	});
 });

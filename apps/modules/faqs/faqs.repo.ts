@@ -5,6 +5,7 @@ import type {
 	UpdateFaqDto,
 	FaqListParams,
 	IFaqRepository,
+	FaqOrderSequenceItem,
 } from "./faqs.interface";
 import { computeFaqStats, slugify } from "./faqs.interface";
 import { PaginatedResult } from "../../shared/interfaces";
@@ -32,6 +33,8 @@ export class FaqRepository implements IFaqRepository {
 			category: 'f.category',
 			sort_order: 'f.sort_order',
 			sortOrder: 'f.sort_order',
+			position: 'f.sort_order',
+			sequence: 'f.sort_order',
 			status: 'f.status',
 			created_at: 'f.created_at',
 			updated_at: 'f.updated_at',
@@ -257,6 +260,8 @@ export class FaqRepository implements IFaqRepository {
 			content: row.answer,
 			category: row.category,
 			sortOrder: row.sort_order,
+			position: row.sort_order,
+			sequence: row.sort_order,
 			status: row.status === 0 ? 0 : 1,
 			articleId: row.article_id,
 			article: row.article_id
@@ -272,5 +277,81 @@ export class FaqRepository implements IFaqRepository {
 			createdAt: row.created_at,
 			updatedAt: row.updated_at,
 		};
+	}
+
+	/**
+	 * @description Replace the admin-controlled sort order of FAQs.
+	 * Writes `sort_order = 0..N-1` for the given ids.
+	 * @param { (number | string)[] } orderedIds FAQ ids in the desired order
+	 * @returns { Promise<number> } Number of rows actually updated
+	 */
+	async reorder(orderedIds: (number | string)[]): Promise<number> {
+		if (orderedIds.length === 0) return 0;
+		const seen = new Set<number>();
+		const unique: number[] = [];
+		for (const raw of orderedIds) {
+			const id = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+			if (!isNaN(id) && !seen.has(id)) {
+				seen.add(id);
+				unique.push(id);
+			}
+		}
+		if (unique.length === 0) return 0;
+
+		const now = new Date().toISOString();
+		const stmts = unique.map((id, index) =>
+			this.db
+				.prepare("UPDATE faqs SET sort_order = ?1, updated_at = ?2 WHERE id = ?3")
+				.bind(index, now, id),
+		);
+		const results = await this.db.batch(stmts);
+		return results.reduce((sum, r) => sum + (r.meta?.changes ?? 0), 0);
+	}
+
+	/**
+	 * @description Update FAQ order sequence with explicit sequence numbers.
+	 * @param { { id: number | string; sequence: number }[] } items Items with id and sequence
+	 * @returns { Promise<number> } Number of rows updated
+	 */
+	async updateOrderSequence(items: { id: number | string; sequence: number }[]): Promise<number> {
+		if (items.length === 0) return 0;
+		const map = new Map<number, number>();
+		for (const item of items) {
+			const id = typeof item.id === 'number' ? item.id : parseInt(String(item.id), 10);
+			if (!isNaN(id)) {
+				map.set(id, item.sequence);
+			}
+		}
+		if (map.size === 0) return 0;
+
+		const now = new Date().toISOString();
+		const stmts = Array.from(map.entries()).map(([id, sequence]) =>
+			this.db
+				.prepare("UPDATE faqs SET sort_order = ?1, updated_at = ?2 WHERE id = ?3")
+				.bind(sequence, now, id),
+		);
+		const results = await this.db.batch(stmts);
+		return results.reduce((sum, r) => sum + (r.meta?.changes ?? 0), 0);
+	}
+
+	/**
+	 * @description Get FAQ order sequence list
+	 * @returns { Promise<FaqOrderSequenceItem[]> } FAQs in display order
+	 */
+	async getOrderSequence(): Promise<FaqOrderSequenceItem[]> {
+		const result = await this.db
+			.prepare("SELECT id, question, slug, category, sort_order, status FROM faqs ORDER BY sort_order ASC, id ASC")
+			.all<{ id: number; question: string; slug: string; category: string; sort_order: number; status: number }>();
+
+		return (result.results ?? []).map((r) => ({
+			id: r.id,
+			question: r.question,
+			slug: r.slug,
+			category: r.category,
+			sortOrder: r.sort_order,
+			position: r.sort_order,
+			sequence: r.sort_order,
+			status: r.status === 0 ? 0 : 1,
+		}));
 	}
 }
