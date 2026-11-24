@@ -1,0 +1,5 @@
+$kind: http-request
+description: Site-wide llms.txt index linking About, Contact, and every published article and project.
+url: "{{baseUrl}}/llms.txt"
+method: GET
+order: 1000

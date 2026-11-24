@@ -17,6 +17,7 @@ import { aiRoutes } from './modules/ai/ai.route';
 import { chatRoutes } from './modules/chat/chat.route';
 import { contactRoutes } from './modules/contact/contact.route';
 import { dashboardRoutes } from './modules/dashboard/dashboard.route';
+import { llmsRoutes } from './modules/llms/llms.route';
 import { bodyLimitMiddleware } from './middlewares/body-limit.middleware';
 import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 import { securityMiddleware } from './middlewares/security.middleware';
@@ -57,6 +58,7 @@ app.route('/', aiRoutes);
 app.route('/', chatRoutes);
 app.route('/', contactRoutes);
 app.route('/', dashboardRoutes);
+app.route('/', llmsRoutes);
 
 // visitor_logs retention window in days (#33). 30 days is enough for the
 // dashboard's live-traffic aggregations and short enough that a leaked DB

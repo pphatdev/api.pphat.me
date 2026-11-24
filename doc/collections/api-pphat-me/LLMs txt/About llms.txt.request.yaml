@@ -1,0 +1,5 @@
+$kind: http-request
+description: Generated llms.txt for the About page: active About Me profile plus active About FAQs.
+url: "{{baseUrl}}/about/llms.txt"
+method: GET
+order: 4000

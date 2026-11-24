@@ -1,0 +1,5 @@
+$kind: http-request
+description: Generated llms.txt (Markdown) for a published article. 404 for drafts, private or unknown slugs.
+url: "{{baseUrl}}/articles/test-article-slug/llms.txt"
+method: GET
+order: 2000
