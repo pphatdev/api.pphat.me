@@ -43,3 +43,4 @@ console.log('  - articles (3 published articles with stats & authors)');
 console.log('  - projects & project_details (3 featured portfolio projects)');
 console.log('  - tags (12 article and project scoped tags)');
 console.log('  - faqs (8 FAQs: About Sophat LEAT)');
+console.log('  - gallery (6 showcase items: 5 public, 3 featured)');

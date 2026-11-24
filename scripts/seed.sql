@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Portfolio Seed Data for api.pphat.me
--- Entities: tech_stacks, skills, experiences, experience_tech_stacks,
+-- Entities: tech_stacks, skills, experiences, experience_tech_stacks, faqs, gallery,
 --           articles, authors, author_details, article_authors, article_stats,
 --           projects, project_details, tags
 -- =============================================================================
@@ -587,3 +587,16 @@ ON CONFLICT(id) DO UPDATE SET
     status = excluded.status,
     article_id = excluded.article_id,
     updated_at = excluded.updated_at;
+
+-- -----------------------------------------------------------------------------
+-- 9. Gallery (Public Gallery showcase items)
+-- INSERT OR IGNORE: re-seeding never overwrites items curated in the admin.
+-- -----------------------------------------------------------------------------
+INSERT OR IGNORE INTO gallery (id, title, caption, alt_text, media_path, category, tags, is_public, is_featured, sort_order, aspect_ratio, created_at, updated_at)
+VALUES
+    (1, 'Phnom Penh Skyline Dusk', 'Sunset panorama over the Mekong river and urban landscape of Phnom Penh.', 'Phnom Penh skyline at twilight', 'blogs/media/cover-phnom-penh.webp', 'photography', '["cambodia","cityscape","sunset"]', 1, 1, 1, '16/9', '2026-11-20T10:00:00.000Z', '2026-11-20T10:00:00.000Z'),
+    (2, 'Developer Workspace & Desk Setup', 'Minimalist dual-monitor workstation with ambient warm lighting.', 'Clean workstation desk setup', 'blogs/media/workspace-setup.webp', 'setup', '["workspace","minimalism","productivity"]', 1, 1, 2, '16/9', '2026-11-21T08:30:00.000Z', '2026-11-21T08:30:00.000Z'),
+    (3, 'Admin Console Design System', 'Color tokens, typography scale, and dark mode interface elements.', 'Design system components preview', 'blogs/media/design-system-preview.webp', 'design', '["design-system","ui","dark-mode"]', 1, 0, 3, '4/3', '2026-11-21T12:00:00.000Z', '2026-11-21T12:00:00.000Z'),
+    (4, 'Cloudflare Edge Infrastructure', 'Distributed network routing and edge worker latency benchmarks.', 'Global edge network architecture map', 'blogs/media/cloudflare-architecture.webp', 'projects', '["cloud","architecture","edge"]', 1, 0, 4, '16/9', '2026-11-22T09:15:00.000Z', '2026-11-22T09:15:00.000Z'),
+    (5, 'Khmer Typography & Font Pairings', 'Exploring contemporary digital typefaces for Khmer and Latin scripts.', 'Khmer typography specimen board', 'blogs/media/khmer-typography-showcase.webp', 'design', '["typography","khmer","branding"]', 0, 0, 5, '1/1', '2026-11-22T14:20:00.000Z', '2026-11-22T14:20:00.000Z'),
+    (6, 'Siem Reap Temple Sunrise', 'Golden morning light filtering through the ancient stone ruins of Angkor.', 'Stone temple ruins at sunrise', 'blogs/media/angkor-sunrise.webp', 'photography', '["angkor","heritage","sunrise"]', 1, 1, 6, '4/3', '2026-11-22T16:45:00.000Z', '2026-11-22T16:45:00.000Z');
