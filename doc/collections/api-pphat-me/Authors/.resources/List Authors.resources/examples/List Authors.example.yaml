@@ -1,0 +1,65 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/authors?page=1&limit=10"
+  method: GET
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: JWT access token or an SSO API key via `ApiKey {{apiKey}}`
+  queryParams:
+    - key: page
+      value: "1"
+      description: "Page number (default: 1)"
+    - key: limit
+      value: "10"
+      description: "Items per page (default: 10, max: 100)"
+    - key: search
+      value: ""
+      disabled: true
+      description: Search in name
+    - key: sort
+      value: id
+      disabled: true
+      description: "Sort column: id, name, profile, url"
+    - key: order
+      value: asc
+      disabled: true
+      description: "Sort order: asc, desc"
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "300"
+    X-RateLimit-Remaining: "298"
+    X-RateLimit-Reset: "44"
+  body:
+    type: text
+    content: |-
+      {
+          "data": [
+              {
+                  "id": 1,
+                  "name": "PPhat Dev",
+                  "profile": "Front-End Developer",
+                  "url": "https://pphat.me",
+                  "bio": "A passionate writer and developer.",
+                  "avatarUrl": "https://example.com/avatar.png",
+                  "socialLinks": [
+                      "https://pphat.me"
+                  ],
+                  "status": 1,
+                  "createdAt": "2026-04-27T03:44:09.952Z",
+                  "updatedAt": "2026-04-27T03:44:09.952Z"
+              }
+          ],
+          "pagination": {
+              "page": 1,
+              "limit": 10,
+              "total": 1,
+              "totalPages": 1
+          }
+      }
+order: 1000

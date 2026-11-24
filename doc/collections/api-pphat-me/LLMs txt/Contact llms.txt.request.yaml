@@ -1,0 +1,5 @@
+$kind: http-request
+description: Generated llms.txt for the Contact page. Never includes submitted contact messages.
+url: "{{baseUrl}}/contact/llms.txt"
+method: GET
+order: 5000

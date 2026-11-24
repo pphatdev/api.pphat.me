@@ -1,0 +1,16 @@
+$kind: http-request
+description: |-
+  Public resume timeline. Active experiences (`status = 1`) grouped by company, with roles ordered current-first and tech-stack links mapped to `skills` ({ name, icon: logo_url, url }).
+
+  Pagination unit is **company** — a page always contains fully-populated companies rather than splitting roles across pages. Response shape: `{ data: TimelineCompany[], pagination: { page, limit, total, totalPages } }`.
+url: "{{baseUrl}}/v1/api/experiences/timeline?page=1&limit=10"
+method: GET
+queryParams:
+  - key: page
+    value: "1"
+    description: "Page number (default: 1)"
+  - key: limit
+    value: "10"
+    description: "Companies per page (default: 10, max: 100)"
+examples: ./.resources/Get Resume Timeline.resources/examples
+order: 6000

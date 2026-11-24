@@ -1,0 +1,9 @@
+$kind: http-request
+description: Deletes an article by UUID. Requires owner or admin. Returns 204 on success. The :id parameter must be a UUID (not a slug).
+url: "{{baseUrl}}/v1/api/articles/{{articleId}}"
+method: DELETE
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — owner or admin only
+order: 6000

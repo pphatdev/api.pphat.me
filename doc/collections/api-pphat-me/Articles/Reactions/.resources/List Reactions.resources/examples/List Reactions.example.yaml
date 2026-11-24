@@ -1,0 +1,26 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/articles/{{slug}}/reactions"
+  method: GET
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "300"
+    X-RateLimit-Remaining: "297"
+    X-RateLimit-Reset: "37"
+  body:
+    type: text
+    content: |-
+      [
+          {
+              "id": 1,
+              "articleId": "c67640b9-dd5c-44a9-93de-4efd8cded2a8",
+              "type": "like",
+              "count": 1
+          }
+      ]
+order: 1000

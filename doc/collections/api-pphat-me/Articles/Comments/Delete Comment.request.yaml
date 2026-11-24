@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/api/articles/{{slug}}/comments/{{commentId}}"
+method: DELETE
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — authenticated users only
+order: 4000

@@ -67,7 +67,6 @@ describe("Articles API", () => {
 					thumbnail: "https://example.com/new-thumb.png",
 					content: "# New content",
 					published: false,
-					author_ids: [1],
 					tag_ids: [],
 				}),
 			});
@@ -78,13 +77,8 @@ describe("Articles API", () => {
 			// client into a second round-trip just to render "created by".
 			expect(body).toHaveProperty("ownerId", "test-user-id");
 			expect(body.owner).toMatchObject({ id: "test-user-id", name: "Test User", role: "admin" });
-			// `author_ids` (snake_case) must attach the author to the article on
-			// create. Previously the authors came back empty if the client sent
-			// the camelCase alias instead — see the authorIds test below.
 			expect(Array.isArray(body.authors)).toBe(true);
-			expect((body.authors as any[]).map((a) => a.id)).toContain(1);
 			// Business rule: the creator is automatically credited as an author
-			// alongside any explicit co-authors sent in author_ids.
 			expect((body.authors as any[]).some((a) => a.name === "Test User")).toBe(true);
 		});
 
@@ -128,30 +122,24 @@ describe("Articles API", () => {
 			expect((body.authors as any[]).some((a) => a.name === "Test User")).toBe(true);
 		});
 
-		it("accepts authorIds (camelCase) as alias for author_ids", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/articles", {
-				method: "POST",
+		it("accepts authorIds (camelCase) as alias for author_ids on update", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_ID}`, {
+				method: "PATCH",
 				headers: authHeaders,
 				body: JSON.stringify({
-					title: "Camel Author Article",
-					slug: "camel-author-article",
-					description: "Uses camelCase authorIds.",
 					authorIds: [1],
 				}),
 			});
-			expect(res.status).toBe(201);
+			expect(res.status).toBe(200);
 			const body = await res.json() as any;
 			expect((body.authors as any[]).map((a) => a.id)).toContain(1);
 		});
 
-		it("rejects authorIds that is not an array of integers (422)", async () => {
-			const res = await SELF.fetch("http://example.com/v1/api/articles", {
-				method: "POST",
+		it("rejects authorIds that is not an array of integers (422) on update", async () => {
+			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_ID}`, {
+				method: "PATCH",
 				headers: authHeaders,
 				body: JSON.stringify({
-					title: "Bad AuthorIds",
-					slug: "bad-author-ids",
-					description: "Non-integer in authorIds.",
 					authorIds: ["one"],
 				}),
 			});

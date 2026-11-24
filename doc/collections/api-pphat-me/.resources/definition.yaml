@@ -1,0 +1,29 @@
+$kind: collection
+description: ""
+variables:
+  baseUrl: http://localhost:8787
+  token: ""
+  slug: my-article-slug
+  authorId: "1"
+  tagId: "1"
+  techStackId: "1"
+  experienceId: "1"
+  skillId: "1"
+  commentId: "1"
+  projectSlug: my-project
+  articleId: 00000000-0000-4000-8000-000000000000
+  contactId: 00000000-0000-4000-8000-000000000000
+  refreshToken: ""
+  apiKey: ""
+  ssoKeyId: ""
+  faqId: "1"
+  aboutMeId: "1"
+  galleryId: "1"
+  serviceId: "1"
+  projectId: 00000000-0000-4000-8000-000000000002
+auth:
+  - id: 66aa1082-4d38-444a-bcf8-2c08c28296ec
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{token}}"

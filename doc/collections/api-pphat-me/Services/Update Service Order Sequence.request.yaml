@@ -1,0 +1,17 @@
+$kind: http-request
+description: Update service order sequence. Admin only.
+url: "{{baseUrl}}/v1/api/services/order-sequence"
+method: PUT
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "ids": [2, 1]
+    }
+order: 10000

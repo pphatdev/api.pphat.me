@@ -1,0 +1,13 @@
+$kind: http-request
+description: List all contact messages. Admin only. Supports standard pagination.
+url: "{{baseUrl}}/v1/api/contact?page=1&limit=10"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+queryParams:
+  page: "1"
+  limit: "10"
+examples: ./.resources/List Contact Messages.resources/examples
+order: 2000

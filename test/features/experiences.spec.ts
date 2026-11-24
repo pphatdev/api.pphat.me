@@ -295,6 +295,8 @@ describe("Experiences API", () => {
 		// company bucket and carry the attached skill + isCurrent period.
 		const senior = turbo.roles[0];
 		expect(senior.title).toBe("Senior Frontend Developer");
+		expect(senior.description).toBeDefined();
+		expect(typeof senior.description).toBe("string");
 		expect(senior.period).toMatchObject({
 			from: "2022, Oct",
 			isCurrent: true,

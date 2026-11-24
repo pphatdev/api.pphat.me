@@ -37,13 +37,26 @@ app.get(
  * @param { String } thumbnail      Thumbnail of Articles
  * @param { String } file_path      File Path of Articles
  * @param { Boolean } published     Published Status of Articles
- * @param { String[] } [author_ids] Author IDs of Articles
  * @param { String[] } [tags]       Tags of Articles
  */
 app.post(
     '/v1/api/articles',
     authGuard,
     ArticlesController.create
+);
+
+/**
+ * @description Replace the admin-controlled article display order
+ * @method PUT
+ * @body `{ ids: string[] }` Article IDs (UUIDs) in the desired order
+ *
+ * Declared before `/:slug` so the literal segment "reorder" isn't swallowed
+ * by the slug catch-all (Hono matches by declaration order).
+ */
+app.put(
+    '/v1/api/articles/reorder',
+    authGuard,
+    ArticlesController.reorder
 );
 
 /**

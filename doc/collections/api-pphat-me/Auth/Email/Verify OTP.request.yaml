@@ -1,0 +1,15 @@
+$kind: http-request
+description: Verifies the 6-digit OTP. Returns { accessToken, refreshToken } on success. The OTP is valid for 10 minutes and can only be used once.
+url: "{{baseUrl}}/v1/api/auth/email/verify"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "info.sophat@gmail.com",
+      "otp": "506102"
+    }
+examples: ./.resources/Verify OTP.resources/examples
+order: 3000

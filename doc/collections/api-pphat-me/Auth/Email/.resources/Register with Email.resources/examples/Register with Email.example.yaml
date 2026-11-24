@@ -1,0 +1,31 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/auth/email/register"
+  method: POST
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "info.sophat@gmail.com",
+        "name": "John Doe",
+        "password": "mypassword123"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "20"
+    X-RateLimit-Remaining: "19"
+    X-RateLimit-Reset: "60"
+  body:
+    type: text
+    content: |-
+      {
+          "message": "Verification code sent to your email"
+      }
+order: 1000

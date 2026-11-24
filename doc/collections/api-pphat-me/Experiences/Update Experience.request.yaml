@@ -1,0 +1,21 @@
+$kind: http-request
+description: |-
+  Partial update. Admin only. Any subset of create fields is accepted.
+
+  Pass `end_date: null` to re-open a role as current.
+url: "{{baseUrl}}/v1/api/experiences/{{experienceId}}"
+method: PATCH
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "description": "Updated description.",
+        "end_date": "2025-04-01"
+    }
+order: 4000

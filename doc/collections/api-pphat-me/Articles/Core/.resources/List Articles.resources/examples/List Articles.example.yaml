@@ -1,0 +1,95 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/articles?page=1&limit=10"
+  method: GET
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: JWT access token or an SSO API key via `ApiKey {{apiKey}}`
+  queryParams:
+    - key: page
+      value: "1"
+      description: "Page number (default: 1)"
+    - key: limit
+      value: "10"
+      description: "Items per page (default: 10, max: 100)"
+    - key: search
+      value: ""
+      disabled: true
+      description: Search in title, slug, description
+    - key: sort
+      value: title,created_at
+      disabled: true
+      description: "Comma-separated sort columns: id, title, slug, description, published, created_at, updated_at"
+    - key: order
+      value: desc
+      disabled: true
+      description: "Sort direction applied to all sort columns: asc, desc"
+    - key: tags
+      value: tag1,tag2
+      disabled: true
+      description: Comma-separated tag names to filter by
+    - key: authors
+      value: author1,author2
+      disabled: true
+      description: Comma-separated author names to filter by
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "300"
+    X-RateLimit-Remaining: "299"
+    X-RateLimit-Reset: "60"
+  body:
+    type: text
+    content: |-
+      {
+          "data": [
+              {
+                  "id": "c67640b9-dd5c-44a9-93de-4efd8cded2a8",
+                  "title": "My Article Title",
+                  "slug": "my-article-slug",
+                  "description": "A short description of the article.",
+                  "tags": [
+                      {
+                          "id": 1,
+                          "tag": "typescript",
+                          "description": "TypeScript articles"
+                      }
+                  ],
+                  "authors": [
+                      {
+                          "name": "PPhat Dev",
+                          "profile": "Front-End Developer",
+                          "url": "https://pphat.me"
+                      }
+                  ],
+                  "thumbnail": "https://example.com/thumbnail.png",
+                  "published": true,
+                  "isPublic": true,
+                  "publishAt": null,
+                  "status": "public",
+                  "ownerId": "d80d99fd-5237-4751-ad8b-89e7150aa889",
+                  "owner": {
+                      "id": "d80d99fd-5237-4751-ad8b-89e7150aa889",
+                      "name": "PPhat Dev",
+                      "avatar": "https://avatars.githubusercontent.com/u/1?v=4",
+                      "role": "user"
+                  },
+                  "createdAt": "2026-04-27T03:45:51.505Z",
+                  "updatedAt": "2026-04-27T03:46:54.340Z",
+                  "content": "Full article content goes here.",
+                  "filePath": ""
+              }
+          ],
+          "pagination": {
+              "page": 1,
+              "limit": 10,
+              "total": 1,
+              "totalPages": 1
+          }
+      }
+order: 1000

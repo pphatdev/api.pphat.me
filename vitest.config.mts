@@ -19,5 +19,11 @@ export default defineConfig({
 		// isolates. The 5s default gets crowded — 15s keeps flakiness away
 		// without hiding a genuinely stuck test.
 		testTimeout: 15_000,
+		// Every spec seeds its own fresh D1 in beforeAll — that runs the full
+		// migration set + seed SQL sequentially. The migration set has grown
+		// past 25 files, and under full-suite parallel load (24 specs each
+		// seeding simultaneously) the 10s Vitest default times out even on a
+		// green run. Keep the hook ceiling in step with the test ceiling.
+		hookTimeout: 20_000,
 	},
 });

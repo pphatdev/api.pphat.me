@@ -1,0 +1,10 @@
+$kind: http-request
+description: Get FAQ by numeric ID or slug. Publicly accessible for active FAQs. Inactive FAQs require admin authentication.
+url: "{{baseUrl}}/v1/api/faqs/{{faqId}}"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    disabled: true
+    description: Optional. Admin JWT required only when retrieving inactive (status=0) FAQs
+order: 3000

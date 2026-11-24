@@ -4,9 +4,30 @@ const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
 
-const email = process.env.ADMIN_EMAIL || process.argv[2];
+// Load environment variables from .env or .dev.vars if present
+try {
+    require('dotenv').config();
+} catch {}
+if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+    const envFile = fs.existsSync('.env') ? '.env' : (fs.existsSync('.dev.vars') ? '.dev.vars' : null);
+    if (envFile) {
+        const lines = fs.readFileSync(envFile, 'utf8').split('\n');
+        for (const line of lines) {
+            const m = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+            if (m && !process.env[m[1]]) {
+                let v = (m[2] || '').trim();
+                if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+                    v = v.slice(1, -1);
+                }
+                process.env[m[1]] = v;
+            }
+        }
+    }
+}
+
+const email = process.env.ADMIN_EMAIL || process.env.SMTP_USER || process.argv[2];
 const password = process.env.ADMIN_PASSWORD || process.argv[3];
-const name = process.env.ADMIN_NAME || process.argv[4] || 'Admin';
+const name = process.env.ADMIN_NAME || process.argv[4] || (process.env.SMTP_FROM ? process.env.SMTP_FROM.replace(/<.*>/, '').replace(/["']/g, '').trim() : 'Admin');
 const target = (process.env.ADMIN_TARGET || 'local').toLowerCase();
 
 if (!email || !password) {

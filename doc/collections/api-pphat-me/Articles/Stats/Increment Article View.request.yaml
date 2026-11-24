@@ -1,0 +1,9 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/api/articles/{{slug}}/stats/view"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — authenticated users only
+examples: ./.resources/Increment Article View.resources/examples
+order: 2000

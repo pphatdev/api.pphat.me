@@ -1,0 +1,39 @@
+$kind: http-request
+description: Authenticates a verified email account with password. Returns { accessToken, refreshToken }.
+url: "{{baseUrl}}/v1/api/auth/email/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "info.sophat@gmail.com",
+      "password": "Improve#168"
+    }
+scripts:
+  - type: afterResponse
+    code: "if(pm.response.code === 200){\r
+
+      \r
+
+      \    const response = pm.response.json();\r
+
+      \r
+
+      \    pm.environment.set(\"token\", response.accessToken);\r
+
+      \    pm.environment.set(\"refreshToken\", response.refreshToken);\r
+
+      \    pm.variables.set(\"token\", response.accessToken);\r
+
+      \    pm.variables.set(\"refreshToken\", response.refreshToken);\r
+
+      \    pm.collectionVariables.set(\"token\", response.accessToken);\r
+
+      \    pm.collectionVariables.set(\"refreshToken\", response.refreshToken);\r
+
+      }"
+    language: text/javascript
+examples: ./.resources/Login with Email.resources/examples
+order: 2000

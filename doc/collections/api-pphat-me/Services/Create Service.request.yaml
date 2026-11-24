@@ -1,0 +1,32 @@
+$kind: http-request
+description: |-
+  Create a new service offering. Admin only.
+
+  **Required:** `title`, `description` (or `content`/`summary`).
+  **Optional:** `icon` (or `iconName`), `category` (default: 'General'), `features` (array of strings), `link_url` (`linkUrl`), `sort_order` (`sortOrder`), `status` (0 or 1, default: 1).
+url: "{{baseUrl}}/v1/api/services"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "UI/UX Design",
+      "description": "Crafting beautiful, accessible, and intuitive digital interfaces.",
+      "icon": "palette",
+      "category": "Design",
+      "features": [
+        "Figma Wireframing & Design Systems",
+        "Responsive Component Architecture",
+        "User Flow & Interactive Prototyping"
+      ],
+      "link_url": "",
+      "sort_order": 3,
+      "status": 1
+    }
+order: 7000

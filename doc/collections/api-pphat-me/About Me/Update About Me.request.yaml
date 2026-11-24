@@ -1,0 +1,23 @@
+$kind: http-request
+description: Update an existing About Me profile. Admin only. Supports partial updates via PUT or PATCH.
+url: "{{baseUrl}}/v1/api/about-me/{{aboutMeId}}"
+method: PUT
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "badge": "About me!",
+      "title": "Who the hell am I ?",
+      "description": "Updated biographical description content...",
+      "button_text": "Gallery",
+      "button_url": "https://pphat.me/gallery",
+      "role": "Senior Front-end Developer & UI/UX Designer",
+      "status": 1
+    }
+order: 5000

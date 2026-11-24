@@ -1,4 +1,4 @@
-import type { Project, IProjectRepository, CreateProjectDto, UpdateProjectDto } from "./projects.interface";
+import type { Project, IProjectRepository, CreateProjectDto, UpdateProjectDto, ProjectOrderSequenceItem } from "./projects.interface";
 import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 
 export class ProjectService {
@@ -53,5 +53,31 @@ export class ProjectService {
 	 */
 	delete(slug: string): Promise<boolean> {
 		return this.repo.delete(slug);
+	}
+
+	/**
+	 * @description Replace the admin-controlled display order of projects.
+	 * @param { string[] } orderedIds Project ids in the desired display order
+	 * @returns { Promise<number> } Rows updated
+	 */
+	reorder(orderedIds: string[]): Promise<number> {
+		return this.repo.reorder(orderedIds);
+	}
+
+	/**
+	 * @description Update project order sequence with explicit sequence numbers.
+	 * @param { { id: string; sequence: number }[] } items Items with id and sequence
+	 * @returns { Promise<number> } Rows updated
+	 */
+	updateOrderSequence(items: { id: string; sequence: number }[]): Promise<number> {
+		return this.repo.updateOrderSequence(items);
+	}
+
+	/**
+	 * @description Get project order sequence list
+	 * @returns { Promise<ProjectOrderSequenceItem[]> } Projects in display order
+	 */
+	getOrderSequence(): Promise<ProjectOrderSequenceItem[]> {
+		return this.repo.getOrderSequence();
 	}
 }

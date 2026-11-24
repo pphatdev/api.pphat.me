@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/api/authors"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+        "name": "PPhat Dev",
+        "profile": "Front-End Developer",
+        "url": "https://pphat.me",
+        "bio": "A passionate writer and developer.",
+        "avatar_url": "https://example.com/avatar.png",
+        "social_links": [
+            "https://pphat.me"
+        ],
+        "status": 1
+    }
+examples: ./.resources/Create Author.resources/examples
+order: 3000

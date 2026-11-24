@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get active service section header configuration.
+url: "{{baseUrl}}/v1/api/services/section"
+method: GET
+order: 2000

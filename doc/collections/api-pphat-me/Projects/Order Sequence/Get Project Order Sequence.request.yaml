@@ -1,0 +1,9 @@
+$kind: http-request
+description: Retrieve all projects ordered by position ASC, created_at DESC with their id, title, slug, thumbnail, published status, position, and sequence.
+url: "{{baseUrl}}/v1/api/projects/order-sequence"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT access token or an SSO API key via `ApiKey {{apiKey}}`
+order: 1000

@@ -1,0 +1,9 @@
+$kind: http-request
+description: "Demonstrates using an SSO API key on any authenticated endpoint. `Authorization: ApiKey <key>` is accepted anywhere a JWT Bearer token is."
+url: "{{baseUrl}}/v1/api/tags"
+method: GET
+headers:
+  - key: Authorization
+    value: ApiKey {{apiKey}}
+    description: "SSO API key issued from POST /v1/api/auth/sso/keys. Alternatively use header `X-API-Key: {{apiKey}}`."
+order: 4000

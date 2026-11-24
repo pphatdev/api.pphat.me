@@ -4,6 +4,7 @@ import { IProjectRepository } from "../projects/projects.interface";
 import { IAuthorRepository } from "../authors/authors.interface";
 import { ITechStackRepository } from "../tech-stacks/tech-stacks.interface";
 import { IExperienceRepository } from "../experiences/experiences.interface";
+import { ISkillRepository } from "../skills/skills.interface";
 
 export class DashboardRepository implements IDashboardRepository {
 	constructor(
@@ -13,6 +14,7 @@ export class DashboardRepository implements IDashboardRepository {
 		private readonly authorRepo: IAuthorRepository,
 		private readonly techStackRepo: ITechStackRepository,
 		private readonly experienceRepo: IExperienceRepository,
+		private readonly skillRepo: ISkillRepository,
 	) {}
 
 	/**
@@ -31,6 +33,7 @@ export class DashboardRepository implements IDashboardRepository {
 			newestContributors,
 			newestTechStacks,
 			newestExperiences,
+			newestSkills,
 		] = await Promise.all([
 			this.articleRepo.getStatsSummary(),
 			this.projectRepo.getStatsSummary(),
@@ -42,6 +45,7 @@ export class DashboardRepository implements IDashboardRepository {
 			this.authorRepo.findAll({ page: 1, limit: 5, sort: ['created_at'], order: 'desc' } as any),
 			this.techStackRepo.findAll({ page: 1, limit: 5, sort: ['created_at'], order: 'desc' } as any),
 			this.experienceRepo.findAll({ page: 1, limit: 5, sort: ['created_at'], order: 'desc' } as any),
+			this.skillRepo.findAll({ page: 1, limit: 5, sort: ['created_at'], order: 'desc' } as any),
 		]);
 
 		return {
@@ -55,6 +59,7 @@ export class DashboardRepository implements IDashboardRepository {
 			newestContributors: newestContributors.data,
 			newestTechStacks: newestTechStacks.data,
 			newestExperiences: newestExperiences.data,
+			newestSkills: newestSkills.data,
 		};
 	}
 

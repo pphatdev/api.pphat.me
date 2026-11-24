@@ -1,0 +1,29 @@
+$kind: http-request
+description: |-
+  Generates API/article description and markdown content using Cloudflare Workers AI.
+
+  Modes:
+  - description
+  - content
+  - both
+url: "{{baseUrl}}/v1/api/ai/generate"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — authenticated users only
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Hello World",
+      "context": "API for blog and project management.",
+      "tone": "professional and friendly",
+      "language": "English",
+      "mode": "both",
+      "model": "@cf/meta/llama-3.1-8b-instruct"
+    }
+examples: ./.resources/Generate Description or Content.resources/examples
+order: 1000

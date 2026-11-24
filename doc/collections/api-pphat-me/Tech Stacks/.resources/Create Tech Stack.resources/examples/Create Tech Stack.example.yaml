@@ -1,0 +1,38 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/tech-stacks"
+  method: POST
+  headers:
+    Authorization: Bearer {{token}}
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "name": "React",
+          "description": "A JavaScript library for building user interfaces.",
+          "url": "https://react.dev",
+          "logo_url": "https://react.dev/favicon.ico",
+          "cover": "https://example.com/react-cover.png",
+          "status": 1
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "id": 1,
+          "name": "React",
+          "description": "A JavaScript library for building user interfaces.",
+          "url": "https://react.dev",
+          "logoUrl": "https://react.dev/favicon.ico",
+          "cover": "https://example.com/react-cover.png",
+          "status": 1,
+          "createdAt": "2026-11-20T08:30:00.000Z",
+          "updatedAt": "2026-11-20T08:30:00.000Z"
+      }
+order: 1000

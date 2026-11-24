@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/contact"
+  method: POST
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Jane Doe",
+        "email": "jane@example.com",
+        "subject": "Inquiry about your services",
+        "message": "Hello, I am interested in collaborating on a project."
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "message": "Message sent successfully"
+      }
+order: 1000

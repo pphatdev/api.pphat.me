@@ -1,0 +1,5 @@
+$kind: http-request
+description: Generated llms.txt (Markdown) for a published project, including demo, repo, status and tech stack.
+url: "{{baseUrl}}/projects/test-project-slug/llms.txt"
+method: GET
+order: 3000

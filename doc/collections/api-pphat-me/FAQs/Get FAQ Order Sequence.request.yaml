@@ -1,0 +1,9 @@
+$kind: http-request
+description: Retrieve all FAQs ordered by sort_order ASC, id ASC with their id, question, slug, category, sortOrder, position, sequence, and status.
+url: "{{baseUrl}}/v1/api/faqs/order-sequence"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT access token or an SSO API key via `ApiKey {{apiKey}}`
+order: 7000

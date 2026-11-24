@@ -1,0 +1,19 @@
+$kind: http-request
+description: Update service section header (badge, title, description). Admin only.
+url: "{{baseUrl}}/v1/api/services/section"
+method: PUT
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "badge": "Feature",
+      "title": "What I can do for you",
+      "description": "I can help you build your next project from scratch. I have experience in web development, design, and cloud hosting. I can help you with everything from the initial design to the final deployment."
+    }
+order: 3000

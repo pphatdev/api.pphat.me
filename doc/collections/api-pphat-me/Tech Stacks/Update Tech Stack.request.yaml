@@ -1,0 +1,18 @@
+$kind: http-request
+description: Partial update. Admin only. Any subset of create fields is accepted.
+url: "{{baseUrl}}/v1/api/tech-stacks/{{techStackId}}"
+method: PATCH
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "description": "Updated description.",
+        "status": 0
+    }
+order: 4000

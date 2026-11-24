@@ -1,0 +1,32 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/authors/{{authorId}}"
+  method: GET
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "300"
+    X-RateLimit-Remaining: "297"
+    X-RateLimit-Reset: "34"
+  body:
+    type: text
+    content: |-
+      {
+          "id": 1,
+          "name": "PPhat Dev",
+          "profile": "Front-End Developer",
+          "url": "https://pphat.me",
+          "bio": "A passionate writer and developer.",
+          "avatarUrl": "https://example.com/avatar.png",
+          "socialLinks": [
+              "https://pphat.me"
+          ],
+          "status": 1,
+          "createdAt": "2026-04-27T03:44:09.952Z",
+          "updatedAt": "2026-04-27T03:44:09.952Z"
+      }
+order: 1000

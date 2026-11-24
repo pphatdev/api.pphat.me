@@ -3,6 +3,7 @@ import { Project } from "../projects/projects.interface";
 import { Author } from "../authors/authors.interface";
 import { TechStack } from "../tech-stacks/tech-stacks.interface";
 import { Experience } from "../experiences/experiences.interface";
+import { Skill } from "../skills/skills.interface";
 
 export interface DashboardData {
 	blogs: {
@@ -25,6 +26,8 @@ export interface DashboardData {
 	newestTechStacks: TechStack[];
 	/** Most-recently created experience entries — part of the recent-activities feed. */
 	newestExperiences: Experience[];
+	/** Most-recently created skills — part of the recent-activities feed. */
+	newestSkills: Skill[];
 }
 
 export interface IDashboardRepository {

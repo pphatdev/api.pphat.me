@@ -1,0 +1,9 @@
+$kind: http-request
+description: Removes the authenticated user from the contributor list. Returns 204 on success.
+url: "{{baseUrl}}/v1/api/articles/{{articleId}}/contributors/me"
+method: DELETE
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — the contributor removing themselves
+order: 2000

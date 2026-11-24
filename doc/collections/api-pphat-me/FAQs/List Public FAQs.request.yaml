@@ -1,0 +1,20 @@
+$kind: http-request
+description: Public list of active (status=1) FAQs without authentication.
+url: "{{baseUrl}}/v1/api/faqs/public?page=1&limit=10"
+method: GET
+queryParams:
+  - key: page
+    value: "1"
+    description: "Page number (default: 1)"
+  - key: limit
+    value: "10"
+    description: "Items per page (default: 10, -1 for all)"
+  - key: search
+    value: ""
+    disabled: true
+    description: Match question, answer, or category
+  - key: category
+    value: General
+    disabled: true
+    description: Filter by category
+order: 2000

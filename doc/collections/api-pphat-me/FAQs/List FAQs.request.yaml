@@ -1,0 +1,36 @@
+$kind: http-request
+description: List FAQs with pagination, search, category, and status filters. Admins see all FAQs (including inactive/drafts); regular authenticated users see active FAQs.
+url: "{{baseUrl}}/v1/api/faqs?page=1&limit=10"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT access token or an SSO API key via `ApiKey {{apiKey}}`
+queryParams:
+  - key: page
+    value: "1"
+    description: "Page number (default: 1)"
+  - key: limit
+    value: "10"
+    description: "Items per page (default: 10, -1 for all)"
+  - key: search
+    value: ""
+    disabled: true
+    description: Match question, answer, or category
+  - key: category
+    value: General
+    disabled: true
+    description: Filter by category
+  - key: status
+    value: "1"
+    disabled: true
+    description: "Filter by status: 0 (inactive), 1 (active), or 'all' (admin only)"
+  - key: sort
+    value: sort_order
+    disabled: true
+    description: id, question, slug, category, sort_order, status, created_at, updated_at
+  - key: order
+    value: asc
+    disabled: true
+    description: asc | desc
+order: 1000

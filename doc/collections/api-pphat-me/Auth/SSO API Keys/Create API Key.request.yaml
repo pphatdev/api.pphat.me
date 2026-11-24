@@ -1,0 +1,42 @@
+$kind: http-request
+description: |-
+  Issues a new SSO API key for the authenticated user. The plaintext `key` is returned only once — store it securely. Use it as `Authorization: ApiKey <key>` or `X-API-Key: <key>` on any endpoint that accepts authentication.
+
+  `expiresInDays` is optional; omit or set null for keys that never expire.
+url: "{{baseUrl}}/v1/api/auth/sso/keys"
+method: POST
+headers:
+  - key: X-API-Key
+    value: "{{apiKey}}"
+    description: JWT access token
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "CI Bot",
+      "expiresInDays": 30
+    }
+scripts:
+  - type: afterResponse
+    code: "if (pm.response.code === 201) {\r
+
+      \    const body = pm.response.json();\r
+
+      \    if (body.key) {\r
+
+      \        pm.collectionVariables.set(\"apiKey\", body.key);\r
+
+      \    }\r
+
+      \    if (body.id) {\r
+
+      \        pm.collectionVariables.set(\"ssoKeyId\", body.id);\r
+
+      \    }\r
+
+      }"
+    language: text/javascript
+examples: ./.resources/Create API Key.resources/examples
+order: 1000

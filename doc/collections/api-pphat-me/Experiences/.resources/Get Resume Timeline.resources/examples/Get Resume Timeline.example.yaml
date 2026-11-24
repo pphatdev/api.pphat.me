@@ -1,0 +1,49 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/experiences/timeline?page=1&limit=10"
+  method: GET
+  queryParams:
+    page: "1"
+    limit: "10"
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": [
+              {
+                  "company": "TURBOTECH CO., LTD",
+                  "url": "https://turbotech.com.kh",
+                  "logo": "/images/companies/turbotech.png",
+                  "roles": [
+                      {
+                          "title": "Senior Frontend Developer",
+                          "description": "Led frontend architecture and component library development.",
+                          "period": {
+                              "from": "2022, Oct",
+                              "isCurrent": true,
+                              "to": "2026, Nov"
+                          },
+                          "skills": [
+                              {
+                                  "name": "Figma",
+                                  "icon": "devicon-figma-plain",
+                                  "url": "https://www.figma.com"
+                              }
+                          ]
+                      }
+                  ]
+              }
+          ],
+          "pagination": {
+              "page": 1,
+              "limit": 10,
+              "total": 1,
+              "totalPages": 1
+          }
+      }
+order: 1000

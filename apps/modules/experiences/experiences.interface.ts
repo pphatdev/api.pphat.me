@@ -85,6 +85,7 @@ export interface TimelinePeriod {
 
 export interface TimelineRole {
 	title: string;
+	description: string;
 	period: TimelinePeriod;
 	skills: TimelineSkill[];
 }

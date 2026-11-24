@@ -1,0 +1,17 @@
+$kind: http-request
+description: Grants a user contributor (write) access to this article. Only the article owner or an admin may call this. The :id must be the article UUID.
+url: "{{baseUrl}}/v1/api/articles/{{articleId}}/contributors"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — owner or admin only
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "user_id": "d80d99fd-5237-4751-ad8b-89e7150aa889"
+    }
+order: 1000

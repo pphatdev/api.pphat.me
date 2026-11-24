@@ -1,0 +1,31 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/auth/sso/keys"
+  method: GET
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: JWT access token
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "keys": [
+              {
+                  "id": "e2d1a4fa-6b2c-4a9c-9b3d-1f0e8c7a5d21",
+                  "user_id": "d80d99fd-5237-4751-ad8b-89e7150aa889",
+                  "name": "CI Bot",
+                  "prefix": "ppk_9f3c1a2b",
+                  "last_used_at": "2026-07-27T05:03:11",
+                  "expires_at": "2026-08-26T04:12:33.911Z",
+                  "revoked_at": null,
+                  "created_at": "2026-07-27 04:12:33"
+              }
+          ]
+      }
+order: 1000

@@ -1,0 +1,9 @@
+$kind: http-request
+description: Delete a service by numeric ID. Admin only.
+url: "{{baseUrl}}/v1/api/services/{{serviceId}}"
+method: DELETE
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+order: 11000

@@ -1,0 +1,9 @@
+$kind: http-request
+description: Get About Me profile by numeric ID.
+url: "{{baseUrl}}/v1/api/about-me/{{aboutMeId}}"
+method: GET
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Optional bearer token
+order: 3000

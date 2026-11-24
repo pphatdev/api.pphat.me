@@ -1,0 +1,14 @@
+# Use this workspace to collaborate
+workspace:
+  id: c0598ccb-8380-4034-8f48-27cd190d75aa
+
+localResources:
+  collections:
+    - ../api-pphat-me
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+cloudResources:
+  collections:
+    ../api-pphat-me: 16827919-46ab6177-7a2b-40f3-a38b-37c38244f7da
+  globals:
+    ../postman/globals/workspace.globals.yaml: 9f64201f-fc5d-4403-89e0-223ba7b8e230

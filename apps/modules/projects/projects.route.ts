@@ -55,6 +55,27 @@ app.get('/v1/api/projects/:slug/details', ProjectsController.resolveProject, (c)
 app.get('/v1/api/projects/:slug/tags', ProjectsController.resolveProject, (c) => ProjectsController.getTagProject(c));
 
 /**
+ * @description Get Project Order Sequence
+ * @method GET
+*/
+app.get('/v1/api/projects/order-sequence', authGuard, (c) => ProjectsController.getOrderSequence(c));
+app.get('/v1/api/projects/sequence', authGuard, (c) => ProjectsController.getOrderSequence(c));
+
+/**
+ * @description Update Project Order Sequence
+ * @method PUT, PATCH
+ * @body `{ ids: string[] }` or `{ sequence: string[] }` or `{ sequence: { id: string, sequence: number }[] }`
+ *
+ * Declared before `/:slug` so literal segments aren't swallowed by the slug catch-all.
+*/
+app.put('/v1/api/projects/order-sequence', authGuard, requireAdmin, (c) => ProjectsController.updateOrderSequence(c));
+app.patch('/v1/api/projects/order-sequence', authGuard, requireAdmin, (c) => ProjectsController.updateOrderSequence(c));
+app.put('/v1/api/projects/sequence', authGuard, requireAdmin, (c) => ProjectsController.updateOrderSequence(c));
+app.patch('/v1/api/projects/sequence', authGuard, requireAdmin, (c) => ProjectsController.updateOrderSequence(c));
+app.put('/v1/api/projects/reorder', authGuard, requireAdmin, (c) => ProjectsController.updateOrderSequence(c));
+app.patch('/v1/api/projects/reorder', authGuard, requireAdmin, (c) => ProjectsController.updateOrderSequence(c));
+
+/**
  * @description Get Project By Slug
  * @method GET
  * ---------------------------------------

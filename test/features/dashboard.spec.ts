@@ -44,7 +44,8 @@ describe("Dashboard API", () => {
 				newestProjects: expect.any(Array),
 				newestContributors: expect.any(Array),
 				newestTechStacks: expect.any(Array),
-				newestExperiences: expect.any(Array)
+				newestExperiences: expect.any(Array),
+				newestSkills: expect.any(Array)
 			});
 
 			if (body.topPosts.length > 0) {

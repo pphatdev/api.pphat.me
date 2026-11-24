@@ -1,0 +1,44 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/skills"
+  method: POST
+  headers:
+    Authorization: Bearer {{token}}
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "tech_stack_id": 1,
+          "level": "advanced",
+          "years_of_experience": 3.5,
+          "description": "Server-rendered React with RSC.",
+          "sort_order": 10,
+          "status": 1
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "id": 1,
+          "techStack": {
+              "id": 1,
+              "name": "React",
+              "icon": "devicon-react-original",
+              "image": "https://react.dev/cover.png",
+              "url": "https://react.dev"
+          },
+          "level": "advanced",
+          "yearsOfExperience": 3.5,
+          "description": "Server-rendered React with RSC.",
+          "sortOrder": 10,
+          "status": 1,
+          "createdAt": "2026-11-21T10:00:00.000Z",
+          "updatedAt": "2026-11-21T10:00:00.000Z"
+      }
+order: 1000

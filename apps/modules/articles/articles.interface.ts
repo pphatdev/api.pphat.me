@@ -33,6 +33,8 @@ export interface Article {
 	status: ArticleStatus;
 	ownerId: string | null;
 	owner: ArticleOwner | null;
+	/** Admin-controlled display order. Lower sorts first. */
+	position: number;
 	createdAt: string;
 	updatedAt: string;
 	content?: string;
@@ -53,6 +55,7 @@ export interface ArticleRow {
 	content: string;
 	file_path: string;
 	owner_id: string | null;
+	position: number;
 	created_at: string;
 	updated_at: string;
 }
@@ -71,7 +74,6 @@ export interface CreateArticleDto {
 	/** Asia/Phnom_Penh timestamp (ISO with +07:00 offset or `YYYY-MM-DD HH:mm` local) — when reached, the cron promotes is_public=1 */
 	publish_at?: string | null;
 	owner_id?: string;
-	author_ids?: number[];
 	tags?: { tag: string; description?: string }[];
 }
 
@@ -124,5 +126,11 @@ export interface IArticleRepository {
 	findTop(limit: number): Promise<Article[]>;
 	getStatsSummary(): Promise<{ total: number; published: number; draft: number }>;
 	promoteScheduled(): Promise<number>;
+	/**
+	 * Replace the admin-controlled order with the given sequence. `orderedIds`
+	 * is a prefix — ids omitted keep their current position and sort after the
+	 * reordered rows. Returns the number of rows updated.
+	 */
+	reorder(orderedIds: string[]): Promise<number>;
 }
 

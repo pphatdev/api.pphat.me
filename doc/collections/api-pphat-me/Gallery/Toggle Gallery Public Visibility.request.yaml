@@ -1,0 +1,9 @@
+$kind: http-request
+description: Quick toggle public visibility between published and hidden. Admin only.
+url: "{{baseUrl}}/v1/api/gallery/{{galleryId}}/toggle-public"
+method: PATCH
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+order: 8000

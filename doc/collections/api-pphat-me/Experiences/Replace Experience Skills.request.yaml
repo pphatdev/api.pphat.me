@@ -1,0 +1,17 @@
+$kind: http-request
+description: Replace the full set of skills (tech stacks) linked to an experience. Admin only. Body accepts `tech_stack_ids` (or camelCase `techStackIds`). Returns 204.
+url: "{{baseUrl}}/v1/api/experiences/{{experienceId}}/skills"
+method: PUT
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: Admin JWT required
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "tech_stack_ids": [1, 2]
+    }
+order: 7000

@@ -8,10 +8,16 @@ import { authorRoutes } from './modules/authors/authors.routes';
 import { tagRoutes } from './modules/tags/tags.routes';
 import { techStackRoutes } from './modules/tech-stacks/tech-stacks.route';
 import { experienceRoutes } from './modules/experiences/experiences.route';
+import { skillRoutes } from './modules/skills/skills.route';
+import { faqRoutes } from './modules/faqs/faqs.route';
+import { aboutMeRoutes } from './modules/about-me/about-me.route';
+import { galleryRoutes } from './modules/gallery/gallery.route';
+import { servicesRoutes } from './modules/services/services.route';
 import { aiRoutes } from './modules/ai/ai.route';
 import { chatRoutes } from './modules/chat/chat.route';
 import { contactRoutes } from './modules/contact/contact.route';
 import { dashboardRoutes } from './modules/dashboard/dashboard.route';
+import { llmsRoutes } from './modules/llms/llms.route';
 import { bodyLimitMiddleware } from './middlewares/body-limit.middleware';
 import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 import { securityMiddleware } from './middlewares/security.middleware';
@@ -43,10 +49,16 @@ app.route('/', authorRoutes);
 app.route('/', tagRoutes);
 app.route('/', techStackRoutes);
 app.route('/', experienceRoutes);
+app.route('/', skillRoutes);
+app.route('/', faqRoutes);
+app.route('/', aboutMeRoutes);
+app.route('/', galleryRoutes);
+app.route('/', servicesRoutes);
 app.route('/', aiRoutes);
 app.route('/', chatRoutes);
 app.route('/', contactRoutes);
 app.route('/', dashboardRoutes);
+app.route('/', llmsRoutes);
 
 // visitor_logs retention window in days (#33). 30 days is enough for the
 // dashboard's live-traffic aggregations and short enough that a leaked DB

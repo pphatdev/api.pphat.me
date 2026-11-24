@@ -1,0 +1,35 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/auth/me"
+  method: GET
+  headers:
+    - key: Authorization
+      value: Bearer {{token}}
+      description: JWT token obtained from the login callback
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Transfer-Encoding: chunked
+    Content-Type: application/json
+    Content-Encoding: gzip
+    X-RateLimit-Limit: "20"
+    X-RateLimit-Remaining: "19"
+    X-RateLimit-Reset: "60"
+  body:
+    type: text
+    content: |-
+      {
+          "id": "d80d99fd-5237-4751-ad8b-89e7150aa889",
+          "role": "user",
+          "provider": "email",
+          "provider_id": "info.sophat@gmail.com",
+          "password_hash": "c16f1e01b17ad7b8d169822c8fc07f38:354cd49cb931678379fb55164786aa574f25c352064c59be6e74f9913b59618c",
+          "email": "info.sophat@gmail.com",
+          "name": "John Doe",
+          "email_verified": 1,
+          "avatar": null,
+          "created_at": "2026-04-27 03:19:27",
+          "updated_at": "2026-04-27 03:20:03"
+      }
+order: 1000

@@ -1,0 +1,56 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/v1/api/dashboard"
+  method: GET
+  headers:
+    Authorization: Bearer {{token}}
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "blogs": { "total": 12, "published": 10, "draft": 2 },
+          "projects": { "total": 5, "published": 4, "draft": 1 },
+          "liveTraffic": 3,
+          "topPosts": [],
+          "topProjects": [],
+          "newestPosts": [],
+          "newestProjects": [],
+          "newestContributors": [],
+          "newestTechStacks": [
+              {
+                  "id": 1,
+                  "name": "React",
+                  "description": "A JavaScript library for building user interfaces.",
+                  "url": "https://react.dev",
+                  "logoUrl": "https://react.dev/favicon.ico",
+                  "cover": null,
+                  "status": 1,
+                  "createdAt": "2026-11-20T08:30:00.000Z",
+                  "updatedAt": "2026-11-20T08:30:00.000Z"
+              }
+          ],
+          "newestExperiences": [
+              {
+                  "id": 1,
+                  "title": "Senior Software Engineer",
+                  "company": "Acme Co",
+                  "description": "Led the platform team.",
+                  "startDate": "2023-01-01",
+                  "endDate": null,
+                  "location": "Remote",
+                  "employmentType": "full-time",
+                  "companyUrl": "https://acme.example",
+                  "logoUrl": "https://acme.example/logo.png",
+                  "cover": null,
+                  "status": 1,
+                  "createdAt": "2026-11-20T08:50:00.000Z",
+                  "updatedAt": "2026-11-20T08:50:00.000Z"
+              }
+          ]
+      }
+order: 1000

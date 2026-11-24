@@ -1,0 +1,13 @@
+$kind: http-request
+description: Returns metadata for all API keys owned by the authenticated user. The plaintext key is never included.
+url: "{{baseUrl}}/v1/api/auth/sso/keys"
+method: GET
+headers:
+  - key: X-API-Key
+    value: "{{apiKey}}"
+    disabled: true
+    description: JWT access token
+auth:
+  type: noauth
+examples: ./.resources/List API Keys.resources/examples
+order: 2000

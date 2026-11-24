@@ -1,0 +1,6 @@
+$kind: http-request
+description: Welcome message and API version information.
+url: "{{baseUrl}}/"
+method: GET
+examples: ./.resources/Welcome.resources/examples
+order: 14000

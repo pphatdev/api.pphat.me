@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/api/articles/{{slug}}/comments/{{commentId}}"
+method: PATCH
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+    description: JWT token — authenticated users only
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "content": "Updated comment text."
+    }
+examples: ./.resources/Update Comment.resources/examples
+order: 3000

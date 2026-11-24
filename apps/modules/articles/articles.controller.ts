@@ -437,4 +437,26 @@ export class ArticlesController {
 		const tags = await new TagService(new TagRepository(c.env.DB)).listByArticle(c.get('articleId'));
 		return Res.ok(tags);
 	}
+
+	/**
+	 * @description Admin: replace the article display order.
+	 * @method PUT
+	 * @body `{ ids: string[] }` — article ids in the desired order
+	 * @returns { Promise<Response> } `{ updated: number }`
+	 */
+	static async reorder(c: Context<AppEnv>): Promise<Response> {
+		if (c.get('user')?.role !== 'admin') return Res.forbidden();
+
+		const body = await c.req.json().catch(() => null);
+		const raw = (body as any)?.ids ?? (body as any)?.article_ids;
+		if (!Array.isArray(raw)) return Res.unprocessable('ids must be an array of article ids');
+		for (const id of raw) {
+			if (typeof id !== 'string' || !UUID_RE.test(id)) {
+				return Res.unprocessable('ids must contain valid article UUIDs');
+			}
+		}
+
+		const updated = await new ArticleService(new ArticleRepository(c.env.DB)).reorder(raw);
+		return Res.ok({ updated });
+	}
 }
