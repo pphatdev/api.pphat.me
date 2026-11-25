@@ -70,9 +70,10 @@ const VISITOR_LOG_RETENTION_DAYS = 30;
 /**
  * Cloudflare Cron Trigger entry point.
  * Configured in wrangler.jsonc as `*​/5 * * * *` — every 5 minutes.
- * Two jobs run per tick:
+ * Jobs run per tick:
  *   1. Promote scheduled articles whose `publish_at` (UTC) has elapsed.
- *   2. Sweep visitor_logs rows older than the retention window (#33).
+ *   2. Sweep anonymous view markers older than 2 days.
+ *   3. Sweep visitor_logs rows older than the retention window (#33).
  * Both are wrapped in try/catch so one failure does not silence the other.
  */
 async function scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
@@ -82,6 +83,15 @@ async function scheduled(_event: ScheduledController, env: Env, ctx: ExecutionCo
             if (promoted > 0) console.log(`[cron:articles] promoted ${promoted} scheduled article(s) to public`);
         } catch (err) {
             console.error('[cron:articles] promoteScheduled failed', err);
+        }
+
+        try {
+            // Anonymous view markers only dedupe within the current UTC day.
+            await env.DB
+                .prepare("DELETE FROM article_view_visitor WHERE day < date('now', '-2 days')")
+                .run();
+        } catch (err) {
+            console.error('[cron:article_view_visitor] sweep failed', err);
         }
 
         try {
