@@ -134,6 +134,19 @@ describe("Article Stats API", () => {
 			expect(res.status).toBe(404);
 		});
 
+		it("article list includes the real stats for each article", async () => {
+			const stats = (await (await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_SLUG}/stats`)).json()) as { views: number; readingMins: number };
+			const res = await SELF.fetch("http://example.com/v1/api/articles?limit=50", { headers: authHeaders });
+			expect(res.status).toBe(200);
+			const body = (await res.json()) as { data: Array<{ slug: string; stats?: { views: number; readingMins: number } }> };
+			const listed = body.data.find((a) => a.slug === ARTICLE_SLUG);
+			expect(listed?.stats).toEqual({ views: stats.views, readingMins: stats.readingMins });
+			expect(stats.views).toBeGreaterThan(0);
+			for (const article of body.data) {
+				expect(typeof article.stats?.views).toBe("number");
+			}
+		});
+
 		it("returns 404 for unknown articles", async () => {
 			const res = await view("203.0.113.31", BROWSER_UA, "non-existent");
 			expect(res.status).toBe(404);
