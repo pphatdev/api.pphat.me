@@ -29,6 +29,10 @@ interface __ExtraSecrets {
 	 * `wrangler secret put ADMIN_PROXY_SECRET` (same value on both Workers).
 	 */
 	ADMIN_PROXY_SECRET?: string;
+	/** Fresh TTL (seconds) of the public-read edge cache; `0` disables it. Default 60. */
+	API_CACHE_TTL?: string;
+	/** `1` logs rows read per query and warns above 1,000 (development only). */
+	DB_QUERY_LOG?: string;
 }
 
 interface Env extends __RateLimiterBindings, __ExtraSecrets {}
