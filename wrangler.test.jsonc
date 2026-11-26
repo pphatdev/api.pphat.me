@@ -13,7 +13,10 @@
 		"SMTP_HOST": "smtp.gmail.com",
 		"SMTP_PORT": "587",
 		"SMTP_USER": "test@example.com",
-		"SMTP_FROM": "test@example.com"
+		"SMTP_FROM": "test@example.com",
+		// Response cache off for the feature suite: tests write then re-read.
+		// cache.middleware has its own spec.
+		"API_CACHE_TTL": "0"
 	},
 	"d1_databases": [
 		{

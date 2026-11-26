@@ -6,6 +6,27 @@ import { ITechStackRepository } from "../tech-stacks/tech-stacks.interface";
 import { IExperienceRepository } from "../experiences/experiences.interface";
 import { ISkillRepository } from "../skills/skills.interface";
 
+/** Window that counts as "live" traffic. */
+const LIVE_WINDOW_MS = 5 * 60 * 1000;
+
+/**
+ * How long a live-traffic count is reused. Every open dashboard polls this
+ * (SSE), so without sharing, N tabs cost N queries per poll. Equal to the SSE
+ * poll interval; a 15s-stale count is fine for a 5-minute window.
+ */
+export const LIVE_TRAFFIC_TTL_MS = 15_000;
+
+// Per-isolate cache shared by all requests/streams in this Worker instance.
+// `pending` de-duplicates concurrent refreshes.
+let liveTrafficCache: { value: number; expiresAt: number } | null = null;
+let liveTrafficPending: Promise<number> | null = null;
+
+/** @description Test hook: drop the cached live-traffic count. */
+export function resetLiveTrafficCache(): void {
+	liveTrafficCache = null;
+	liveTrafficPending = null;
+}
+
 export class DashboardRepository implements IDashboardRepository {
 	constructor(
 		private readonly db: D1Database,
@@ -64,16 +85,31 @@ export class DashboardRepository implements IDashboardRepository {
 	}
 
 	/**
-	 * @description Get number of active visitors in the last 5 minutes
+	 * @description Get number of distinct visitors in the last 5 minutes.
+	 * Cached per isolate for LIVE_TRAFFIC_TTL_MS and de-duplicated while a
+	 * refresh is in flight. The query is served by idx_visitor_logs_ts_ip
+	 * (covering), so it reads only rows inside the window.
 	 * @returns { Promise<number> } Active visitor count
 	 */
 	public async getLiveTraffic(): Promise<number> {
-		// Active visitors in the last 5 minutes from DB
-		const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-		const row = await this.db
-			.prepare("SELECT COUNT(DISTINCT ip_hash) as count FROM visitor_logs WHERE timestamp > ?1")
-			.bind(fiveMinsAgo)
-			.first<{ count: number }>();
-		return row?.count ?? 0;
+		const now = Date.now();
+		if (liveTrafficCache && liveTrafficCache.expiresAt > now) return liveTrafficCache.value;
+		if (liveTrafficPending) return liveTrafficPending;
+
+		liveTrafficPending = (async () => {
+			try {
+				const since = new Date(now - LIVE_WINDOW_MS).toISOString();
+				const row = await this.db
+					.prepare("SELECT COUNT(DISTINCT ip_hash) as count FROM visitor_logs WHERE timestamp > ?1")
+					.bind(since)
+					.first<{ count: number }>();
+				const value = row?.count ?? 0;
+				liveTrafficCache = { value, expiresAt: Date.now() + LIVE_TRAFFIC_TTL_MS };
+				return value;
+			} finally {
+				liveTrafficPending = null;
+			}
+		})();
+		return liveTrafficPending;
 	}
 }

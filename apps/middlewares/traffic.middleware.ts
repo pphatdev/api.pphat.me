@@ -46,17 +46,37 @@ function toHex(buf: ArrayBuffer): string {
 }
 
 /**
- * @description Hono middleware to track visitor traffic
+ * @description Whether a request should be recorded in visitor_logs. Only real
+ * hits count: `/` or a `/v1/api/*` route that did not 404. Scanner noise
+ * (`/xor_create.php`, `/.env`, `/wp-login.php`), unknown routes, and the admin
+ * dashboard's own polling are skipped, which keeps the table (and every scan
+ * of it) small.
+ * @param { string } method HTTP method
+ * @param { string } path URL pathname
+ * @param { number } status Response status
+ * @returns { boolean }
+ */
+export function shouldLogVisit(method: string, path: string, status: number): boolean {
+	if (method !== 'GET') return false;
+	if (status === 404) return false;
+	if (path === '/') return true;
+	return path.startsWith('/v1/api/') && !path.startsWith('/v1/api/dashboard');
+}
+
+/**
+ * @description Hono middleware to track visitor traffic. Runs after the route
+ * so the response status is known (see `shouldLogVisit`).
  * @param { Context } c The Hono context
  * @param { Next } next The next middleware
  * @returns { Promise<Response | void> }
  */
 export async function trafficMiddleware(c: Context<{ Bindings: Env }>, next: Next): Promise<Response | void> {
-	// Only log GET requests to public pages or API calls to track traffic
-	if (c.req.method !== 'GET') return next();
+	await next();
+
+	const path = new URL(c.req.url).pathname;
+	if (!shouldLogVisit(c.req.method, path, c.res.status)) return;
 
 	const ip = getClientIp(c.req.raw, c.env.ADMIN_PROXY_SECRET) ?? 'unknown';
-	const path = new URL(c.req.url).pathname;
 	const timestamp = new Date().toISOString();
 
 	const ipHash = await hashIp(c.env, ip);
@@ -68,6 +88,4 @@ export async function trafficMiddleware(c: Context<{ Bindings: Env }>, next: Nex
 			.run()
 			.catch(err => console.error("Failed to log traffic:", err))
 	);
-
-	return next();
 }
