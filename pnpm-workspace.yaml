@@ -1,6 +1,14 @@
 packages:
   - "."
 
+# Keep in sync with "overrides" in package.json (npm / package-lock.json).
+# pnpm ignores package.json "overrides", so security pins must be repeated here.
+overrides:
+  # GHSA-67mh-4wv8-2f99: esbuild <=0.24.2 dev server allows any site to read
+  # responses. drizzle-kit -> @esbuild-kit/core-utils pins esbuild 0.18.
+  '@esbuild-kit/core-utils>esbuild': ^0.25.12
+  undici: ^7.29.0
+
 allowBuilds:
   esbuild: true
   workerd: true
@@ -15,14 +23,3 @@ minimumReleaseAgeExclude:
   - "@fallow-cli/win32-arm64-msvc@3.45.0"
   - "@fallow-cli/win32-x64-msvc@3.45.0"
   - fallow@3.45.0
-permissions:
-  fallow:
-    skills: [fallow, fallow-setup]
-skills:
-  dirs:
-    - .agent/skills
-    - .agents/skills
-    - .claude/skills
-    - .cursor/skills
-    - .gemini/skills
-    - .github/skills
