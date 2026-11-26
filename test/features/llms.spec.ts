@@ -1,7 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
 import { seedDatabase, ARTICLE_SLUG, PROJECT_SLUG } from "../../apps/shared/helpers/test-cases";
-import { inline, stripLeadingTitle } from "../../apps/modules/llms/llms.builder";
+import { inline, stripLeadingTitle, buildIndexLlms } from "../../apps/modules/llms/llms.builder";
 
 const SELF = exports.default;
 const BASE = "http://example.com";
@@ -158,5 +158,19 @@ describe("llms.txt builder helpers", () => {
 		expect(stripLeadingTitle("# My Post\n\nBody", "My Post")).toBe("Body");
 		expect(stripLeadingTitle("# Other\n\nBody", "My Post")).toBe("# Other\n\nBody");
 		expect(stripLeadingTitle("Body only", "My Post")).toBe("Body only");
+	});
+
+	it("escapes [, ] and backslashes in index link labels", () => {
+		const urls = { siteUrl: "https://pphat.me", llmsBaseUrl: "https://api.test" };
+		const item = (title: string, slug: string) => ({ title, slug, description: "" });
+		const body = buildIndexLlms(
+			{ about: null, projects: [], articles: [item("Arrays [0] and [1]", "a"), item("Path C:\\dir\\", "b"), item("Tricky \\] end", "c")] },
+			urls as never,
+		);
+		expect(body).toContain("- [Arrays \\[0\\] and \\[1\\]](https://api.test/articles/a/llms.txt)");
+		// Trailing backslash is escaped, so the label still ends at the real `]`.
+		expect(body).toContain("- [Path C:\\\\dir\\\\](https://api.test/articles/b/llms.txt)");
+		// `\]` in the title becomes `\\\]`: escaped backslash + escaped `]` (no early close).
+		expect(body).toContain("- [Tricky \\\\\\] end](https://api.test/articles/c/llms.txt)");
 	});
 });

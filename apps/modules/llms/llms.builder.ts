@@ -16,9 +16,14 @@ export function inline(value: string | null | undefined): string {
 	return (value ?? '').replace(/\s+/g, ' ').trim();
 }
 
-/** Escape characters that would break a Markdown link label. */
+/**
+ * Escape characters that would break a Markdown link label: `[`, `]` and the
+ * backslash itself. Without escaping `\`, a title ending in `\` turns the
+ * added `\]` into `\\]` (escaped backslash + live `]`) and closes the label
+ * early (CodeQL js/incomplete-sanitization).
+ */
 function linkLabel(value: string): string {
-	return inline(value).replace(/([[\]])/g, '\\$1');
+	return inline(value).replace(/([\\[\]])/g, '\\$1');
 }
 
 function isoDate(value: string | null | undefined): string {
