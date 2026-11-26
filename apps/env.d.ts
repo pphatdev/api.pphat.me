@@ -29,6 +29,15 @@ interface __ExtraSecrets {
 	 * `wrangler secret put ADMIN_PROXY_SECRET` (same value on both Workers).
 	 */
 	ADMIN_PROXY_SECRET?: string;
+	/**
+	 * Database driver: `d1` (default) or `turso`. With `turso`, `env.DB` is
+	 * swapped for a D1-compatible libSQL adapter (apps/shared/db).
+	 */
+	DB_DRIVER?: 'd1' | 'turso' | (string & {});
+	/** Turso database URL, e.g. `libsql://<db>-<org>.turso.io`. Secret. */
+	TURSO_DATABASE_URL?: string;
+	/** Turso auth token (`turso db tokens create <db>`). Secret. */
+	TURSO_AUTH_TOKEN?: string;
 	/** Fresh TTL (seconds) of the public-read edge cache; `0` disables it. Default 60. */
 	API_CACHE_TTL?: string;
 	/** `1` logs rows read per query and warns above 1,000 (development only). */

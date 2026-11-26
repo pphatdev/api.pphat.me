@@ -26,6 +26,7 @@ import { trafficMiddleware } from './middlewares/traffic.middleware';
 import { apiCacheMiddleware } from './middlewares/cache.middleware';
 import { withQueryLog } from './shared/db/query-log';
 import { resolveAllowedOrigin } from './shared/config/cors';
+import { resolveEnv } from './shared/db';
 
 import packageJson from '../package.json';
 
@@ -126,7 +127,9 @@ async function scheduled(event: ScheduledController, env: Env, ctx: ExecutionCon
 }
 
 export default {
-    // withQueryLog: dev-only rows-read logging when DB_QUERY_LOG=1 (no-op otherwise).
-    fetch: (request, env, ctx) => app.fetch(request, withQueryLog(env), ctx),
-    scheduled: (event, env, ctx) => scheduled(event, withQueryLog(env), ctx),
+    // resolveEnv: swaps env.DB for the Turso adapter when DB_DRIVER=turso.
+    // withQueryLog: dev-only rows-read logging when DB_QUERY_LOG=1 (no-op
+    // otherwise). On Turso it logs 0 rows: libSQL results carry no rows_read.
+    fetch: (request, env, ctx) => app.fetch(request, withQueryLog(resolveEnv(env)), ctx),
+    scheduled: (event, env, ctx) => scheduled(event, withQueryLog(resolveEnv(env)), ctx),
 } satisfies ExportedHandler<Env>;

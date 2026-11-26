@@ -18,6 +18,11 @@
         "db:create-admin": "node scripts/create-admin.js",
         "db:seed": "node scripts/seed-data.js",
         "db:pull-remote": "node scripts/db-pull-remote.js",
+        "dev:turso": "wrangler dev --var DB_DRIVER:turso",
+        "db:turso:ping": "node scripts/turso/ping.mjs",
+        "db:turso:migrate": "node scripts/turso/migrate.mjs",
+        "db:turso:seed": "node scripts/turso/seed-from-backup.mjs",
+        "db:turso:check": "node scripts/turso/conformance.mjs",
         "test:dev": "vitest watch",
         "test": "vitest run",
         "test:fallow": "fallow dead-code",
@@ -25,7 +30,6 @@
     },
     "devDependencies": {
         "@cloudflare/vitest-plugin": "^1.9.1",
-        "@libsql/client": "^0.18.0",
         "@types/node": "^26.6.6",
         "@types/nodemailer": "^8.0.2",
         "drizzle-kit": "^0.31.11",
@@ -36,6 +40,7 @@
         "wrangler": "^4.167.0"
     },
     "dependencies": {
+        "@libsql/client": "^0.18.0",
         "hono": "^4.13.21",
         "nodemailer": "^10.6.1"
     },
