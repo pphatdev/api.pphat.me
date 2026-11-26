@@ -72,11 +72,22 @@ const VISITOR_LOG_RETENTION_DAYS = 30;
  * Configured in wrangler.jsonc as `*​/5 * * * *` — every 5 minutes.
  * Jobs run per tick:
  *   1. Promote scheduled articles whose `publish_at` (UTC) has elapsed.
- *   2. Sweep anonymous view markers older than 2 days.
- *   3. Sweep visitor_logs rows older than the retention window (#33).
+ *   2. (hourly) Sweep anonymous view markers older than 2 days.
+ *   3. (hourly) Sweep visitor_logs rows older than the retention window (#33).
  * Both are wrapped in try/catch so one failure does not silence the other.
  */
-async function scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+/**
+ * @description The cron fires every 5 minutes; retention sweeps only need to
+ * run hourly. True for the tick in the first 5 minutes of each UTC hour.
+ * @param { number } scheduledTime Cron tick time (ms since epoch)
+ * @returns { boolean }
+ */
+export function isHourlyTick(scheduledTime: number): boolean {
+    return new Date(scheduledTime).getUTCMinutes() < 5;
+}
+
+async function scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    const hourly = isHourlyTick(event.scheduledTime);
     ctx.waitUntil((async () => {
         try {
             const promoted = await new ArticleRepository(env.DB).promoteScheduled();
@@ -84,6 +95,9 @@ async function scheduled(_event: ScheduledController, env: Env, ctx: ExecutionCo
         } catch (err) {
             console.error('[cron:articles] promoteScheduled failed', err);
         }
+
+        // Retention sweeps: hourly is plenty (both are index-backed seeks).
+        if (!hourly) return;
 
         try {
             // Anonymous view markers only dedupe within the current UTC day.
