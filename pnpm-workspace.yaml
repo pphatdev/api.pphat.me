@@ -1,6 +1,14 @@
 packages:
   - "."
 
+# Keep in sync with "overrides" in package.json (npm / package-lock.json).
+# pnpm ignores package.json "overrides", so security pins must be repeated here.
+overrides:
+  # GHSA-67mh-4wv8-2f99: esbuild <=0.24.2 dev server allows any site to read
+  # responses. drizzle-kit -> @esbuild-kit/core-utils pins esbuild 0.18.
+  '@esbuild-kit/core-utils>esbuild': ^0.25.12
+  undici: ^7.29.0
+
 allowBuilds:
   esbuild: true
   workerd: true
