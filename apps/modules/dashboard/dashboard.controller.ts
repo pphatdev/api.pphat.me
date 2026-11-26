@@ -1,7 +1,7 @@
 import { Context } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { Res } from "../../shared/helpers/response";
-import { DashboardRepository } from "./dashboard.repo";
+import { DashboardRepository, LIVE_TRAFFIC_TTL_MS } from "./dashboard.repo";
 import { DashboardService } from "./dashboard.service";
 import { ArticleRepository } from "../articles/articles.repo";
 import { ProjectRepository } from "../projects/projects.repo";
@@ -53,7 +53,8 @@ export class DashboardController {
 		const skillRepo = new SkillRepository(db);
 		const repo = new DashboardRepository(db, articleRepo, projectRepo, authorRepo, techStackRepo, experienceRepo, skillRepo);
 
-		const POLL_INTERVAL_MS = 5000;
+		// Matches the shared cache TTL: polling faster would only re-read the cache.
+		const POLL_INTERVAL_MS = LIVE_TRAFFIC_TTL_MS;
 		const MAX_STREAM_DURATION_MS = 10 * 60 * 1000; // 10 min hard cap; client reconnects
 		const signal = c.req.raw.signal;
 
