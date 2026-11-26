@@ -697,7 +697,7 @@ export class ArticleRepository implements IArticleRepository {
 			new Set(rows.map((r) => r.owner_id).filter((v): v is string => typeof v === 'string' && v.length > 0)),
 		);
 
-		const [authorsResult, tagsResult, ownersResult] = await Promise.all([
+		const [authorsResult, tagsResult, ownersResult, statsResult] = await Promise.all([
 			this.db
 				.prepare(
 					`SELECT aa.article_id, a.id, a.name, a.profile, a.url, ad.bio, ad.avatar_url, ad.social_links, ad.status, ad.created_at, ad.updated_at
@@ -720,7 +720,16 @@ export class ArticleRepository implements IArticleRepository {
 					.bind(...ownerIds)
 					.all<ArticleOwner>()
 				: Promise.resolve({ results: [] as ArticleOwner[] } as Awaited<ReturnType<D1PreparedStatement['all']>>),
+			this.db
+				.prepare(`SELECT article_id, views, reading_mins FROM article_stats WHERE article_id IN (${placeholders})`)
+				.bind(...ids)
+				.all<{ article_id: string; views: number; reading_mins: number }>(),
 		]);
+
+		const statsByArticle = new Map<string, { views: number; readingMins: number }>();
+		for (const raw of statsResult.results) {
+			statsByArticle.set(raw.article_id, { views: raw.views, readingMins: raw.reading_mins });
+		}
 
 		// Bucket by article_id so the per-row lookup is O(1).
 		const authorsByArticle = new Map<string, Author[]>();
@@ -765,6 +774,7 @@ export class ArticleRepository implements IArticleRepository {
 				createdAt: row.created_at,
 				updatedAt: row.updated_at,
 				filePath: row.file_path,
+				stats: statsByArticle.get(row.id) ?? { views: 0, readingMins: 0 },
 			};
 			if (options.includeContent !== false) {
 				article.content = row.content;

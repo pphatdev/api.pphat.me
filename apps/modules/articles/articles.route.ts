@@ -82,15 +82,19 @@ app.get(
 );
 
 /**
- * @description Increment Article View Count (authenticated)
+ * @description Increment Article View Count (public or authenticated).
+ * Signed-in callers count once per user per day. Anonymous readers count once
+ * per visitor per day (hashed IP + user agent, never stored raw); bots, drafts
+ * and private articles do not count. Rate-limited as an engagement route.
  * @method POST
  * @param { String } slug   Slug of Article
+ * @returns { views, readingMins, articleId, counted? }
  */
 app.post(
     '/v1/api/articles/:slug/stats/view',
-    authGuard,
+    optionalAuth,
     ArticlesController.resolveArticle,
-    (c) => ArticleStatsController.incrementViews(c.req.raw, c.env, c.get('articleId'), c.get('user')!)
+    (c) => ArticleStatsController.incrementViews(c.req.raw, c.env, c.get('articleId'), c.get('user'))
 );
 
 /**

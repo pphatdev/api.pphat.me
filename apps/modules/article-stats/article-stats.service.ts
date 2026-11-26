@@ -1,4 +1,4 @@
-import type { ArticleStats, IArticleStatsRepository } from "./article-stats.interface";
+import type { ArticleStats, IArticleStatsRepository, ViewResult } from "./article-stats.interface";
 
 export class ArticleStatsService {
 	constructor(private readonly repo: IArticleStatsRepository) {}
@@ -20,5 +20,15 @@ export class ArticleStatsService {
 	 */
 	incrementViews(articleId: string, userId: string): Promise<ArticleStats> {
 		return this.repo.incrementViews(articleId, userId);
+	}
+
+	/**
+	 * @description Increment view count for an anonymous visitor (idempotent per visitor + day).
+	 * @param { string } articleId The article ID
+	 * @param { string } visitorHash Opaque per-day visitor hash
+	 * @returns { Promise<ViewResult> } Current stats and whether this call counted
+	 */
+	incrementVisitorViews(articleId: string, visitorHash: string): Promise<ViewResult> {
+		return this.repo.incrementVisitorViews(articleId, visitorHash);
 	}
 }
