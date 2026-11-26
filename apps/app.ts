@@ -23,6 +23,7 @@ import { bodyLimitMiddleware } from './middlewares/body-limit.middleware';
 import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 import { securityMiddleware } from './middlewares/security.middleware';
 import { trafficMiddleware } from './middlewares/traffic.middleware';
+import { apiCacheMiddleware } from './middlewares/cache.middleware';
 import { withQueryLog } from './shared/db/query-log';
 import { resolveAllowedOrigin } from './shared/config/cors';
 
@@ -42,6 +43,8 @@ app.use('*', trafficMiddleware);
 // so a garbage attacker can't waste those cycles.
 app.use('/v1/api/*', bodyLimitMiddleware);
 app.use('/v1/api/*', rateLimitMiddleware);
+// After rate limiting so cached hits still count; see cache.middleware.ts.
+app.use('/v1/api/*', apiCacheMiddleware);
 app.get('/', (c) => c.json({ message: 'Welcome to the API', version: packageJson.version }));
 
 app.route('/', authRoutes);
