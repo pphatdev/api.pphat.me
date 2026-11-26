@@ -24,6 +24,7 @@ import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 import { securityMiddleware } from './middlewares/security.middleware';
 import { trafficMiddleware } from './middlewares/traffic.middleware';
 import { resolveAllowedOrigin } from './shared/config/cors';
+import { resolveEnv } from './shared/db';
 
 import packageJson from '../package.json';
 
@@ -108,6 +109,7 @@ async function scheduled(_event: ScheduledController, env: Env, ctx: ExecutionCo
 }
 
 export default {
-    fetch: app.fetch,
-    scheduled,
+    // resolveEnv swaps env.DB for the Turso adapter when DB_DRIVER=turso.
+    fetch: (request, env, ctx) => app.fetch(request, resolveEnv(env), ctx),
+    scheduled: (event, env, ctx) => scheduled(event, resolveEnv(env), ctx),
 } satisfies ExportedHandler<Env>;

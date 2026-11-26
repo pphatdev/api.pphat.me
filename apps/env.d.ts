@@ -29,6 +29,15 @@ interface __ExtraSecrets {
 	 * `wrangler secret put ADMIN_PROXY_SECRET` (same value on both Workers).
 	 */
 	ADMIN_PROXY_SECRET?: string;
+	/**
+	 * Database driver: `d1` (default) or `turso`. With `turso`, `env.DB` is
+	 * swapped for a D1-compatible libSQL adapter (apps/shared/db).
+	 */
+	DB_DRIVER?: 'd1' | 'turso' | (string & {});
+	/** Turso database URL, e.g. `libsql://<db>-<org>.turso.io`. Secret. */
+	TURSO_DATABASE_URL?: string;
+	/** Turso auth token (`turso db tokens create <db>`). Secret. */
+	TURSO_AUTH_TOKEN?: string;
 }
 
 interface Env extends __RateLimiterBindings, __ExtraSecrets {}
