@@ -27,7 +27,20 @@ if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
 
 const email = process.env.ADMIN_EMAIL || process.env.SMTP_USER || process.argv[2];
 const password = process.env.ADMIN_PASSWORD || process.argv[3];
-const name = process.env.ADMIN_NAME || process.argv[4] || (process.env.SMTP_FROM ? process.env.SMTP_FROM.replace(/<.*>/, '').replace(/["']/g, '').trim() : 'Admin');
+/**
+ * Display name from a "from" address: `"Pphat" <hi@pphat.me>` -> `Pphat`.
+ * Takes the text before the first `<` rather than regex-stripping `<...>`,
+ * which CodeQL flags (js/incomplete-multi-character-sanitization).
+ * @param { string } from The SMTP_FROM value
+ * @returns { string | null } The display name, or null if there is none
+ */
+function displayNameFrom(from) {
+    const lt = from.indexOf('<');
+    const display = (lt === -1 ? from : from.slice(0, lt)).replace(/["']/g, '').trim();
+    return display || null;
+}
+
+const name = process.env.ADMIN_NAME || process.argv[4] || (process.env.SMTP_FROM && displayNameFrom(process.env.SMTP_FROM)) || 'Admin';
 const target = (process.env.ADMIN_TARGET || 'local').toLowerCase();
 
 if (!email || !password) {
