@@ -23,6 +23,7 @@ import { bodyLimitMiddleware } from './middlewares/body-limit.middleware';
 import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 import { securityMiddleware } from './middlewares/security.middleware';
 import { trafficMiddleware } from './middlewares/traffic.middleware';
+import { withQueryLog } from './shared/db/query-log';
 import { resolveAllowedOrigin } from './shared/config/cors';
 
 import packageJson from '../package.json';
@@ -122,6 +123,7 @@ async function scheduled(event: ScheduledController, env: Env, ctx: ExecutionCon
 }
 
 export default {
-    fetch: app.fetch,
-    scheduled,
+    // withQueryLog: dev-only rows-read logging when DB_QUERY_LOG=1 (no-op otherwise).
+    fetch: (request, env, ctx) => app.fetch(request, withQueryLog(env), ctx),
+    scheduled: (event, env, ctx) => scheduled(event, withQueryLog(env), ctx),
 } satisfies ExportedHandler<Env>;
