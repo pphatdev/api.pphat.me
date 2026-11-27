@@ -2,6 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
 import { seedDatabase } from "../../apps/shared/helpers/test-cases";
 import { deliverOtp } from "../../apps/modules/auth/auth.controller";
+import { smtpIpv4 } from "../../apps/modules/auth/email.service";
 
 const SELF = exports.default;
 const SMTP = { ...env, SMTP_HOST: "smtp.example.test", SMTP_PORT: "587", SMTP_USER: "me@example.test", SMTP_FROM: "Me <me@example.test>", SMTP_PASS: "app-password" } as Env;
@@ -62,5 +63,37 @@ describe("wrangler.jsonc SMTP settings", () => {
 		const config = (await import("../../wrangler.jsonc?raw")).default as string;
 		const user = /"SMTP_USER":\s*"([^"]*)"/.exec(config)?.[1] ?? "";
 		expect(user).toMatch(/^[^<>\s]+@[^<>\s]+$/);
+	});
+});
+
+describe("smtpIpv4", () => {
+	it("uses the first IPv4 address", async () => {
+		expect(await smtpIpv4("smtp.example.test", async () => ["192.0.2.10", "192.0.2.11"])).toBe("192.0.2.10");
+	});
+
+	it("falls back to the hostname (null) when there is no IPv4 or the lookup fails", async () => {
+		expect(await smtpIpv4("smtp.example.test", async () => [])).toBeNull();
+		expect(await smtpIpv4("smtp.example.test", async () => { throw new Error("ENOTFOUND"); })).toBeNull();
+	});
+
+	it("passes IPv4 literals through and never returns IPv6", async () => {
+		expect(await smtpIpv4("192.0.2.5")).toBe("192.0.2.5");
+		expect(await smtpIpv4("2001:db8::1")).toBeNull();
+	});
+});
+
+describe("OTP_DEV_LOG (local development)", () => {
+	const never = async () => { throw new Error("should not send"); };
+
+	it("prints instead of emailing when APP_URL is localhost", async () => {
+		const local = { ...SMTP, OTP_DEV_LOG: "1", APP_URL: "http://localhost:8787" } as Env;
+		expect(await deliverOtp("a@example.test", "123456", local, never)).toBe("skipped");
+	});
+
+	it("is ignored in production", async () => {
+		let sent = false;
+		const prod = { ...SMTP, OTP_DEV_LOG: "1", APP_URL: "https://api.pphat.me" } as Env;
+		expect(await deliverOtp("a@example.test", "123456", prod, async () => { sent = true; })).toBe("sent");
+		expect(sent).toBe(true);
 	});
 });

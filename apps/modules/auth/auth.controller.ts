@@ -526,6 +526,21 @@ function handleAuthError(err: unknown): Response {
  * @param { Env } env Environment bindings
  * @returns { Promise<void> }
  */
+/**
+ * @description Whether the API runs locally (APP_URL on localhost), so a
+ * dev-only switch like OTP_DEV_LOG can never take effect in production.
+ * @param { Env } env Bindings
+ * @returns { boolean }
+ */
+function isLocalApp(env: Env): boolean {
+	try {
+		const host = new URL(env.APP_URL).hostname;
+		return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+	} catch {
+		return false;
+	}
+}
+
 /** `skipped`: SMTP isn't configured (tests, local dev without SMTP_PASS). */
 export type OtpDelivery = 'sent' | 'skipped' | 'failed';
 
@@ -539,6 +554,10 @@ export type OtpDelivery = 'sent' | 'skipped' | 'failed';
  * @returns { Promise<OtpDelivery> }
  */
 export async function deliverOtp(email: string, otp: string, env: Env, send = sendOtpEmail): Promise<OtpDelivery> {
+	if (env.OTP_DEV_LOG === '1' && isLocalApp(env)) {
+		console.warn(`[DEV_OTP] ${email} -> ${otp} (OTP_DEV_LOG=1; not emailed)`);
+		return 'skipped';
+	}
 	if (!env.SMTP_PASS || !env.SMTP_HOST || !env.SMTP_USER) {
 		console.warn('[SEND_OTP_SKIPPED] SMTP is not configured');
 		return 'skipped';
