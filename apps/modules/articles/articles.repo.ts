@@ -4,7 +4,7 @@ import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface
 
 import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow, dedupeTagsByName } from "../../shared/helpers/repo";
 import { formatUtcAsPhnomPenh } from "../../shared/helpers/tz";
-import type { Article, ArticleOwner, IArticleRepository, ArticleRow, CreateArticleDto, MineScope, UpdateArticleDto } from "./articles.interface";
+import type { Article, ArticleContributor, ArticleOwner, IArticleRepository, ArticleRow, CreateArticleDto, MineScope, UpdateArticleDto } from "./articles.interface";
 
 /**
  * @description Compute estimated reading time in minutes
@@ -574,6 +574,26 @@ export class ArticleRepository implements IArticleRepository {
 			.bind(id)
 			.run();
 		return result.meta.changes > 0;
+	}
+
+	/**
+	 * @description Contributors to credit on an article: everyone in
+	 * article_contributors except the owner, name and avatar only
+	 * @param { string } articleId Article ID
+	 * @returns { Promise<ArticleContributor[]> }
+	 */
+	async findContributors(articleId: string): Promise<ArticleContributor[]> {
+		const { results } = await this.db
+			.prepare(
+				`SELECT u.id, u.name, u.avatar FROM article_contributors ac
+				 JOIN users u ON u.id = ac.user_id
+				 JOIN articles a ON a.id = ac.article_id
+				 WHERE ac.article_id = ?1 AND (a.owner_id IS NULL OR u.id != a.owner_id)
+				 ORDER BY u.name COLLATE NOCASE`,
+			)
+			.bind(articleId)
+			.all<ArticleContributor>();
+		return results ?? [];
 	}
 
 	/**

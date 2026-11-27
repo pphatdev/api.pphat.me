@@ -32,6 +32,9 @@ const STORED_AT_HEADER = 'x-api-cache-stored-at';
 /** Public content routes whose GET responses are identical for every caller in a scope. */
 const CACHEABLE_PATH = /^\/v1\/api\/(articles|projects|tags|authors|faqs|gallery|services|about-me|experiences|skills|tech-stacks)(\/|$)/;
 
+/** Writes outside CACHEABLE_PATH that still change cached content (accepting an invitation adds a contributor to an article). */
+const INVALIDATING_PATH = /^\/v1\/api\/invitations(\/|$)/;
+
 /**
  * @description Fresh TTL in seconds from `API_CACHE_TTL` (0 disables caching).
  * @param { Pick<Env, 'API_CACHE_TTL'> } env Worker env
@@ -102,7 +105,7 @@ export async function apiCacheMiddleware(c: Context<{ Bindings: Env }>, next: Ne
 	// Writes: refresh this colo's entries once the change has succeeded.
 	if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
 		await next();
-		if (cacheablePath && c.res.status < 400) {
+		if ((cacheablePath || INVALIDATING_PATH.test(url.pathname)) && c.res.status < 400) {
 			c.executionCtx.waitUntil(bumpGeneration(cache).catch((err) => console.error('[cache] generation bump failed', err)));
 		}
 		return;
