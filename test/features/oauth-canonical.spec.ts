@@ -2,7 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { describe, it, expect, beforeAll, afterEach, vi } from "vitest";
 import { AuthController } from "../../apps/modules/auth/auth.controller";
 import { seedDatabase } from "../../apps/shared/helpers/test-cases";
-import { authRedirectTarget, canonicalOAuthStart } from "../../apps/modules/auth/oauth-canonical";
+import { authRedirectAllowlist, authRedirectTarget, canonicalOAuthStart } from "../../apps/modules/auth/oauth-canonical";
 
 const SELF = exports.default;
 const PROD = { APP_URL: "https://api.pphat.me" } as Pick<Env, "APP_URL">;
@@ -109,6 +109,70 @@ describe("OAuth callback with AUTH_REDIRECT_URL (browser lands back in the admin
 		expect(authRedirectTarget({ AUTH_REDIRECT_URL: "javascript:alert(1)" })).toBeNull();
 		expect(authRedirectTarget({ AUTH_REDIRECT_URL: "not a url" })).toBeNull();
 		expect(authRedirectTarget({})).toBeNull();
+	});
+});
+
+describe("OAuth return_to allowlist (blog readers return to the blog)", () => {
+	const ADMIN = "https://admin.example.test/auth/callback";
+	const BLOG = "https://blog.example.test/auth/callback";
+	const appEnv = () => ({ ...env, AUTH_REDIRECT_URL: ADMIN, AUTH_REDIRECT_ALLOWLIST: ` ${BLOG} , not a url,${ADMIN}` }) as Env;
+	const fragment = (res: Response) => new URLSearchParams(new URL(res.headers.get("location")!).hash.slice(1));
+
+	// Database already seeded by the earlier describe block in this file.
+	afterEach(() => vi.restoreAllMocks());
+
+	async function startWith(returnTo?: string) {
+		const q = returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : "";
+		const start = await AuthController.github(new Request(`http://example.com/v1/api/auth/github${q}`), appEnv());
+		const state = new URL(start.headers.get("location")!).searchParams.get("state")!;
+		const cookie = (start.headers.get("set-cookie") ?? "").split(";")[0]!;
+		return { state, cookie };
+	}
+
+	function stubGitHub() {
+		const realFetch = globalThis.fetch;
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+			const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+			if (url === "https://github.com/login/oauth/access_token") return Response.json({ access_token: "gho_test" });
+			if (url === "https://api.github.com/user") return Response.json({ id: 515151, login: "reader", name: "Reader", email: null, avatar_url: "" });
+			if (url === "https://api.github.com/user/emails") return Response.json([{ email: "reader@example.com", primary: true, verified: true }]);
+			return realFetch(input as RequestInfo, init);
+		});
+	}
+
+	const callback = (state: string, cookie: string, extra = "code=CODE") =>
+		AuthController.githubCallback(
+			new Request(`http://example.com/v1/api/auth/github/callback?${extra}&state=${encodeURIComponent(state)}`, { headers: { Cookie: cookie } }),
+			appEnv(),
+		);
+
+	it("returns to an allowlisted return_to with tokens", async () => {
+		stubGitHub();
+		const { state, cookie } = await startWith(BLOG);
+		const res = await callback(state, cookie);
+		expect(res.headers.get("location")!.startsWith(`${BLOG}#`)).toBe(true);
+		expect(fragment(res).get("accessToken")).toBeTruthy();
+	});
+
+	it("ignores a return_to that is not allowlisted (no open redirect)", async () => {
+		stubGitHub();
+		const { state, cookie } = await startWith("https://evil.example/steal");
+		const res = await callback(state, cookie);
+		expect(res.headers.get("location")!.startsWith(`${ADMIN}#`)).toBe(true);
+	});
+
+	it("sends provider errors back to the app that started sign-in", async () => {
+		const { state, cookie } = await startWith(BLOG);
+		const res = await callback(state, cookie, "error=access_denied");
+		expect(res.headers.get("location")!.startsWith(`${BLOG}#`)).toBe(true);
+		expect(fragment(res).get("error")).toBe("access_denied");
+	});
+
+	it("authRedirectAllowlist keeps the default first, drops invalid and duplicate entries", () => {
+		expect(authRedirectAllowlist({ AUTH_REDIRECT_URL: ADMIN, AUTH_REDIRECT_ALLOWLIST: ` ${BLOG} , not a url,${ADMIN}` }).map((u) => u.href)).toEqual([ADMIN, BLOG]);
+		expect(authRedirectTarget({ AUTH_REDIRECT_URL: ADMIN, AUTH_REDIRECT_ALLOWLIST: BLOG }, BLOG)?.href).toBe(BLOG);
+		expect(authRedirectTarget({ AUTH_REDIRECT_URL: ADMIN, AUTH_REDIRECT_ALLOWLIST: BLOG }, "https://evil.example/")?.href).toBe(ADMIN);
+		expect(authRedirectTarget({ AUTH_REDIRECT_ALLOWLIST: BLOG }, null)).toBeNull();
 	});
 });
 

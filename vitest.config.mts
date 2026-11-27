@@ -6,8 +6,15 @@ export default defineConfig({
 		cloudflareTest({
 			wrangler: { configPath: "./wrangler.test.jsonc" },
 			miniflare: {
+				// Pinned so a developer's local .env cannot change test behaviour
+				// (wrangler loads .env/.dev.vars next to the config).
 				bindings: {
 					JWT_SECRET: "test-jwt-secret",
+					AUTH_REDIRECT_URL: "",
+					AUTH_REDIRECT_ALLOWLIST: "",
+					DB_DRIVER: "d1",
+					DB_QUERY_LOG: "",
+					API_CACHE_TTL: "0",
 				},
 			},
 		}),
