@@ -2,7 +2,7 @@ import type { Context, Next } from 'hono';
 import { Res } from "../../shared/helpers/response";
 import { isObject } from "../../shared/helpers/json";
 import { parseListParams } from "../../shared/helpers/query";
-import { AppEnv } from "./articles.interface";
+import type { AppEnv, MineScope } from "./articles.interface";
 import { ArticleRepository } from "./articles.repo";
 import { ArticleService } from "./articles.service";
 import { TagRepository } from "../tags/tags.repo";
@@ -11,6 +11,12 @@ import { getValidBody, validateRequired } from "../../shared/helpers/request";
 import { parsePhnomPenhToUtc } from "../../shared/helpers/tz";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MINE_SCOPES: readonly MineScope[] = ['owned', 'contributing'];
+
+/** Current publishing state, used to tell a real change from a re-sent value. */
+type PublishState = { published: number; is_public: number; publish_at: string | null };
+
+const PUBLISH_FORBIDDEN = 'Only an admin can publish. Submit the post for review instead.';
 
 export class ArticlesController {
 
@@ -216,6 +222,9 @@ export class ArticlesController {
 			? await service.getById(param)
 			: await service.getBySlug(param);
 		if (!article) return Res.notFound();
+		if (article.status !== 'public' && !(await ArticlesController.canPreview(c, article.id, article.ownerId))) {
+			return Res.notFound();
+		}
 
 		const [nextSlug, prevSlug] = await Promise.all([
 			repository.getNextSlug(article.slug),
@@ -232,6 +241,23 @@ export class ArticlesController {
 		};
 
 		return Res.ok(response);
+	}
+
+	/**
+	 * @description Whether the caller may read an article that isn't public
+	 * (draft, in review, scheduled, private): an admin, its owner, or a
+	 * contributor, signed in with a Bearer session. API keys never unlock
+	 * unpublished posts, so a site key used by the public blog can't render a
+	 * draft even if it belongs to an admin account.
+	 * @param { Context<AppEnv> } c The Hono context (after optionalAuth)
+	 * @param { string } id Article ID
+	 * @param { string | null } ownerId Article owner ID
+	 * @returns { Promise<boolean> }
+	 */
+	private static async canPreview(c: Context<AppEnv>, id: string, ownerId: string | null): Promise<boolean> {
+		const user = c.get('user');
+		if (!user || !c.req.header('Authorization')?.startsWith('Bearer ')) return false;
+		return (await ArticlesController.resolveArticleRole(id, user, ownerId, c.env.DB)) !== null;
 	}
 
 	/**
@@ -277,6 +303,29 @@ export class ArticlesController {
 	}
 
 	/**
+	 * @description Publishing is admin-only. A non-admin may keep a post
+	 * unpublished (or take their own post down) but may not make it public,
+	 * schedule it, or attach authors. On update, re-sending the value the row
+	 * already has is allowed so a full-form save of an approved post still
+	 * works. Call after `normalizeArticleBody` (keys are snake_case by then).
+	 * @param { any } body The normalized request body
+	 * @param { PublishState | null } current The row's current state (null on create)
+	 * @returns { Response | null } 403 response, or null when allowed
+	 */
+	private static rejectNonAdminPublishing(body: any, current: PublishState | null): Response | null {
+		const wasPublished = current?.published === 1;
+		const wasPublic = current?.is_public === 1;
+		if (body.published === true && !wasPublished) return Res.forbidden(PUBLISH_FORBIDDEN);
+		if (body.is_public === true && !wasPublic) return Res.forbidden(PUBLISH_FORBIDDEN);
+		if (body.publish_at && body.publish_at !== (current?.publish_at ?? null)) return Res.forbidden(PUBLISH_FORBIDDEN);
+		const authorIds = body.author_ids;
+		if (Array.isArray(authorIds) && (current !== null || authorIds.length > 0)) {
+			return Res.forbidden('Only an admin can set article authors.');
+		}
+		return null;
+	}
+
+	/**
 	 * @description Authenticated: create article
 	 * @method POST
 	 * @param { Context<AppEnv> } c The Hono context
@@ -289,6 +338,10 @@ export class ArticlesController {
 
 			const invalid = ArticlesController.normalizeArticleBody(body);
 			if (invalid) return invalid;
+			if (c.get('user')?.role !== 'admin') {
+				const blocked = ArticlesController.rejectNonAdminPublishing(body, null);
+				if (blocked) return blocked;
+			}
 
 			const repo = new ArticleRepository(c.env.DB);
 			const article = await repo.create({ ...body, owner_id: c.get('user')?.sub } as any);
@@ -342,6 +395,14 @@ export class ArticlesController {
 
 			const invalid = ArticlesController.normalizeArticleBody(body);
 			if (invalid) return invalid;
+			if (role === 'owner') {
+				const current = await c.env.DB
+					.prepare('SELECT published, is_public, publish_at FROM articles WHERE id = ?1')
+					.bind(id)
+					.first<PublishState>();
+				const blocked = ArticlesController.rejectNonAdminPublishing(body, current);
+				if (blocked) return blocked;
+			}
 			const repo = new ArticleRepository(c.env.DB);
 			const article = await new ArticleService(repo).update(id, body as never);
 			if (!article) return Res.notFound();
@@ -358,6 +419,51 @@ export class ArticlesController {
 			if (err instanceof Response) return err;
 			return ArticlesController.handleSlugConflict(err);
 		}
+	}
+
+	/**
+	 * @description Authenticated: the caller's own workspace — articles they
+	 * own (`?scope=owned`, default) or contribute to (`?scope=contributing`),
+	 * every status included. Accepts the usual search/status/sort/page params.
+	 * @method GET
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { Promise<Response> } Paginated list of articles
+	 */
+	static async listMine(c: Context<AppEnv>): Promise<Response> {
+		const user = c.get('user');
+		if (!user) return Res.unauthorized();
+		const rawScope = new URL(c.req.url).searchParams.get('scope') ?? 'owned';
+		if (!(MINE_SCOPES as readonly string[]).includes(rawScope)) {
+			return Res.badRequest(`scope must be one of: ${MINE_SCOPES.join(', ')}`);
+		}
+		const result = await new ArticleRepository(c.env.DB).findMine(user.sub, rawScope as MineScope, parseListParams(c.req.url));
+		return Res.ok(result);
+	}
+
+	/**
+	 * @description Owner (or admin): submit a draft for admin review, or
+	 * clear the request — the owner withdrawing it, or an admin declining it.
+	 * Only unpublished articles can be in review.
+	 * @method POST, DELETE
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @param { boolean } requested True to submit, false to clear
+	 * @returns { Promise<Response> } The updated article
+	 */
+	static async setReview(c: Context<AppEnv>, requested: boolean): Promise<Response> {
+		const id = c.req.param('id') ?? '';
+		if (!UUID_RE.test(id)) return Res.badRequest('Invalid article ID');
+		const user = c.get('user');
+		const row = await c.env.DB
+			.prepare('SELECT owner_id, published FROM articles WHERE id = ?1')
+			.bind(id)
+			.first<{ owner_id: string | null; published: number }>();
+		if (!row) return Res.notFound();
+		if (user?.role !== 'admin' && user?.sub !== row.owner_id) return Res.forbidden();
+		if (requested && row.published === 1) return Res.conflict('Article is already published');
+
+		const repo = new ArticleRepository(c.env.DB);
+		await repo.setReviewRequested(id, requested);
+		return Res.ok(await repo.findById(id));
 	}
 
 	/**

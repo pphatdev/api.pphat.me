@@ -125,7 +125,7 @@ describe("Articles API", () => {
 		it("accepts authorIds (camelCase) as alias for author_ids on update", async () => {
 			const res = await SELF.fetch(`http://example.com/v1/api/articles/${ARTICLE_ID}`, {
 				method: "PATCH",
-				headers: authHeaders,
+				headers: adminHeaders, // publishing/authors are admin-only
 				body: JSON.stringify({
 					authorIds: [1],
 				}),
@@ -426,7 +426,7 @@ describe("Articles API", () => {
 			const slug = `scheduled-future-${Date.now()}`;
 			const createRes = await SELF.fetch("http://example.com/v1/api/articles", {
 				method: "POST",
-				headers: authHeaders,
+				headers: adminHeaders, // publishing/authors are admin-only
 				body: JSON.stringify({
 					title: "Scheduled Future",
 					slug,
@@ -452,7 +452,7 @@ describe("Articles API", () => {
 			const slug = `scheduled-past-${Date.now()}`;
 			const res = await SELF.fetch("http://example.com/v1/api/articles", {
 				method: "POST",
-				headers: authHeaders,
+				headers: adminHeaders, // publishing/authors are admin-only
 				body: JSON.stringify({
 					title: "Scheduled Past",
 					slug,
@@ -471,7 +471,7 @@ describe("Articles API", () => {
 			const slug = `scheduled-local-${Date.now()}`;
 			const res = await SELF.fetch("http://example.com/v1/api/articles", {
 				method: "POST",
-				headers: authHeaders,
+				headers: adminHeaders, // publishing/authors are admin-only
 				body: JSON.stringify({
 					title: "Scheduled Local",
 					slug,
@@ -505,7 +505,7 @@ describe("Articles API", () => {
 			const slug = `admin-queue-${Date.now()}`;
 			const createRes = await SELF.fetch("http://example.com/v1/api/articles", {
 				method: "POST",
-				headers: authHeaders,
+				headers: adminHeaders, // publishing/authors are admin-only
 				body: JSON.stringify({
 					title: "Admin Queue View",
 					slug,

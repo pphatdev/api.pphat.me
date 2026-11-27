@@ -1,4 +1,4 @@
-import type { User, PublicUser, IAuthRepository, ApiKeyRecord, ApiKeyLookup, RefreshTokenRow } from './auth.interface';
+import type { User, PublicUser, ProfileUpdate, IAuthRepository, ApiKeyRecord, ApiKeyLookup, RefreshTokenRow } from './auth.interface';
 
 export class AuthRepository implements IAuthRepository {
 	constructor(private readonly db: D1Database) { }
@@ -21,11 +21,16 @@ export class AuthRepository implements IAuthRepository {
 			.first<User>();
 
 		if (existing) {
+			// Name and avatar come from the provider only until the user sets
+			// their own (PATCH /auth/me); after that a sign-in must not undo
+			// their profile edits. Email still follows the provider.
+			const name = existing.name || data.name;
+			const avatar = existing.avatar || data.avatar;
 			await this.db
 				.prepare("UPDATE users SET email = ?1, name = ?2, avatar = ?3, updated_at = datetime('now') WHERE id = ?4")
-				.bind(data.email, data.name, data.avatar, existing.id)
+				.bind(data.email, name, avatar, existing.id)
 				.run();
-			return { ...existing, ...data };
+			return { ...existing, email: data.email, name, avatar };
 		}
 
 		const id = crypto.randomUUID();
@@ -59,6 +64,27 @@ export class AuthRepository implements IAuthRepository {
 			.prepare('SELECT id, provider, provider_id, email, name, avatar, email_verified, password_hash, role, created_at, updated_at FROM users WHERE id = ?1')
 			.bind(id)
 			.first<User>();
+	}
+
+	/**
+	 * @description Update the user's own profile fields
+	 * @param { string } id User ID
+	 * @param { ProfileUpdate } data Validated fields to change
+	 * @returns { Promise<PublicUser | null> } The updated public user, or null if missing
+	 */
+	async updateProfile(id: string, data: ProfileUpdate): Promise<PublicUser | null> {
+		const sets: string[] = [];
+		const values: unknown[] = [];
+		if (data.name !== undefined) { sets.push(`name = ?${values.length + 1}`); values.push(data.name); }
+		if (data.avatar !== undefined) { sets.push(`avatar = ?${values.length + 1}`); values.push(data.avatar); }
+		if (sets.length > 0) {
+			values.push(id);
+			await this.db
+				.prepare(`UPDATE users SET ${sets.join(', ')}, updated_at = datetime('now') WHERE id = ?${values.length}`)
+				.bind(...values)
+				.run();
+		}
+		return this.findPublicUserById(id);
 	}
 
 	/**

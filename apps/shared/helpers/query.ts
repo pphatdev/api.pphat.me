@@ -1,6 +1,6 @@
 import type { ArticleStatus } from "../interfaces";
 
-const VALID_STATUSES: readonly ArticleStatus[] = ['public', 'draft', 'queue', 'private'];
+const VALID_STATUSES: readonly ArticleStatus[] = ['public', 'draft', 'review', 'queue', 'private'];
 
 export interface ListOptions {
 	page: number;
