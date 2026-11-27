@@ -42,6 +42,8 @@
 		"APP_URL": "https://api.pphat.me",
 		// OAuth callback sends the browser here with tokens in the URL fragment.
 		"AUTH_REDIRECT_URL": "https://admin.pphat.me/auth/callback",
+		// Other apps may request these via ?return_to= on the OAuth start endpoint.
+		"AUTH_REDIRECT_ALLOWLIST": "https://pphat.me/auth/callback",
 		// SMTP settings for email 2FA (use wrangler secret put for SMTP_PASS)
 		"SMTP_HOST": "smtp.gmail.com",
 		"SMTP_PORT": "587",

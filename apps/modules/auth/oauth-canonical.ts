@@ -40,22 +40,56 @@ export function canonicalOAuthStart(request: Request, env: Pick<Env, 'APP_URL'>)
 	});
 }
 
-/**
- * Where the browser goes after the OAuth callback, from `AUTH_REDIRECT_URL`
- * (e.g. https://admin.pphat.me/auth/callback). Config only, never a request
- * parameter, so it cannot become an open redirect. Null keeps the JSON
- * response (API clients, tests).
- * @param { Pick<Env, 'AUTH_REDIRECT_URL'> } env Worker env
- * @returns { URL | null } The validated http(s) target, or null when unset/invalid
- */
-export function authRedirectTarget(env: Pick<Env, 'AUTH_REDIRECT_URL'>): URL | null {
-	if (!env.AUTH_REDIRECT_URL) return null;
+/** Parse an http(s) URL, or null. */
+function httpUrl(value: string | null | undefined): URL | null {
+	if (!value) return null;
 	try {
-		const url = new URL(env.AUTH_REDIRECT_URL);
+		const url = new URL(value.trim());
 		return url.protocol === 'https:' || url.protocol === 'http:' ? url : null;
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * @description Allowed post-sign-in destinations: AUTH_REDIRECT_URL (the
+ * default) plus the comma-separated AUTH_REDIRECT_ALLOWLIST. Config only, so
+ * neither can become an open redirect.
+ * @param { Pick<Env, 'AUTH_REDIRECT_URL' | 'AUTH_REDIRECT_ALLOWLIST'> } env Worker env
+ * @returns { URL[] } Default first; invalid entries dropped
+ */
+export function authRedirectAllowlist(env: Pick<Env, 'AUTH_REDIRECT_URL' | 'AUTH_REDIRECT_ALLOWLIST'>): URL[] {
+	const entries = [env.AUTH_REDIRECT_URL, ...(env.AUTH_REDIRECT_ALLOWLIST ?? '').split(',')];
+	const seen = new Set<string>();
+	const out: URL[] = [];
+	for (const entry of entries) {
+		const url = httpUrl(entry);
+		if (url && !seen.has(url.href)) {
+			seen.add(url.href);
+			out.push(url);
+		}
+	}
+	return out;
+}
+
+/**
+ * Where the browser goes after the OAuth callback. Null keeps the JSON
+ * response (API clients, tests).
+ * @param { Pick<Env, 'AUTH_REDIRECT_URL' | 'AUTH_REDIRECT_ALLOWLIST'> } env Worker env
+ * @param { string } [returnTo] A requested target (from `?return_to=` or the state); used only if allowlisted
+ * @returns { URL | null } The requested target if allowed, else AUTH_REDIRECT_URL, else null
+ */
+export function authRedirectTarget(
+	env: Pick<Env, 'AUTH_REDIRECT_URL' | 'AUTH_REDIRECT_ALLOWLIST'>,
+	returnTo?: string | null,
+): URL | null {
+	const allowed = authRedirectAllowlist(env);
+	const requested = httpUrl(returnTo);
+	if (requested) {
+		const match = allowed.find((url) => url.href === requested.href);
+		if (match) return match;
+	}
+	return httpUrl(env.AUTH_REDIRECT_URL);
 }
 
 /**

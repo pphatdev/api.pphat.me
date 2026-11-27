@@ -48,6 +48,13 @@ interface __ExtraSecrets {
 	 * fragment. Unset: the callback returns JSON (API clients, tests).
 	 */
 	AUTH_REDIRECT_URL?: string;
+	/**
+	 * Extra allowed post-sign-in destinations, comma-separated full URLs
+	 * (e.g. `https://pphat.me/auth/callback`). Clients pick one with
+	 * `?return_to=` on the OAuth start endpoint; anything else falls back to
+	 * AUTH_REDIRECT_URL.
+	 */
+	AUTH_REDIRECT_ALLOWLIST?: string;
 }
 
 interface Env extends __RateLimiterBindings, __ExtraSecrets {}
