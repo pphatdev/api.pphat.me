@@ -42,6 +42,12 @@ interface __ExtraSecrets {
 	API_CACHE_TTL?: string;
 	/** `1` logs rows read per query and warns above 1,000 (development only). */
 	DB_QUERY_LOG?: string;
+	/**
+	 * Where the browser lands after OAuth sign-in, e.g.
+	 * `https://admin.pphat.me/auth/callback`. Tokens are passed in the URL
+	 * fragment. Unset: the callback returns JSON (API clients, tests).
+	 */
+	AUTH_REDIRECT_URL?: string;
 }
 
 interface Env extends __RateLimiterBindings, __ExtraSecrets {}

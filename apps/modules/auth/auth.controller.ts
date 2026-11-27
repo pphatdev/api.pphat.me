@@ -1,3 +1,4 @@
+import { authRedirectTarget, canonicalOAuthStart, redirectWithFragment } from './oauth-canonical';
 import { serialize, parse } from 'hono/utils/cookie';
 import { json, isObject } from '../../shared/helpers/json';
 import { Res } from '../../shared/helpers/response';
@@ -108,6 +109,9 @@ export class AuthController {
 	 * @returns { Promise<Response> } Redirect response
 	 */
 	static async github(request: Request, env: Env): Promise<Response> {
+		// Start on the callback's host so the oauth_state cookie is sent back.
+		const canonical = canonicalOAuthStart(request, env);
+		if (canonical) return canonical;
 		const { state, cookieValue, codeChallenge } = await generateOAuthState(env.JWT_SECRET, 'github');
 		const params = new URLSearchParams({
 			client_id: env.GITHUB_CLIENT_ID,
@@ -145,6 +149,9 @@ export class AuthController {
 	 * @returns { Promise<Response> } Redirect response
 	 */
 	static async google(request: Request, env: Env): Promise<Response> {
+		// Start on the callback's host so the oauth_state cookie is sent back.
+		const canonical = canonicalOAuthStart(request, env);
+		if (canonical) return canonical;
 		const { state, cookieValue, codeChallenge } = await generateOAuthState(env.JWT_SECRET, 'google');
 		const params = new URLSearchParams({
 			client_id: env.GOOGLE_CLIENT_ID,
@@ -450,17 +457,23 @@ async function handleOAuthCallback(
 		return res;
 	};
 
+	// With AUTH_REDIRECT_URL set, send the browser back to the app (tokens or
+	// error in the URL fragment) instead of leaving it on a JSON page.
+	const redirectTarget = authRedirectTarget(env);
+	const fail = (jsonResponse: Response, errorCode: string): Response =>
+		withCleared(redirectTarget ? redirectWithFragment(redirectTarget, { error: errorCode }) : jsonResponse);
+
 	const url = new URL(request.url);
 	const oauthError = url.searchParams.get('error');
-	if (oauthError) return withCleared(json({ error: oauthError, description: url.searchParams.get('error_description') }, 400));
+	if (oauthError) return fail(json({ error: oauthError, description: url.searchParams.get('error_description') }, 400), oauthError);
 
 	const code = url.searchParams.get('code');
 	const state = url.searchParams.get('state');
-	if (!code || !state) return withCleared(Res.badRequest('Missing code or state'));
+	if (!code || !state) return fail(Res.badRequest('Missing code or state'), 'missing_code');
 
 	const cookieVal = readStateCookie(request);
 	const verified = await verifyOAuthState(state, cookieVal, env.JWT_SECRET, provider);
-	if (!verified) return withCleared(Res.badRequest('Invalid or expired state'));
+	if (!verified) return fail(Res.badRequest('Invalid or expired state'), 'invalid_state');
 
 	try {
 		const redirectUri = `${env.APP_URL}/v1/api/auth/${provider}/callback`;
@@ -472,9 +485,14 @@ async function handleOAuthCallback(
 
 		const repo = new AuthRepository(env.DB);
 		const tokens = await new AuthService(repo).handleOAuthCallback(provider, userInfo, env.JWT_SECRET);
+		if (redirectTarget) {
+			const res = redirectWithFragment(redirectTarget, { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
+			res.headers.append('Set-Cookie', buildRefreshCookie(env, tokens.refreshToken, tokens.refreshTTL));
+			return withCleared(res);
+		}
 		return withCleared(tokenResponse(env, tokens));
 	} catch (err) {
-		return withCleared(json({ error: err instanceof Error ? err.message : `${provider} authentication failed` }, 502));
+		return fail(json({ error: err instanceof Error ? err.message : `${provider} authentication failed` }, 502), 'oauth_failed');
 	}
 }
 
