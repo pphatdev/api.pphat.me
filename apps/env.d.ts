@@ -42,6 +42,11 @@ interface __ExtraSecrets {
 	API_CACHE_TTL?: string;
 	/** `1` logs rows read per query and warns above 1,000 (development only). */
 	DB_QUERY_LOG?: string;
+	/**
+	 * `1` prints verification codes to the console instead of emailing them.
+	 * Local development only: ignored unless APP_URL is localhost.
+	 */
+	OTP_DEV_LOG?: string;
 	/** Admin app origin used in links inside emails. Default `https://admin.pphat.me`. */
 	ADMIN_APP_URL?: string;
 }

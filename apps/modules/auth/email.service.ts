@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import { promises as dns } from 'node:dns';
+import { isIP } from 'node:net';
 
 export interface SmtpConfig {
 	host: string;
@@ -9,6 +11,46 @@ export interface SmtpConfig {
 }
 
 /**
+ * @description First IPv4 address of an SMTP host, or null if it has none or
+ * the lookup fails (then the hostname is used as before).
+ * @param { string } host SMTP hostname
+ * @param { (host: string) => Promise<string[]> } [resolve4] Resolver (injectable for tests)
+ * @returns { Promise<string | null> }
+ */
+export async function smtpIpv4(host: string, resolve4: (host: string) => Promise<string[]> = dns.resolve4): Promise<string | null> {
+	if (isIP(host)) return isIP(host) === 4 ? host : null;
+	try {
+		return (await resolve4(host))[0] ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * @description One SMTP transport for every mailer. Connects over IPv4:
+ * nodemailer tries IPv6 first and relies on Node's family fallback, which the
+ * Workers runtime doesn't do, so on a network without IPv6 (local wrangler
+ * dev) every send failed with ENETUNREACH. `servername` keeps SNI and the
+ * certificate check against the real hostname when connecting by address.
+ * @param { SmtpConfig } config SMTP configuration
+ * @returns { Promise<nodemailer.Transporter> }
+ */
+async function createSmtpTransport(config: SmtpConfig) {
+	const address = await smtpIpv4(config.host);
+	return nodemailer.createTransport({
+		host: address ?? config.host,
+		servername: config.host,
+		port: config.port,
+		secure: config.port === 465,
+		auth: { user: config.user, pass: config.pass },
+		// Fail fast instead of holding the request open on a stuck server.
+		connectionTimeout: 10_000,
+		greetingTimeout: 10_000,
+		socketTimeout: 15_000,
+	} as Parameters<typeof nodemailer.createTransport>[0]);
+}
+
+/**
  * @description Send an OTP verification email
  * @param { string } to Recipient email
  * @param { string } code The verification code
@@ -16,15 +58,7 @@ export interface SmtpConfig {
  * @returns { Promise<void> }
  */
 export async function sendOtpEmail(to: string, code: string, config: SmtpConfig): Promise<void> {
-	const transporter = nodemailer.createTransport({
-		host: config.host,
-		port: config.port,
-		secure: config.port === 465,
-		auth: {
-			user: config.user,
-			pass: config.pass,
-		},
-	});
+	const transporter = await createSmtpTransport(config);
 
 	await transporter.sendMail({
 		from: config.from,
@@ -125,15 +159,7 @@ export async function sendContactEmail(
 	data: { name: string; email: string; subject: string; message: string },
 	config: SmtpConfig
 ): Promise<void> {
-	const transporter = nodemailer.createTransport({
-		host: config.host,
-		port: config.port,
-		secure: config.port === 465,
-		auth: {
-			user: config.user,
-			pass: config.pass,
-		},
-	});
+	const transporter = await createSmtpTransport(config);
 
 	const rendered = renderContactEmail(data);
 	await transporter.sendMail({
@@ -191,11 +217,6 @@ export function renderInvitationEmail(data: InvitationEmailData): { subject: str
  * @returns { Promise<void> }
  */
 export async function sendInvitationEmail(to: string, data: InvitationEmailData, config: SmtpConfig): Promise<void> {
-	const transporter = nodemailer.createTransport({
-		host: config.host,
-		port: config.port,
-		secure: config.port === 465,
-		auth: { user: config.user, pass: config.pass },
-	});
+	const transporter = await createSmtpTransport(config);
 	await transporter.sendMail({ from: config.from, to, ...renderInvitationEmail(data) });
 }
