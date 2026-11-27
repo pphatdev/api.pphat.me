@@ -48,7 +48,12 @@
 		// SMTP_USER is the login and must be the bare address; the display
 		// name belongs in SMTP_FROM. SMTP_PASS must be a Gmail app password.
 		"SMTP_USER": "info.sophat@gmail.com",
-		"SMTP_FROM": "Sophat L. <info.sophat@gmail.com>"
+		"SMTP_FROM": "Sophat L. <info.sophat@gmail.com>",
+		// Production database: Turso (TURSO_DATABASE_URL / TURSO_AUTH_TOKEN are
+		// secrets). env.DB is swapped for the libSQL adapter in resolveEnv; the
+		// D1 binding below stays for rollback (set back to "d1"). Local dev
+		// keeps D1 via DB_DRIVER=d1 in .env, and tests via wrangler.test.jsonc.
+		"DB_DRIVER": "turso"
 	},
 	/**
 	 * Secrets (set via `wrangler secret put <NAME>`):

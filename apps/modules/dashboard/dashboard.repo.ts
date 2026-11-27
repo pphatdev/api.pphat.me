@@ -12,9 +12,11 @@ const LIVE_WINDOW_MS = 5 * 60 * 1000;
 /**
  * How long a live-traffic count is reused. Every open dashboard polls this
  * (SSE), so without sharing, N tabs cost N queries per poll. Equal to the SSE
- * poll interval; a 15s-stale count is fine for a 5-minute window.
+ * poll interval; a 30s-stale count is fine for a 5-minute window, and it
+ * halves the query rate of an open dashboard (the uncached query was 98% of
+ * the reads in the 2026-11-27 D1 limit outage).
  */
-export const LIVE_TRAFFIC_TTL_MS = 15_000;
+export const LIVE_TRAFFIC_TTL_MS = 30_000;
 
 // Per-isolate cache shared by all requests/streams in this Worker instance.
 // `pending` de-duplicates concurrent refreshes.
