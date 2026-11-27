@@ -32,6 +32,12 @@ export interface Article {
 	/** Derived from (published, is_public, publish_at, review_requested_at). See ArticleStatus. */
 	status: ArticleStatus;
 	ownerId: string | null;
+	/**
+	 * The signed-in caller's access on GET by slug/id: `admin` and `owner` edit
+	 * everything, `contributor` edits content only, `null` is read-only.
+	 * Present only for Bearer sessions; absent elsewhere.
+	 */
+	viewerRole?: 'owner' | 'contributor' | 'admin' | null;
 	owner: ArticleOwner | null;
 	/** Admin-controlled display order. Lower sorts first. */
 	position: number;

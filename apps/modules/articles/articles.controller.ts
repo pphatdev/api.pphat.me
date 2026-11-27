@@ -222,9 +222,9 @@ export class ArticlesController {
 			? await service.getById(param)
 			: await service.getBySlug(param);
 		if (!article) return Res.notFound();
-		if (article.status !== 'public' && !(await ArticlesController.canPreview(c, article.id, article.ownerId))) {
-			return Res.notFound();
-		}
+		const signedIn = ArticlesController.hasBearerSession(c);
+		const viewerRole = signedIn ? await ArticlesController.resolveArticleRole(article.id, c.get('user'), article.ownerId, c.env.DB) : null;
+		if (article.status !== 'public' && !viewerRole) return Res.notFound();
 
 		const [nextSlug, prevSlug] = await Promise.all([
 			repository.getNextSlug(article.slug),
@@ -233,7 +233,10 @@ export class ArticlesController {
 
 		const baseUrl = new URL(c.req.url).origin;
 		const response = {
-			data: article,
+			// Signed-in callers learn what they may do with this article
+			// (admin | owner | contributor, or null = read only), so editors
+			// don't have to guess from ownerId.
+			data: signedIn ? { ...article, viewerRole } : article,
 			navigation: {
 				next: nextSlug ? `${baseUrl}/articles/${nextSlug}` : null,
 				prev: prevSlug ? `${baseUrl}/articles/${prevSlug}` : null,
@@ -244,20 +247,15 @@ export class ArticlesController {
 	}
 
 	/**
-	 * @description Whether the caller may read an article that isn't public
-	 * (draft, in review, scheduled, private): an admin, its owner, or a
-	 * contributor, signed in with a Bearer session. API keys never unlock
-	 * unpublished posts, so a site key used by the public blog can't render a
-	 * draft even if it belongs to an admin account.
-	 * @param { Context<AppEnv> } c The Hono context (after optionalAuth)
-	 * @param { string } id Article ID
-	 * @param { string | null } ownerId Article owner ID
-	 * @returns { Promise<boolean> }
+	 * @description Whether the caller is signed in with a Bearer session (after
+	 * optionalAuth). Only such callers get a role on an article: API keys never
+	 * unlock unpublished posts, so a site key used by the public blog can't
+	 * render a draft even if it belongs to an admin account.
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @returns { boolean }
 	 */
-	private static async canPreview(c: Context<AppEnv>, id: string, ownerId: string | null): Promise<boolean> {
-		const user = c.get('user');
-		if (!user || !c.req.header('Authorization')?.startsWith('Bearer ')) return false;
-		return (await ArticlesController.resolveArticleRole(id, user, ownerId, c.env.DB)) !== null;
+	private static hasBearerSession(c: Context<AppEnv>): boolean {
+		return !!c.get('user') && !!c.req.header('Authorization')?.startsWith('Bearer ');
 	}
 
 	/**

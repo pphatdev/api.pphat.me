@@ -250,3 +250,35 @@ describe("OAuth sign-in keeps profile edits", () => {
 		expect(row).toEqual({ name: "Chosen Name", avatar: "https://avatars.example.com/1" });
 	});
 });
+
+describe("viewerRole on GET /v1/api/articles/:slug", () => {
+	let published: any;
+
+	beforeAll(async () => {
+		const draft = await createDraft(writerHeaders, `writer-viewer-${Date.now()}`);
+		const res = await patch(draft.id, adminHeaders, { published: true, isPublic: true });
+		published = await res.json();
+		await env.DB.prepare("INSERT OR IGNORE INTO users (id, provider, provider_id, email, name, role, email_verified) VALUES ('viewer-contrib', 'email', 'viewer-contrib@example.com', 'viewer-contrib@example.com', 'VC', 'user', 1)").run();
+		await env.DB.prepare("INSERT OR IGNORE INTO article_contributors (article_id, user_id) VALUES (?1, 'viewer-contrib')").bind(published.id).run();
+	});
+
+	const roleOf = async (headers?: Record<string, string>) => {
+		const res = await SELF.fetch(`${BASE}/articles/${published.slug}`, headers ? { headers } : undefined);
+		expect(res.status).toBe(200);
+		return ((await res.json()) as any).data;
+	};
+
+	it("is null for a signed-in user with no access to a public post", async () => {
+		expect((await roleOf(otherHeaders)).viewerRole).toBeNull();
+	});
+
+	it("reports owner, contributor and admin", async () => {
+		expect((await roleOf(writerHeaders)).viewerRole).toBe("owner");
+		expect((await roleOf(await headersFor("viewer-contrib", "VC"))).viewerRole).toBe("contributor");
+		expect((await roleOf(adminHeaders)).viewerRole).toBe("admin");
+	});
+
+	it("is absent for anonymous readers", async () => {
+		expect(await roleOf()).not.toHaveProperty("viewerRole");
+	});
+});
