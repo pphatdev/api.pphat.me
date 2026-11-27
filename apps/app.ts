@@ -19,6 +19,7 @@ import { contactRoutes } from './modules/contact/contact.route';
 import { dashboardRoutes } from './modules/dashboard/dashboard.route';
 import { llmsRoutes } from './modules/llms/llms.route';
 import { userRoutes } from './modules/users/users.route';
+import { articleInvitationRoutes } from './modules/article-invitations/article-invitations.route';
 import { bodyLimitMiddleware } from './middlewares/body-limit.middleware';
 import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 import { securityMiddleware } from './middlewares/security.middleware';
@@ -50,6 +51,7 @@ app.get('/', (c) => c.json({ message: 'Welcome to the API', version: packageJson
 
 app.route('/', authRoutes);
 app.route('/', articleRoutes);
+app.route('/', articleInvitationRoutes);
 app.route('/', projectRoutes);
 app.route('/', authorRoutes);
 app.route('/', tagRoutes);
