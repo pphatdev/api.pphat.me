@@ -35,7 +35,9 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({
     origin: (origin) => resolveAllowedOrigin(origin),
-    allowHeaders: ['*'],
+    // Explicit list: a `*` in Access-Control-Allow-Headers never covers
+    // `Authorization` (Fetch spec), so browsers blocked Bearer-token requests.
+    allowHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'Cache-Control', 'Last-Event-ID', 'X-Requested-With'],
     allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE', 'PATCH'],
 }));
 

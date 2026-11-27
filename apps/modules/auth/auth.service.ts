@@ -226,12 +226,13 @@ async function sha256Base64Url(input: string): Promise<string> {
  * @param { OAuthProvider } provider The provider we're starting the flow for
  * @returns { Promise<OAuthStateInit> } State, cookie, and PKCE values
  */
-export async function generateOAuthState(secret: string, provider: OAuthProvider): Promise<OAuthStateInit> {
+export async function generateOAuthState(secret: string, provider: OAuthProvider, returnTo?: string): Promise<OAuthStateInit> {
 	const state = randomToken(24); // nonce sent to provider
 	const codeVerifier = randomToken(48); // PKCE verifier (kept server-side)
 	const codeChallenge = await sha256Base64Url(codeVerifier);
 	const jwt: JwtService = await stateJwt(secret, OAUTH_STATE_TTL_SECONDS);
-	const cookieValue = await jwt.generate({ n: state, cv: codeVerifier, p: provider });
+	// `r`: where to send the browser after the callback (already allowlisted by the caller).
+	const cookieValue = await jwt.generate({ n: state, cv: codeVerifier, p: provider, ...(returnTo ? { r: returnTo } : {}) });
 	return { state, cookieValue, codeVerifier, codeChallenge };
 }
 
@@ -243,17 +244,17 @@ export async function generateOAuthState(secret: string, provider: OAuthProvider
  * @param { string | null } cookieValue The `oauth_state` cookie sent by the client
  * @param { string } secret      JWT secret
  * @param { OAuthProvider } provider The provider whose callback fired
- * @returns { Promise<{ codeVerifier: string } | null> } Verifier on success, null on any mismatch
+ * @returns { Promise<{ codeVerifier: string; returnTo?: string } | null> } Verifier (and return target, if any) on success, null on any mismatch
  */
 export async function verifyOAuthState(
 	state: string,
 	cookieValue: string | null | undefined,
 	secret: string,
 	provider: OAuthProvider,
-): Promise<{ codeVerifier: string } | null> {
+): Promise<{ codeVerifier: string; returnTo?: string } | null> {
 	if (!cookieValue) return null;
 	const jwt: JwtService = await stateJwt(secret);
-	const payload = await jwt.verify<{ n?: string; cv?: string; p?: string }>(cookieValue);
+	const payload = await jwt.verify<{ n?: string; cv?: string; p?: string; r?: string }>(cookieValue);
 	if (!payload?.n || !payload?.cv || !payload?.p) return null;
 	if (payload.p !== provider) return null;
 	// Constant-time-ish equality via encoded length + explicit compare
@@ -261,7 +262,7 @@ export async function verifyOAuthState(
 	let diff = 0;
 	for (let i = 0; i < state.length; i++) diff |= state.charCodeAt(i) ^ payload.n.charCodeAt(i);
 	if (diff !== 0) return null;
-	return { codeVerifier: payload.cv };
+	return { codeVerifier: payload.cv, ...(typeof payload.r === 'string' ? { returnTo: payload.r } : {}) };
 }
 
 /**
