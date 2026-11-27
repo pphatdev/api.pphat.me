@@ -16,6 +16,10 @@ const MINE_SCOPES: readonly MineScope[] = ['owned', 'contributing'];
 /** Current publishing state, used to tell a real change from a re-sent value. */
 type PublishState = { published: number; is_public: number; publish_at: string | null };
 
+/** The fields that count as writing an article (vs. publishing or tagging it). */
+const EDITORIAL_FIELDS = ['title', 'description', 'content', 'thumbnail'] as const;
+type EditorialState = Record<(typeof EDITORIAL_FIELDS)[number], string | null>;
+
 const PUBLISH_FORBIDDEN = 'Only an admin can publish. Submit the post for review instead.';
 
 export class ArticlesController {
@@ -226,9 +230,10 @@ export class ArticlesController {
 		const viewerRole = signedIn ? await ArticlesController.resolveArticleRole(article.id, c.get('user'), article.ownerId, c.env.DB) : null;
 		if (article.status !== 'public' && !viewerRole) return Res.notFound();
 
-		const [nextSlug, prevSlug] = await Promise.all([
+		const [nextSlug, prevSlug, contributors] = await Promise.all([
 			repository.getNextSlug(article.slug),
 			repository.getPrevSlug(article.slug),
+			repository.findContributors(article.id),
 		]);
 
 		const baseUrl = new URL(c.req.url).origin;
@@ -236,7 +241,7 @@ export class ArticlesController {
 			// Signed-in callers learn what they may do with this article
 			// (admin | owner | contributor, or null = read only), so editors
 			// don't have to guess from ownerId.
-			data: signedIn ? { ...article, viewerRole } : article,
+			data: signedIn ? { ...article, contributors, viewerRole } : { ...article, contributors },
 			navigation: {
 				next: nextSlug ? `${baseUrl}/articles/${nextSlug}` : null,
 				prev: prevSlug ? `${baseUrl}/articles/${prevSlug}` : null,
@@ -298,6 +303,16 @@ export class ArticlesController {
 		delete body.authorIds;
 
 		return null;
+	}
+
+	/**
+	 * @description Whether an update changes any editorial field
+	 * @param { EditorialState } before The row before the update
+	 * @param { Record<string, unknown> } body The normalized update body
+	 * @returns { boolean }
+	 */
+	private static changedWriting(before: EditorialState, body: Record<string, unknown>): boolean {
+		return EDITORIAL_FIELDS.some((f) => body[f] !== undefined && (body[f] ?? '') !== (before[f] ?? ''));
 	}
 
 	/**
@@ -393,24 +408,26 @@ export class ArticlesController {
 
 			const invalid = ArticlesController.normalizeArticleBody(body);
 			if (invalid) return invalid;
+			const before = await c.env.DB
+				.prepare('SELECT published, is_public, publish_at, owner_id, title, description, content, thumbnail FROM articles WHERE id = ?1')
+				.bind(id)
+				.first<PublishState & EditorialState & { owner_id: string | null }>();
 			if (role === 'owner') {
-				const current = await c.env.DB
-					.prepare('SELECT published, is_public, publish_at FROM articles WHERE id = ?1')
-					.bind(id)
-					.first<PublishState>();
-				const blocked = ArticlesController.rejectNonAdminPublishing(body, current);
+				const blocked = ArticlesController.rejectNonAdminPublishing(body, before);
 				if (blocked) return blocked;
 			}
 			const repo = new ArticleRepository(c.env.DB);
 			const article = await new ArticleService(repo).update(id, body as never);
 			if (!article) return Res.notFound();
 
-			// Business rule: anyone who edits an article they didn't author is
-			// recorded as a contributor. Authors (owner or otherwise) and
-			// existing contributors are no-ops thanks to INSERT OR IGNORE and
-			// the author-check inside the helper.
+			// Business rule: anyone who changes the writing of an article they
+			// don't own (and aren't credited as author on) is recorded as a
+			// contributor. Publishing, scheduling or re-saving unchanged text
+			// isn't contributing: an admin approving a post isn't credited.
 			const userId = c.get('user')?.sub;
-			if (userId) await repo.ensureContributorIfNotAuthor(id, userId);
+			if (userId && userId !== before?.owner_id && before && ArticlesController.changedWriting(before, body)) {
+				await repo.ensureContributorIfNotAuthor(id, userId);
+			}
 
 			return Res.ok(article);
 		} catch (err) {

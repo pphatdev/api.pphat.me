@@ -6,8 +6,12 @@ export default defineConfig({
 		cloudflareTest({
 			wrangler: { configPath: "./wrangler.test.jsonc" },
 			miniflare: {
+				// Pinned so a developer's local secrets (wrangler loads .env /
+				// .dev.vars) never reach the suite: with a real SMTP_PASS, tests
+				// that register users or invite contributors would send real mail.
 				bindings: {
 					JWT_SECRET: "test-jwt-secret",
+					SMTP_PASS: "",
 				},
 			},
 		}),

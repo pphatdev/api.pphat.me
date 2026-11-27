@@ -281,4 +281,20 @@ describe("viewerRole on GET /v1/api/articles/:slug", () => {
 	it("is absent for anonymous readers", async () => {
 		expect(await roleOf()).not.toHaveProperty("viewerRole");
 	});
+
+	it("lists contributors publicly (name and avatar only), never the owner", async () => {
+		// The owner can end up in article_contributors too; they're credited as owner.
+		await env.DB.prepare("INSERT OR IGNORE INTO article_contributors (article_id, user_id) VALUES (?1, ?2)").bind(published.id, WRITER_ID).run();
+		const data = await roleOf();
+		expect(data.contributors).toEqual([{ id: "viewer-contrib", name: "VC", avatar: null }]);
+		expect(data.owner?.id).toBe(WRITER_ID);
+		expect(JSON.stringify(data.contributors)).not.toContain("@");
+	});
+
+	it("is an empty list when nobody contributed", async () => {
+		const draft = await createDraft(writerHeaders, `writer-solo-${Date.now()}`);
+		const solo = (await (await patch(draft.id, adminHeaders, { published: true, isPublic: true })).json()) as any;
+		const res = await SELF.fetch(`${BASE}/articles/${solo.slug}`);
+		expect(((await res.json()) as any).data.contributors).toEqual([]);
+	});
 });

@@ -40,6 +40,8 @@
 		"GITHUB_CLIENT_ID": "Ov23li3Ck51xqMVZd7Ob",
 		"GOOGLE_CLIENT_ID": "",
 		"APP_URL": "https://api.pphat.me",
+		// Admin app origin for links in emails (contributor invitations).
+		"ADMIN_APP_URL": "https://admin.pphat.me",
 		// SMTP settings for email 2FA (use wrangler secret put for SMTP_PASS)
 		"SMTP_HOST": "smtp.gmail.com",
 		"SMTP_PORT": "587",

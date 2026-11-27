@@ -39,6 +39,29 @@ export class ArticleInvitationRepository {
 	}
 
 	/**
+	 * @description A user's display name
+	 * @param { string } userId User ID
+	 * @returns { Promise<string | null> }
+	 */
+	async findUserName(userId: string): Promise<string | null> {
+		const row = await this.db.prepare('SELECT name FROM users WHERE id = ?1').bind(userId).first<{ name: string | null }>();
+		return row?.name ?? null;
+	}
+
+	/**
+	 * @description Invitations a user sent (or re-sent) in the last 24 hours, across all articles
+	 * @param { string } userId Inviter's user ID
+	 * @returns { Promise<number> }
+	 */
+	async countSentToday(userId: string): Promise<number> {
+		const row = await this.db
+			.prepare("SELECT COUNT(*) AS count FROM article_invitations WHERE invited_by = ?1 AND created_at >= datetime('now', '-1 day')")
+			.bind(userId)
+			.first<{ count: number }>();
+		return row?.count ?? 0;
+	}
+
+	/**
 	 * @description Contributors on an article
 	 * @param { string } articleId Article ID
 	 * @returns { Promise<Contributor[]> }

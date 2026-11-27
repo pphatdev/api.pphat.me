@@ -42,6 +42,8 @@ interface __ExtraSecrets {
 	API_CACHE_TTL?: string;
 	/** `1` logs rows read per query and warns above 1,000 (development only). */
 	DB_QUERY_LOG?: string;
+	/** Admin app origin used in links inside emails. Default `https://admin.pphat.me`. */
+	ADMIN_APP_URL?: string;
 }
 
 interface Env extends __RateLimiterBindings, __ExtraSecrets {}

@@ -17,6 +17,13 @@ export interface ArticleOwner {
 	role: 'user' | 'admin';
 }
 
+/** Public credit for a contributor: name and avatar only. */
+export interface ArticleContributor {
+	id: string;
+	name: string | null;
+	avatar: string | null;
+}
+
 export interface Article {
 	id: string;
 	title: string;
@@ -38,6 +45,8 @@ export interface Article {
 	 * Present only for Bearer sessions; absent elsewhere.
 	 */
 	viewerRole?: 'owner' | 'contributor' | 'admin' | null;
+	/** People who helped write it (not the owner). GET by slug/id only. */
+	contributors?: ArticleContributor[];
 	owner: ArticleOwner | null;
 	/** Admin-controlled display order. Lower sorts first. */
 	position: number;

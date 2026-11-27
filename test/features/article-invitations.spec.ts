@@ -2,7 +2,8 @@ import { env, exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
 import { getAdminHeaders, seedDatabase } from "../../apps/shared/helpers/test-cases";
 import { createJwt } from "../../apps/modules/auth/auth.service";
-import { MAX_PENDING_INVITATIONS } from "../../apps/modules/article-invitations/article-invitations.controller";
+import { MAX_INVITES_PER_DAY, MAX_PENDING_INVITATIONS } from "../../apps/modules/article-invitations/article-invitations.controller";
+import { renderInvitationEmail } from "../../apps/modules/auth/email.service";
 
 const SELF = exports.default;
 const BASE = "http://example.com/v1/api";
@@ -177,10 +178,57 @@ describe("Revoking and limits", () => {
 			body: JSON.stringify({ title: "Busy", slug: `busy-${Date.now()}`, description: "x" }),
 		});
 		const busyId = ((await res.json()) as any).id;
+		// An admin sends these: admins aren't subject to the per-user daily cap,
+		// so this isolates the per-article limit.
 		for (let i = 0; i < MAX_PENDING_INVITATIONS; i++) {
-			expect((await invite(ownerH, `fan${i}@invite.test`, busyId)).status).toBe(201);
+			expect((await invite(adminH, `fan${i}@invite.test`, busyId)).status).toBe(201);
 		}
-		expect((await invite(ownerH, "one-too-many@invite.test", busyId)).status).toBe(422);
+		expect((await invite(adminH, "one-too-many@invite.test", busyId)).status).toBe(422);
+	});
+
+	it(`caps a non-admin at ${MAX_INVITES_PER_DAY} invitations a day, across articles`, async () => {
+		const SENDER = { id: "inv-daily", email: "daily@invite.test" };
+		await env.DB.prepare(
+			"INSERT OR IGNORE INTO users (id, provider, provider_id, email, name, role, email_verified) VALUES (?1, 'email', ?2, ?2, 'Daily', 'user', 1)",
+		).bind(SENDER.id, SENDER.email).run();
+		const senderH = await headersFor(SENDER);
+		const ids: string[] = [];
+		for (const n of [1, 2]) {
+			const res = await SELF.fetch(`${BASE}/articles`, {
+				method: "POST",
+				headers: senderH,
+				body: JSON.stringify({ title: `Daily ${n}`, slug: `daily-${n}-${Date.now()}`, description: "x" }),
+			});
+			ids.push(((await res.json()) as any).id);
+		}
+		// Split across two articles so the per-article cap never applies.
+		for (let i = 0; i < MAX_INVITES_PER_DAY; i++) {
+			expect((await invite(senderH, `d${i}@invite.test`, ids[i % 2])).status).toBe(201);
+		}
+		const res = await invite(senderH, "over@invite.test", ids[0]);
+		expect(res.status).toBe(422);
+		expect(((await res.json()) as any).error ?? "").toMatch(/a day/);
+	});
+});
+
+describe("Invitation email", () => {
+	it("is skipped when SMTP isn't configured (emailed: false)", async () => {
+		const created = (await (await invite(ownerH, "no-smtp@invite.test")).json()) as any;
+		expect(created.emailed).toBe(false);
+	});
+
+	it("uses a fixed subject and escapes user-written text", () => {
+		const mail = renderInvitationEmail({
+			inviterName: 'Eve <script>alert(1)</script>\r\nBcc: x@evil.test',
+			articleTitle: '"><img src=x onerror=alert(1)>',
+			url: "https://admin.pphat.me/articles",
+		});
+		expect(mail.subject).toBe("You're invited to contribute on pphat.me");
+		expect(mail.html).not.toContain("<script>");
+		expect(mail.html).not.toContain("<img");
+		expect(mail.html).toContain("&lt;script&gt;");
+		expect(mail.text).not.toMatch(/\r|\nBcc:/);
+		expect(mail.html).toContain('href="https://admin.pphat.me/articles"');
 	});
 });
 
