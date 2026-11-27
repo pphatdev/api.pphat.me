@@ -112,12 +112,25 @@ export class ArticleCommentsController {
 		const validContent = this.validateContent(body.content);
 		if (!validContent) return Res.unprocessable(`content is required (max ${MAX_COMMENT_LENGTH} chars)`);
 
-		const authorName = this.resolveAuthorName(user);
 		const repo = new ArticleCommentRepository(env.DB);
-		const comment = await new ArticleCommentService(repo).create(articleId, {
-			authorName,
+		const service = new ArticleCommentService(repo);
+
+		// Replies are one level deep: answering a reply joins its thread.
+		let parentId: number | null = null;
+		if (body.parentId !== undefined && body.parentId !== null) {
+			const requested = typeof body.parentId === 'number' && Number.isInteger(body.parentId) && body.parentId > 0 ? body.parentId : null;
+			if (requested === null) return Res.unprocessable('parentId must be a comment id');
+			const parent = await service.findById(requested);
+			// Unknown or another article's comment: same 404 so ids can't be probed.
+			if (!parent || parent.articleId !== articleId) return Res.notFound('Comment to reply to not found');
+			parentId = parent.parentId ?? parent.id;
+		}
+
+		const comment = await service.create(articleId, {
+			authorName: this.resolveAuthorName(user),
 			content: validContent,
 			userId: user.sub,
+			parentId,
 		});
 		return Res.created(comment);
 	}

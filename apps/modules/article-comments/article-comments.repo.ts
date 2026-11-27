@@ -2,6 +2,7 @@ import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 import type {
 	ArticleComment,
 	ArticleCommentRow,
+	ArticleCommentThread,
 	CreateCommentDto,
 	IArticleCommentRepository,
 	UpdateCommentDto,
@@ -11,29 +12,31 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 	constructor(private readonly db: D1Database) {}
 
 	/**
-	 * @description Find all comments for an article with pagination
+	 * @description Top-level comments for an article (newest first, paginated),
+	 * each with all its replies (oldest first). `total` counts threads.
 	 * @param { string } articleId The article ID
 	 * @param { PaginationParams } params Pagination parameters
-	 * @returns { Promise<PaginatedResult<ArticleComment>> } Paginated comments
+	 * @returns { Promise<PaginatedResult<ArticleCommentThread>> } Paginated threads
 	 */
-	async findAllByArticleId(articleId: string, { page, limit }: PaginationParams): Promise<PaginatedResult<ArticleComment>> {
+	async findAllByArticleId(articleId: string, { page, limit }: PaginationParams): Promise<PaginatedResult<ArticleCommentThread>> {
 		const offset = (page - 1) * limit;
 
 		const [{ results }, countRow] = await Promise.all([
 			this.db
-				.prepare("SELECT * FROM article_comments WHERE article_id = ?1 ORDER BY created_at DESC LIMIT ?2 OFFSET ?3")
+				.prepare("SELECT * FROM article_comments WHERE article_id = ?1 AND parent_id IS NULL ORDER BY created_at DESC LIMIT ?2 OFFSET ?3")
 				.bind(articleId, limit, offset)
 				.all<ArticleCommentRow>(),
 			this.db
-				.prepare("SELECT COUNT(*) as count FROM article_comments WHERE article_id = ?1")
+				.prepare("SELECT COUNT(*) as count FROM article_comments WHERE article_id = ?1 AND parent_id IS NULL")
 				.bind(articleId)
 				.first<{ count: number }>(),
 		]);
 
 		const total = countRow?.count ?? 0;
+		const replies = await this.findReplies(articleId, results.map((r) => r.id));
 
 		return {
-			data: results.map(this.mapRow),
+			data: results.map((row) => ({ ...this.mapRow(row), replies: replies.get(row.id) ?? [] })),
 			pagination: {
 				page,
 				limit,
@@ -41,6 +44,28 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 				totalPages: Math.ceil(total / limit),
 			},
 		};
+	}
+
+	/**
+	 * @description Replies to the given top-level comments, grouped by parent
+	 * @param { string } articleId The article ID
+	 * @param { number[] } parentIds Top-level comment IDs
+	 * @returns { Promise<Map<number, ArticleComment[]>> }
+	 */
+	private async findReplies(articleId: string, parentIds: number[]): Promise<Map<number, ArticleComment[]>> {
+		const byParent = new Map<number, ArticleComment[]>();
+		if (!parentIds.length) return byParent;
+		const placeholders = parentIds.map((_, i) => `?${i + 2}`).join(', ');
+		const { results } = await this.db
+			.prepare(`SELECT * FROM article_comments WHERE article_id = ?1 AND parent_id IN (${placeholders}) ORDER BY created_at ASC`)
+			.bind(articleId, ...parentIds)
+			.all<ArticleCommentRow>();
+		for (const row of results ?? []) {
+			const list = byParent.get(row.parent_id!) ?? [];
+			list.push(this.mapRow(row));
+			byParent.set(row.parent_id!, list);
+		}
+		return byParent;
 	}
 
 	/**
@@ -53,9 +78,9 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 		const now = new Date().toISOString();
 		const result = await this.db
 			.prepare(
-				"INSERT INTO article_comments (article_id, user_id, author_name, content, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
+				"INSERT INTO article_comments (article_id, user_id, parent_id, author_name, content, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"
 			)
-			.bind(articleId, dto.userId, dto.authorName, dto.content, now, now)
+			.bind(articleId, dto.userId, dto.parentId ?? null, dto.authorName, dto.content, now, now)
 			.run();
 		const id = result.meta.last_row_id as number;
 		const row = await this.db
@@ -126,6 +151,7 @@ export class ArticleCommentRepository implements IArticleCommentRepository {
 			id: row.id,
 			articleId: row.article_id,
 			userId: row.user_id ?? null,
+			parentId: row.parent_id ?? null,
 			authorName: row.author_name,
 			content: row.content,
 			createdAt: row.created_at,

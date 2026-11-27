@@ -1,4 +1,4 @@
-import type { ArticleComment, CreateCommentDto, IArticleCommentRepository, UpdateCommentDto } from "./article-comments.interface";
+import type { ArticleComment, ArticleCommentThread, CreateCommentDto, IArticleCommentRepository, UpdateCommentDto } from "./article-comments.interface";
 import { PaginatedResult, PaginationParams } from "../../shared/interfaces";
 
 export class ArticleCommentService {
@@ -10,7 +10,7 @@ export class ArticleCommentService {
 	 * @param { PaginationParams } params Pagination parameters
 	 * @returns { Promise<PaginatedResult<ArticleComment>> } Paginated comments
 	 */
-	list(articleId: string, params: PaginationParams): Promise<PaginatedResult<ArticleComment>> {
+	list(articleId: string, params: PaginationParams): Promise<PaginatedResult<ArticleCommentThread>> {
 		return this.repo.findAllByArticleId(articleId, params);
 	}
 
