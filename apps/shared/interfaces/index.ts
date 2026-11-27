@@ -1,5 +1,5 @@
 
-export type ArticleStatus = 'public' | 'draft' | 'queue' | 'private';
+export type ArticleStatus = 'public' | 'draft' | 'review' | 'queue' | 'private';
 
 export interface PaginationParams {
 	page: number;

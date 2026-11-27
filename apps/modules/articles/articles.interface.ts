@@ -29,7 +29,7 @@ export interface Article {
 	isPublic: boolean;
 	/** Scheduled publication time, formatted as Asia/Phnom_Penh (+07:00) — null when not scheduled */
 	publishAt: string | null;
-	/** Derived from (published, is_public, publish_at). See ArticleStatus. */
+	/** Derived from (published, is_public, publish_at, review_requested_at). See ArticleStatus. */
 	status: ArticleStatus;
 	ownerId: string | null;
 	owner: ArticleOwner | null;
@@ -52,6 +52,8 @@ export interface ArticleRow {
 	published: number;
 	is_public: number;
 	publish_at: string | null;
+	/** Set while a non-admin's draft awaits admin review (migration 0036). */
+	review_requested_at?: string | null;
 	content: string;
 	file_path: string;
 	owner_id: string | null;
@@ -91,6 +93,9 @@ export interface UpdateArticleDto {
 	tags?: { tag: string; description?: string }[];
 }
 
+/** `owned`: articles the user created. `contributing`: articles they were added to but don't own. */
+export type MineScope = 'owned' | 'contributing';
+
 // Intentionally shares the AppEnv name with projects.interface.ts —
 // each module scopes its own Variables shape (articleId + user here).
 export type AppEnv = {
@@ -114,6 +119,8 @@ export interface IArticleRepository {
 		params: PaginationParams,
 		opts?: { admin?: boolean; viewerUserId?: string | null },
 	): Promise<PaginatedResult<Article>>;
+	findMine(userId: string, scope: MineScope, params: PaginationParams): Promise<PaginatedResult<Article>>;
+	setReviewRequested(id: string, requested: boolean): Promise<void>;
 	findBySlug(slug: string): Promise<Article | null>;
 	findById(id: string): Promise<Article | null>;
 	create(dto: CreateArticleDto): Promise<Article>;

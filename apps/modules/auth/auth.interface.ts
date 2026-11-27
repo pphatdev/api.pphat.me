@@ -14,6 +14,12 @@ export interface User {
 
 export type PublicUser = Omit<User, 'password_hash' | 'provider_id'>;
 
+/** Fields a user may change on their own profile. `avatar: null` clears it. */
+export interface ProfileUpdate {
+	name?: string;
+	avatar?: string | null;
+}
+
 export interface JwtPayload {
 	sub: string;
 	provider: string;
@@ -78,6 +84,7 @@ export interface IAuthRepository {
 		data: { email: string | null; name: string | null; avatar: string | null },
 	): Promise<User>;
 	findUserById(id: string): Promise<User | null>;
+	updateProfile(id: string, data: ProfileUpdate): Promise<PublicUser | null>;
 	findPublicUserById(id: string): Promise<PublicUser | null>;
 	findEmailUser(email: string): Promise<User | null>;
 	createEmailUser(email: string, name: string, passwordHash: string): Promise<User>;

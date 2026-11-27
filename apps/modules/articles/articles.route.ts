@@ -60,6 +60,41 @@ app.put(
 );
 
 /**
+ * @description The caller's own articles, every status included
+ * @method GET
+ * @query { 'owned' | 'contributing' } [scope=owned] Articles they own, or were added to as a contributor
+ *
+ * Declared before `/:slug` so "mine" isn't treated as a slug.
+ */
+app.get(
+    '/v1/api/articles/mine',
+    authGuard,
+    ArticlesController.listMine
+);
+
+/**
+ * @description Submit a draft for admin review (owner | admin)
+ * @method POST
+ * @param { String } id Article ID (UUID)
+ */
+app.post(
+    '/v1/api/articles/:id/review',
+    authGuard,
+    (c) => ArticlesController.setReview(c, true)
+);
+
+/**
+ * @description Withdraw (owner) or decline (admin) a review request
+ * @method DELETE
+ * @param { String } id Article ID (UUID)
+ */
+app.delete(
+    '/v1/api/articles/:id/review',
+    authGuard,
+    (c) => ArticlesController.setReview(c, false)
+);
+
+/**
  * @description List articles by author (owner | admin — includes drafts)
  * @method GET
  * @param { Number } authorId Author ID
@@ -241,6 +276,7 @@ app.delete(
  */
 app.get(
     '/v1/api/articles/:slug',
+    optionalAuth,
     ArticlesController.getBySlugOrId
 );
 

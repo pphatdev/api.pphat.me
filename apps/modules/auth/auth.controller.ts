@@ -2,6 +2,7 @@ import { serialize, parse } from 'hono/utils/cookie';
 import { json, isObject } from '../../shared/helpers/json';
 import { Res } from '../../shared/helpers/response';
 import { AuthRepository } from './auth.repo';
+import type { ProfileUpdate } from './auth.interface';
 import {
 	AuthService,
 	generateOAuthState,
@@ -190,6 +191,25 @@ export class AuthController {
 		const payload = await verifyJwt(rawToken, env.JWT_SECRET);
 		if (!payload) return Res.unauthorized('Invalid or expired token');
 		const user = await new AuthService(repo).getCurrentUser(payload.sub);
+		if (!user) return Res.notFound('User not found');
+		return Res.ok(user);
+	}
+
+	/**
+	 * @description Update the signed-in user's own profile (name, avatar).
+	 * Role, email and provider are never changed here.
+	 * @method PATCH
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @param { string } userId The caller's user ID (from authGuard)
+	 * @returns { Promise<Response> } The updated public user
+	 */
+	static async updateMe(request: Request, env: Env, userId: string): Promise<Response> {
+		const body = await request.json().catch(() => null);
+		if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
+		const parsed = parseProfileUpdate(body as Record<string, unknown>);
+		if (parsed instanceof Response) return parsed;
+		const user = await new AuthRepository(env.DB).updateProfile(userId, parsed);
 		if (!user) return Res.notFound('User not found');
 		return Res.ok(user);
 	}
@@ -513,4 +533,45 @@ async function sendOtpEmailSafely(email: string, otp: string, env: Env): Promise
 	} catch (error) {
 		console.error('[SEND_OTP_ERROR]', error);
 	}
+}
+
+const MAX_NAME_LENGTH = 80;
+const MAX_AVATAR_LENGTH = 500;
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
+
+/**
+ * @description Validate a profile PATCH body. Unknown keys are rejected so a
+ * client can't believe it changed something (like `role`) that it didn't.
+ * @param { Record<string, unknown> } body The parsed JSON body
+ * @returns { ProfileUpdate | Response } The fields to change, or a 4xx response
+ */
+function parseProfileUpdate(body: Record<string, unknown>): ProfileUpdate | Response {
+	const unknown = Object.keys(body).filter((k) => k !== 'name' && k !== 'avatar');
+	if (unknown.length > 0) return Res.unprocessable(`Only name and avatar can be updated. Rejected: ${unknown.join(', ')}`);
+
+	const update: ProfileUpdate = {};
+	if (body.name !== undefined) {
+		if (typeof body.name !== 'string') return Res.unprocessable('name must be a string');
+		const name = body.name.trim();
+		if (!name || name.length > MAX_NAME_LENGTH || CONTROL_CHARS.test(name)) {
+			return Res.unprocessable(`name must be 1-${MAX_NAME_LENGTH} characters`);
+		}
+		update.name = name;
+	}
+	if (body.avatar !== undefined) {
+		if (body.avatar === null || body.avatar === '') {
+			update.avatar = null;
+		} else {
+			if (typeof body.avatar !== 'string' || body.avatar.length > MAX_AVATAR_LENGTH) {
+				return Res.unprocessable(`avatar must be an https URL up to ${MAX_AVATAR_LENGTH} characters`);
+			}
+			let url: URL;
+			try { url = new URL(body.avatar); } catch { return Res.unprocessable('avatar must be an https URL'); }
+			if (url.protocol !== 'https:') return Res.unprocessable('avatar must be an https URL');
+			update.avatar = url.href;
+		}
+	}
+	if (update.name === undefined && update.avatar === undefined) return Res.unprocessable('Nothing to update');
+	return update;
 }
