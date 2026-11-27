@@ -3,6 +3,7 @@ import { Res } from '../../shared/helpers/response';
 import { isObject } from '../../shared/helpers/json';
 import { ArticleInvitationRepository } from './article-invitations.repo';
 import type { AppEnv } from './article-invitations.interface';
+import { sendInvitationEmail } from '../auth/email.service';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ID_RE = /^\d{1,12}$/;
@@ -11,15 +12,25 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL_LENGTH = 254;
 /** Keeps one article from being used to fan out invitations. */
 export const MAX_PENDING_INVITATIONS = 20;
+/**
+ * Each invitation emails the invitee, and any signed-up account can own an
+ * article, so non-admins get a rolling daily cap across all their articles.
+ */
+export const MAX_INVITES_PER_DAY = 20;
 
-type ManageResult = { repo: ArticleInvitationRepository; articleId: string; ownerId: string | null } | Response;
+type ManageResult =
+	| { repo: ArticleInvitationRepository; articleId: string; ownerId: string | null; title: string }
+	| Response;
 
 /**
  * Owners invite people by email to contribute to their article; the invitee
- * accepts or declines from their own workspace. No email is sent: an API that
- * mails arbitrary addresses on behalf of any signed-up account is a spam
- * relay. Invitations are matched to the invitee by their account email, which
- * is verified (email sign-up OTP, or the provider's verified address).
+ * gets an email and accepts or declines from their own workspace.
+ * Invitations are matched to the invitee by their account email, which is
+ * verified (email sign-up OTP, or the provider's verified address).
+ *
+ * Because any signed-up account can send these, the email is a fixed
+ * template (fixed subject, escaped user text), non-admins are capped at
+ * MAX_INVITES_PER_DAY, and an article at MAX_PENDING_INVITATIONS.
  */
 export class ArticleInvitationsController {
 
@@ -36,7 +47,7 @@ export class ArticleInvitationsController {
 		if (!article) return Res.notFound();
 		const user = c.get('user');
 		if (user?.role !== 'admin' && user?.sub !== article.owner_id) return Res.forbidden();
-		return { repo, articleId, ownerId: article.owner_id };
+		return { repo, articleId, ownerId: article.owner_id, title: article.title };
 	}
 
 	/**
@@ -80,9 +91,42 @@ export class ArticleInvitationsController {
 		if ((await ctx.repo.countPending(ctx.articleId)) >= MAX_PENDING_INVITATIONS) {
 			return Res.unprocessable(`An article can have at most ${MAX_PENDING_INVITATIONS} pending invitations`);
 		}
+		const user = c.get('user')!;
+		if (user.role !== 'admin' && (await ctx.repo.countSentToday(user.sub)) >= MAX_INVITES_PER_DAY) {
+			return Res.unprocessable(`You can send at most ${MAX_INVITES_PER_DAY} invitations a day. Try again tomorrow.`);
+		}
 
-		const invitation = await ctx.repo.upsert(ctx.articleId, email, c.get('user')!.sub);
-		return Res.created(invitation);
+		const invitation = await ctx.repo.upsert(ctx.articleId, email, user.sub);
+		const emailed = await ArticleInvitationsController.notify(c, email, ctx.title, await ctx.repo.findUserName(user.sub));
+		return Res.created({ ...invitation, emailed });
+	}
+
+	/**
+	 * @description Email the invitee in the background (the response doesn't
+	 * wait on SMTP). Skipped when SMTP isn't configured, e.g. tests and local
+	 * dev without SMTP_PASS. Failures are logged, never surfaced: the
+	 * invitation itself is already saved and visible in the invitee's account.
+	 * @param { Context<AppEnv> } c The Hono context
+	 * @param { string } to Invitee address
+	 * @param { string } articleTitle Article title
+	 * @param { string | null } inviterName Inviter's display name
+	 * @returns { Promise<boolean> } Whether an email was queued
+	 */
+	private static async notify(c: Context<AppEnv>, to: string, articleTitle: string, inviterName: string | null): Promise<boolean> {
+		const env = c.env;
+		if (!env.SMTP_PASS || !env.SMTP_HOST) return false;
+		const adminUrl = (env.ADMIN_APP_URL || 'https://admin.pphat.me').replace(/\/+$/, '');
+		const send = sendInvitationEmail(
+			to,
+			{ inviterName, articleTitle, url: `${adminUrl}/articles` },
+			{ host: env.SMTP_HOST, port: Number(env.SMTP_PORT), user: env.SMTP_USER, pass: env.SMTP_PASS, from: env.SMTP_FROM },
+		).catch((error) => console.error('[SEND_INVITATION_ERROR]', error));
+		try {
+			c.executionCtx.waitUntil(send);
+		} catch {
+			await send; // no execution context (e.g. unit tests): just finish here
+		}
+		return true;
 	}
 
 	/**
