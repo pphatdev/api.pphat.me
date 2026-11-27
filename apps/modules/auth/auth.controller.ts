@@ -1,7 +1,9 @@
+import { authRedirectTarget, canonicalOAuthStart, redirectWithFragment } from './oauth-canonical';
 import { serialize, parse } from 'hono/utils/cookie';
 import { json, isObject } from '../../shared/helpers/json';
 import { Res } from '../../shared/helpers/response';
 import { AuthRepository } from './auth.repo';
+import type { ProfileUpdate } from './auth.interface';
 import {
 	AuthService,
 	generateOAuthState,
@@ -108,7 +110,13 @@ export class AuthController {
 	 * @returns { Promise<Response> } Redirect response
 	 */
 	static async github(request: Request, env: Env): Promise<Response> {
-		const { state, cookieValue, codeChallenge } = await generateOAuthState(env.JWT_SECRET, 'github');
+		// Start on the callback's host so the oauth_state cookie is sent back.
+		const canonical = canonicalOAuthStart(request, env);
+		if (canonical) return canonical;
+		// Optional ?return_to=<allowlisted URL> (e.g. the blog), carried in the signed state.
+		const requested = new URL(request.url).searchParams.get('return_to');
+		const returnTo = requested ? authRedirectTarget(env, requested)?.href : undefined;
+		const { state, cookieValue, codeChallenge } = await generateOAuthState(env.JWT_SECRET, 'github', returnTo);
 		const params = new URLSearchParams({
 			client_id: env.GITHUB_CLIENT_ID,
 			redirect_uri: `${env.APP_URL}/v1/api/auth/github/callback`,
@@ -145,7 +153,13 @@ export class AuthController {
 	 * @returns { Promise<Response> } Redirect response
 	 */
 	static async google(request: Request, env: Env): Promise<Response> {
-		const { state, cookieValue, codeChallenge } = await generateOAuthState(env.JWT_SECRET, 'google');
+		// Start on the callback's host so the oauth_state cookie is sent back.
+		const canonical = canonicalOAuthStart(request, env);
+		if (canonical) return canonical;
+		// Optional ?return_to=<allowlisted URL> (e.g. the blog), carried in the signed state.
+		const requested = new URL(request.url).searchParams.get('return_to');
+		const returnTo = requested ? authRedirectTarget(env, requested)?.href : undefined;
+		const { state, cookieValue, codeChallenge } = await generateOAuthState(env.JWT_SECRET, 'google', returnTo);
 		const params = new URLSearchParams({
 			client_id: env.GOOGLE_CLIENT_ID,
 			redirect_uri: `${env.APP_URL}/v1/api/auth/google/callback`,
@@ -195,6 +209,25 @@ export class AuthController {
 	}
 
 	/**
+	 * @description Update the signed-in user's own profile (name, avatar).
+	 * Role, email and provider are never changed here.
+	 * @method PATCH
+	 * @param { Request } request The incoming request
+	 * @param { Env } env Environment bindings
+	 * @param { string } userId The caller's user ID (from authGuard)
+	 * @returns { Promise<Response> } The updated public user
+	 */
+	static async updateMe(request: Request, env: Env, userId: string): Promise<Response> {
+		const body = await request.json().catch(() => null);
+		if (!isObject(body)) return Res.badRequest('Invalid request body. Expected JSON.');
+		const parsed = parseProfileUpdate(body as Record<string, unknown>);
+		if (parsed instanceof Response) return parsed;
+		const user = await new AuthRepository(env.DB).updateProfile(userId, parsed);
+		if (!user) return Res.notFound('User not found');
+		return Res.ok(user);
+	}
+
+	/**
 	 * @description Register a new user with email/password
 	 * @method POST
 	 * @param { Request } request The incoming request
@@ -212,7 +245,12 @@ export class AuthController {
 		try {
 			const repo = new AuthRepository(env.DB);
 			const { otp } = await new AuthService(repo).registerEmailUser(email, name, password);
-			await sendOtpEmailSafely(email, otp, env);
+			// Never claim the code was sent when it wasn't: the user would wait for
+			// an email that never comes. The account stays unverified; registering
+			// again issues a fresh code.
+			if ((await deliverOtp(email, otp, env)) === 'failed') {
+				return json({ error: "We couldn't send the verification email. Please try again in a few minutes." }, 503);
+			}
 			return Res.created({ message: 'Verification code sent to your email' });
 		} catch (err) {
 			return handleAuthError(err);
@@ -451,16 +489,24 @@ async function handleOAuthCallback(
 	};
 
 	const url = new URL(request.url);
-	const oauthError = url.searchParams.get('error');
-	if (oauthError) return withCleared(json({ error: oauthError, description: url.searchParams.get('error_description') }, 400));
-
 	const code = url.searchParams.get('code');
 	const state = url.searchParams.get('state');
-	if (!code || !state) return withCleared(Res.badRequest('Missing code or state'));
 
-	const cookieVal = readStateCookie(request);
-	const verified = await verifyOAuthState(state, cookieVal, env.JWT_SECRET, provider);
-	if (!verified) return withCleared(Res.badRequest('Invalid or expired state'));
+	// Verify first so errors (e.g. "access_denied") also return to the app that
+	// started sign-in; the return target lives in the signed state cookie.
+	const verified = state ? await verifyOAuthState(state, readStateCookie(request), env.JWT_SECRET, provider) : null;
+
+	// With AUTH_REDIRECT_URL set, send the browser back to the app (tokens or
+	// error in the URL fragment) instead of leaving it on a JSON page.
+	const redirectTarget = authRedirectTarget(env, verified?.returnTo);
+	const fail = (jsonResponse: Response, errorCode: string): Response =>
+		withCleared(redirectTarget ? redirectWithFragment(redirectTarget, { error: errorCode }) : jsonResponse);
+
+	const oauthError = url.searchParams.get('error');
+	if (oauthError) return fail(json({ error: oauthError, description: url.searchParams.get('error_description') }, 400), oauthError);
+
+	if (!code || !state) return fail(Res.badRequest('Missing code or state'), 'missing_code');
+	if (!verified) return fail(Res.badRequest('Invalid or expired state'), 'invalid_state');
 
 	try {
 		const redirectUri = `${env.APP_URL}/v1/api/auth/${provider}/callback`;
@@ -472,9 +518,14 @@ async function handleOAuthCallback(
 
 		const repo = new AuthRepository(env.DB);
 		const tokens = await new AuthService(repo).handleOAuthCallback(provider, userInfo, env.JWT_SECRET);
+		if (redirectTarget) {
+			const res = redirectWithFragment(redirectTarget, { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
+			res.headers.append('Set-Cookie', buildRefreshCookie(env, tokens.refreshToken, tokens.refreshTTL));
+			return withCleared(res);
+		}
 		return withCleared(tokenResponse(env, tokens));
 	} catch (err) {
-		return withCleared(json({ error: err instanceof Error ? err.message : `${provider} authentication failed` }, 502));
+		return fail(json({ error: err instanceof Error ? err.message : `${provider} authentication failed` }, 502), 'oauth_failed');
 	}
 }
 
@@ -501,16 +552,94 @@ function handleAuthError(err: unknown): Response {
  * @param { Env } env Environment bindings
  * @returns { Promise<void> }
  */
-async function sendOtpEmailSafely(email: string, otp: string, env: Env): Promise<void> {
+/**
+ * @description Whether the API runs locally (APP_URL on localhost), so a
+ * dev-only switch like OTP_DEV_LOG can never take effect in production.
+ * @param { Env } env Bindings
+ * @returns { boolean }
+ */
+function isLocalApp(env: Env): boolean {
 	try {
-		await sendOtpEmail(email, otp, {
+		const host = new URL(env.APP_URL).hostname;
+		return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+	} catch {
+		return false;
+	}
+}
+
+/** `skipped`: SMTP isn't configured (tests, local dev without SMTP_PASS). */
+export type OtpDelivery = 'sent' | 'skipped' | 'failed';
+
+/**
+ * @description Email a verification code. Failures are logged and reported,
+ * not thrown, so the caller decides how to answer.
+ * @param { string } email Recipient
+ * @param { string } otp The code
+ * @param { Env } env Bindings with SMTP settings
+ * @param { typeof sendOtpEmail } [send] Sender (injectable for tests)
+ * @returns { Promise<OtpDelivery> }
+ */
+export async function deliverOtp(email: string, otp: string, env: Env, send = sendOtpEmail): Promise<OtpDelivery> {
+	if (env.OTP_DEV_LOG === '1' && isLocalApp(env)) {
+		console.warn(`[DEV_OTP] ${email} -> ${otp} (OTP_DEV_LOG=1; not emailed)`);
+		return 'skipped';
+	}
+	if (!env.SMTP_PASS || !env.SMTP_HOST || !env.SMTP_USER) {
+		console.warn('[SEND_OTP_SKIPPED] SMTP is not configured');
+		return 'skipped';
+	}
+	try {
+		await send(email, otp, {
 			host: env.SMTP_HOST,
 			port: Number(env.SMTP_PORT),
 			user: env.SMTP_USER,
 			pass: env.SMTP_PASS,
-			from: env.SMTP_FROM,
+			from: env.SMTP_FROM || env.SMTP_USER,
 		});
+		return 'sent';
 	} catch (error) {
 		console.error('[SEND_OTP_ERROR]', error);
+		return 'failed';
 	}
+}
+
+const MAX_NAME_LENGTH = 80;
+const MAX_AVATAR_LENGTH = 500;
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
+
+/**
+ * @description Validate a profile PATCH body. Unknown keys are rejected so a
+ * client can't believe it changed something (like `role`) that it didn't.
+ * @param { Record<string, unknown> } body The parsed JSON body
+ * @returns { ProfileUpdate | Response } The fields to change, or a 4xx response
+ */
+function parseProfileUpdate(body: Record<string, unknown>): ProfileUpdate | Response {
+	const unknown = Object.keys(body).filter((k) => k !== 'name' && k !== 'avatar');
+	if (unknown.length > 0) return Res.unprocessable(`Only name and avatar can be updated. Rejected: ${unknown.join(', ')}`);
+
+	const update: ProfileUpdate = {};
+	if (body.name !== undefined) {
+		if (typeof body.name !== 'string') return Res.unprocessable('name must be a string');
+		const name = body.name.trim();
+		if (!name || name.length > MAX_NAME_LENGTH || CONTROL_CHARS.test(name)) {
+			return Res.unprocessable(`name must be 1-${MAX_NAME_LENGTH} characters`);
+		}
+		update.name = name;
+	}
+	if (body.avatar !== undefined) {
+		if (body.avatar === null || body.avatar === '') {
+			update.avatar = null;
+		} else {
+			if (typeof body.avatar !== 'string' || body.avatar.length > MAX_AVATAR_LENGTH) {
+				return Res.unprocessable(`avatar must be an https URL up to ${MAX_AVATAR_LENGTH} characters`);
+			}
+			let url: URL;
+			try { url = new URL(body.avatar); } catch { return Res.unprocessable('avatar must be an https URL'); }
+			if (url.protocol !== 'https:') return Res.unprocessable('avatar must be an https URL');
+			update.avatar = url.href;
+		}
+	}
+	if (update.name === undefined && update.avatar === undefined) return Res.unprocessable('Nothing to update');
+	return update;
 }

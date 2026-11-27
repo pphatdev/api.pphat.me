@@ -4,7 +4,7 @@ import { Author, AuthorRow, AuthorDetailRow } from "../authors/authors.interface
 
 import { getNextSlug, getPrevSlug, buildUpdateFields, buildListConditions, getStatsSummary, mapAuthorRow, dedupeTagsByName } from "../../shared/helpers/repo";
 import { formatUtcAsPhnomPenh } from "../../shared/helpers/tz";
-import type { Article, ArticleOwner, IArticleRepository, ArticleRow, CreateArticleDto, UpdateArticleDto } from "./articles.interface";
+import type { Article, ArticleContributor, ArticleOwner, IArticleRepository, ArticleRow, CreateArticleDto, MineScope, UpdateArticleDto } from "./articles.interface";
 
 /**
  * @description Compute estimated reading time in minutes
@@ -26,7 +26,7 @@ export class ArticleRepository implements IArticleRepository {
 	 *  - Non-admin (`opts.admin` false or omitted) and `onlyPublished` true: the standard
 	 *    public list — only `published=1 AND is_public=1`.
 	 *  - Admin: sees every article regardless of `published`/`is_public`. May pass
-	 *    `params.status` (subset of 'public'|'draft'|'queue'|'private') to filter.
+	 *    `params.status` (subset of 'public'|'draft'|'review'|'queue'|'private') to filter.
 	 * @param { PaginationParams } params Pagination parameters (includes optional `status`)
 	 * @param { boolean } [onlyPublished=true] Public-visibility gate for non-admin callers
 	 * @param { object } [opts] Auth context
@@ -120,7 +120,8 @@ export class ArticleRepository implements IArticleRepository {
 			case 'public':  return '(published = 1 AND is_public = 1)';
 			case 'queue':   return '(published = 1 AND is_public = 0 AND publish_at IS NOT NULL)';
 			case 'private': return '(published = 1 AND is_public = 0 AND publish_at IS NULL)';
-			case 'draft':   return '(published = 0)';
+			case 'draft':   return '(published = 0 AND review_requested_at IS NULL)';
+			case 'review':  return '(published = 0 AND review_requested_at IS NOT NULL)';
 		}
 	}
 
@@ -129,10 +130,10 @@ export class ArticleRepository implements IArticleRepository {
 	 * Treat a queued row whose `publish_at` has elapsed as `public` — the row is already
 	 * visible in the list even if the cron hasn't run yet to flip `is_public`.
 	 * @param { ArticleRow } row The DB row
-	 * @returns { ArticleStatus } Public | queue | private | draft
+	 * @returns { ArticleStatus } Public | queue | private | review | draft
 	 */
 	private computeStatus(row: ArticleRow): ArticleStatus {
-		if (row.published !== 1) return 'draft';
+		if (row.published !== 1) return row.review_requested_at ? 'review' : 'draft';
 		if (row.is_public === 1) return 'public';
 		if (row.publish_at) {
 			const due = new Date(row.publish_at).getTime();
@@ -140,6 +141,59 @@ export class ArticleRepository implements IArticleRepository {
 			return 'queue';
 		}
 		return 'private';
+	}
+
+	/**
+	 * @description The signed-in user's own workspace: every status (drafts
+	 * included), scoped to articles they own or contribute to. Supports the
+	 * usual search / status filter / sort / pagination params.
+	 * @param { string } userId The caller's user ID (JWT `sub`)
+	 * @param { MineScope } scope `owned` or `contributing`
+	 * @param { PaginationParams } params Pagination parameters
+	 * @returns { Promise<PaginatedResult<Article>> } Paginated articles
+	 */
+	async findMine(userId: string, scope: MineScope, params: PaginationParams): Promise<PaginatedResult<Article>> {
+		const { page, limit, sort, order } = params;
+		const offset = (page - 1) * limit;
+		const { conditions, bindings, nextIdx } = this.buildConditions(params, false, params.status);
+		if (scope === 'owned') {
+			conditions.push(`owner_id = ?${nextIdx}`);
+		} else {
+			conditions.push(`id IN (SELECT article_id FROM article_contributors WHERE user_id = ?${nextIdx}) AND (owner_id IS NULL OR owner_id != ?${nextIdx})`);
+		}
+		bindings.push(userId);
+		const where = conditions.join(' AND ');
+		const orderBy = sort?.length ? this.buildOrderBy(sort, order) : 'updated_at DESC';
+
+		const [dataResult, countRow] = await Promise.all([
+			this.db
+				.prepare(`SELECT * FROM articles WHERE ${where} ORDER BY ${orderBy} LIMIT ?${nextIdx + 1} OFFSET ?${nextIdx + 2}`)
+				.bind(...bindings, limit, offset)
+				.all<ArticleRow>(),
+			this.db
+				.prepare(`SELECT COUNT(*) as count FROM articles WHERE ${where}`)
+				.bind(...bindings)
+				.first<{ count: number }>(),
+		]);
+
+		const total = countRow?.count ?? 0;
+		const data = await this.hydrateMany(dataResult.results as ArticleRow[], { includeContent: false });
+		return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+	}
+
+	/**
+	 * @description Mark a draft as awaiting admin review, or clear the request
+	 * (withdrawn by the owner or declined by an admin).
+	 * @param { string } id Article ID
+	 * @param { boolean } requested True to submit, false to clear
+	 * @returns { Promise<void> }
+	 */
+	async setReviewRequested(id: string, requested: boolean): Promise<void> {
+		const now = new Date().toISOString();
+		await this.db
+			.prepare('UPDATE articles SET review_requested_at = ?1, updated_at = ?2 WHERE id = ?3')
+			.bind(requested ? now : null, now, id)
+			.run();
 	}
 
 	/**
@@ -444,6 +498,8 @@ export class ArticleRepository implements IArticleRepository {
 			['is_public', 'is_public', (v) => (v ? 1 : 0)],
 			['publish_at', 'publish_at', (v) => v ?? null],
 		];
+		// Publishing settles any pending review request.
+		if (dto.published === true) mappings.push(['published', 'review_requested_at', () => null]);
 
 		const { fields, values, nextIdx } = buildUpdateFields(dto, mappings);
 
@@ -518,6 +574,26 @@ export class ArticleRepository implements IArticleRepository {
 			.bind(id)
 			.run();
 		return result.meta.changes > 0;
+	}
+
+	/**
+	 * @description Contributors to credit on an article: everyone in
+	 * article_contributors except the owner, name and avatar only
+	 * @param { string } articleId Article ID
+	 * @returns { Promise<ArticleContributor[]> }
+	 */
+	async findContributors(articleId: string): Promise<ArticleContributor[]> {
+		const { results } = await this.db
+			.prepare(
+				`SELECT u.id, u.name, u.avatar FROM article_contributors ac
+				 JOIN users u ON u.id = ac.user_id
+				 JOIN articles a ON a.id = ac.article_id
+				 WHERE ac.article_id = ?1 AND (a.owner_id IS NULL OR u.id != a.owner_id)
+				 ORDER BY u.name COLLATE NOCASE`,
+			)
+			.bind(articleId)
+			.all<ArticleContributor>();
+		return results ?? [];
 	}
 
 	/**

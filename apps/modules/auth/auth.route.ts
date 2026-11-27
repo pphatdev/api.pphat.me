@@ -46,6 +46,19 @@ app.get('/v1/api/auth/google', (c) => AuthController.google(c.req.raw, c.env));
 app.get('/v1/api/auth/me', (c) => AuthController.me(c.req.raw, c.env));
 
 /**
+ * @description Update the current user's profile (name, avatar)
+ * @method PATCH
+ * ---------------------------------------
+ * @header { String } Authorization - Bearer JWT token
+ * @param { String } [name] - Display name, 1-80 characters
+ * @param { String | null } [avatar] - https image URL; null or "" clears it
+*/
+app.patch('/v1/api/auth/me', authGuard, (c) => {
+	const user = c.get('user' as never) as JwtPayload;
+	return AuthController.updateMe(c.req.raw, c.env, user.sub);
+});
+
+/**
  * @description Register with Email
  * @method POST
  * ---------------------------------------

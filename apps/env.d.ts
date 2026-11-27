@@ -42,6 +42,26 @@ interface __ExtraSecrets {
 	API_CACHE_TTL?: string;
 	/** `1` logs rows read per query and warns above 1,000 (development only). */
 	DB_QUERY_LOG?: string;
+	/**
+	 * `1` prints verification codes to the console instead of emailing them.
+	 * Local development only: ignored unless APP_URL is localhost.
+	 */
+	OTP_DEV_LOG?: string;
+	/** Admin app origin used in links inside emails. Default `https://admin.pphat.me`. */
+	ADMIN_APP_URL?: string;
+	/**
+	 * Where the browser lands after OAuth sign-in, e.g.
+	 * `https://admin.pphat.me/auth/callback`. Tokens are passed in the URL
+	 * fragment. Unset: the callback returns JSON (API clients, tests).
+	 */
+	AUTH_REDIRECT_URL?: string;
+	/**
+	 * Extra allowed post-sign-in destinations, comma-separated full URLs
+	 * (e.g. `https://pphat.me/auth/callback`). Clients pick one with
+	 * `?return_to=` on the OAuth start endpoint; anything else falls back to
+	 * AUTH_REDIRECT_URL.
+	 */
+	AUTH_REDIRECT_ALLOWLIST?: string;
 }
 
 interface Env extends __RateLimiterBindings, __ExtraSecrets {}

@@ -40,11 +40,24 @@
 		"GITHUB_CLIENT_ID": "Ov23li3Ck51xqMVZd7Ob",
 		"GOOGLE_CLIENT_ID": "",
 		"APP_URL": "https://api.pphat.me",
+		// Admin app origin for links in emails (contributor invitations).
+		"ADMIN_APP_URL": "https://admin.pphat.me",
+		// OAuth callback sends the browser here with tokens in the URL fragment.
+		"AUTH_REDIRECT_URL": "https://admin.pphat.me/auth/callback",
+		// Other apps may request these via ?return_to= on the OAuth start endpoint.
+		"AUTH_REDIRECT_ALLOWLIST": "https://pphat.me/auth/callback",
 		// SMTP settings for email 2FA (use wrangler secret put for SMTP_PASS)
 		"SMTP_HOST": "smtp.gmail.com",
 		"SMTP_PORT": "587",
-		"SMTP_USER": "Sophat L. <info.sophat@gmail.com>",
-		"SMTP_FROM": "info.sophat@gmail.com"
+		// SMTP_USER is the login and must be the bare address; the display
+		// name belongs in SMTP_FROM. SMTP_PASS must be a Gmail app password.
+		"SMTP_USER": "info.sophat@gmail.com",
+		"SMTP_FROM": "Sophat L. <info.sophat@gmail.com>",
+		// Production database: Turso (TURSO_DATABASE_URL / TURSO_AUTH_TOKEN are
+		// secrets). env.DB is swapped for the libSQL adapter in resolveEnv; the
+		// D1 binding below stays for rollback (set back to "d1"). Local dev
+		// keeps D1 via DB_DRIVER=d1 in .env, and tests via wrangler.test.jsonc.
+		"DB_DRIVER": "turso"
 	},
 	/**
 	 * Secrets (set via `wrangler secret put <NAME>`):

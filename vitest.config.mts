@@ -6,8 +6,18 @@ export default defineConfig({
 		cloudflareTest({
 			wrangler: { configPath: "./wrangler.test.jsonc" },
 			miniflare: {
+				// Pinned so a developer's local .env / .dev.vars (wrangler loads them
+				// next to the config) can't change test behaviour or reach the suite:
+				// with a real SMTP_PASS, tests that register users or invite
+				// contributors would send real mail.
 				bindings: {
 					JWT_SECRET: "test-jwt-secret",
+					SMTP_PASS: "",
+					AUTH_REDIRECT_URL: "",
+					AUTH_REDIRECT_ALLOWLIST: "",
+					DB_DRIVER: "d1",
+					DB_QUERY_LOG: "",
+					API_CACHE_TTL: "0",
 				},
 			},
 		}),

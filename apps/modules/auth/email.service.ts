@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import { promises as dns } from 'node:dns';
+import { isIP } from 'node:net';
 
 export interface SmtpConfig {
 	host: string;
@@ -9,6 +11,46 @@ export interface SmtpConfig {
 }
 
 /**
+ * @description First IPv4 address of an SMTP host, or null if it has none or
+ * the lookup fails (then the hostname is used as before).
+ * @param { string } host SMTP hostname
+ * @param { (host: string) => Promise<string[]> } [resolve4] Resolver (injectable for tests)
+ * @returns { Promise<string | null> }
+ */
+export async function smtpIpv4(host: string, resolve4: (host: string) => Promise<string[]> = dns.resolve4): Promise<string | null> {
+	if (isIP(host)) return isIP(host) === 4 ? host : null;
+	try {
+		return (await resolve4(host))[0] ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * @description One SMTP transport for every mailer. Connects over IPv4:
+ * nodemailer tries IPv6 first and relies on Node's family fallback, which the
+ * Workers runtime doesn't do, so on a network without IPv6 (local wrangler
+ * dev) every send failed with ENETUNREACH. `servername` keeps SNI and the
+ * certificate check against the real hostname when connecting by address.
+ * @param { SmtpConfig } config SMTP configuration
+ * @returns { Promise<nodemailer.Transporter> }
+ */
+async function createSmtpTransport(config: SmtpConfig) {
+	const address = await smtpIpv4(config.host);
+	return nodemailer.createTransport({
+		host: address ?? config.host,
+		servername: config.host,
+		port: config.port,
+		secure: config.port === 465,
+		auth: { user: config.user, pass: config.pass },
+		// Fail fast instead of holding the request open on a stuck server.
+		connectionTimeout: 10_000,
+		greetingTimeout: 10_000,
+		socketTimeout: 15_000,
+	} as Parameters<typeof nodemailer.createTransport>[0]);
+}
+
+/**
  * @description Send an OTP verification email
  * @param { string } to Recipient email
  * @param { string } code The verification code
@@ -16,15 +58,7 @@ export interface SmtpConfig {
  * @returns { Promise<void> }
  */
 export async function sendOtpEmail(to: string, code: string, config: SmtpConfig): Promise<void> {
-	const transporter = nodemailer.createTransport({
-		host: config.host,
-		port: config.port,
-		secure: config.port === 465,
-		auth: {
-			user: config.user,
-			pass: config.pass,
-		},
-	});
+	const transporter = await createSmtpTransport(config);
 
 	await transporter.sendMail({
 		from: config.from,
@@ -125,15 +159,7 @@ export async function sendContactEmail(
 	data: { name: string; email: string; subject: string; message: string },
 	config: SmtpConfig
 ): Promise<void> {
-	const transporter = nodemailer.createTransport({
-		host: config.host,
-		port: config.port,
-		secure: config.port === 465,
-		auth: {
-			user: config.user,
-			pass: config.pass,
-		},
-	});
+	const transporter = await createSmtpTransport(config);
 
 	const rendered = renderContactEmail(data);
 	await transporter.sendMail({
@@ -144,4 +170,53 @@ export async function sendContactEmail(
 		text: rendered.text,
 		html: rendered.html,
 	});
+}
+
+export interface InvitationEmailData {
+	inviterName: string | null;
+	articleTitle: string;
+	/** Where the invitee accepts: the admin app's posts page. */
+	url: string;
+}
+
+/**
+ * @description Render a contributor invitation. The inviter's name and the
+ * article title are written by users, so they are HTML-escaped in the body
+ * and kept out of the subject entirely: the subject is fixed text, so the
+ * message can't be turned into a custom-subject mailer.
+ * @param { InvitationEmailData } data Invitation details
+ * @returns { { subject: string; text: string; html: string } }
+ */
+export function renderInvitationEmail(data: InvitationEmailData): { subject: string; text: string; html: string } {
+	const inviter = stripHeaderNewlines(data.inviterName?.trim() || 'Someone');
+	const title = stripHeaderNewlines(data.articleTitle.trim() || 'an article');
+	return {
+		subject: "You're invited to contribute on pphat.me",
+		text:
+			`${inviter} invited you to contribute to "${title}" on pphat.me.\n\n` +
+			`Sign in with this email address to accept or decline:\n${data.url}\n\n` +
+			`If you weren't expecting this, you can ignore this email.`,
+		html: `
+			<div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+				<h2>You're invited to contribute</h2>
+				<p><strong>${escapeHtml(inviter)}</strong> invited you to contribute to
+				<strong>${escapeHtml(title)}</strong> on pphat.me.</p>
+				<p>Sign in with this email address to accept or decline.</p>
+				<p><a href="${escapeHtml(data.url)}" style="display:inline-block;padding:10px 16px;background:#14b8a6;color:#fff;border-radius:8px;text-decoration:none">Open my posts</a></p>
+				<p style="color:#6b7280;font-size:14px">If you weren't expecting this, you can ignore this email.</p>
+			</div>
+		`,
+	};
+}
+
+/**
+ * @description Send a contributor invitation email
+ * @param { string } to Invitee address
+ * @param { InvitationEmailData } data Invitation details
+ * @param { SmtpConfig } config SMTP configuration
+ * @returns { Promise<void> }
+ */
+export async function sendInvitationEmail(to: string, data: InvitationEmailData, config: SmtpConfig): Promise<void> {
+	const transporter = await createSmtpTransport(config);
+	await transporter.sendMail({ from: config.from, to, ...renderInvitationEmail(data) });
 }
