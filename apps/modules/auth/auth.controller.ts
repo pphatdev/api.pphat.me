@@ -232,7 +232,12 @@ export class AuthController {
 		try {
 			const repo = new AuthRepository(env.DB);
 			const { otp } = await new AuthService(repo).registerEmailUser(email, name, password);
-			await sendOtpEmailSafely(email, otp, env);
+			// Never claim the code was sent when it wasn't: the user would wait for
+			// an email that never comes. The account stays unverified; registering
+			// again issues a fresh code.
+			if ((await deliverOtp(email, otp, env)) === 'failed') {
+				return json({ error: "We couldn't send the verification email. Please try again in a few minutes." }, 503);
+			}
 			return Res.created({ message: 'Verification code sent to your email' });
 		} catch (err) {
 			return handleAuthError(err);
@@ -521,17 +526,35 @@ function handleAuthError(err: unknown): Response {
  * @param { Env } env Environment bindings
  * @returns { Promise<void> }
  */
-async function sendOtpEmailSafely(email: string, otp: string, env: Env): Promise<void> {
+/** `skipped`: SMTP isn't configured (tests, local dev without SMTP_PASS). */
+export type OtpDelivery = 'sent' | 'skipped' | 'failed';
+
+/**
+ * @description Email a verification code. Failures are logged and reported,
+ * not thrown, so the caller decides how to answer.
+ * @param { string } email Recipient
+ * @param { string } otp The code
+ * @param { Env } env Bindings with SMTP settings
+ * @param { typeof sendOtpEmail } [send] Sender (injectable for tests)
+ * @returns { Promise<OtpDelivery> }
+ */
+export async function deliverOtp(email: string, otp: string, env: Env, send = sendOtpEmail): Promise<OtpDelivery> {
+	if (!env.SMTP_PASS || !env.SMTP_HOST || !env.SMTP_USER) {
+		console.warn('[SEND_OTP_SKIPPED] SMTP is not configured');
+		return 'skipped';
+	}
 	try {
-		await sendOtpEmail(email, otp, {
+		await send(email, otp, {
 			host: env.SMTP_HOST,
 			port: Number(env.SMTP_PORT),
 			user: env.SMTP_USER,
 			pass: env.SMTP_PASS,
-			from: env.SMTP_FROM,
+			from: env.SMTP_FROM || env.SMTP_USER,
 		});
+		return 'sent';
 	} catch (error) {
 		console.error('[SEND_OTP_ERROR]', error);
+		return 'failed';
 	}
 }
 

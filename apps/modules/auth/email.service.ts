@@ -24,6 +24,10 @@ export async function sendOtpEmail(to: string, code: string, config: SmtpConfig)
 			user: config.user,
 			pass: config.pass,
 		},
+		// Fail fast instead of holding the sign-up request open on a stuck server.
+		connectionTimeout: 10_000,
+		greetingTimeout: 10_000,
+		socketTimeout: 15_000,
 	});
 
 	await transporter.sendMail({
