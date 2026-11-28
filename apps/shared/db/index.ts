@@ -3,22 +3,30 @@
  * migration (docs/turso-migration-plan.md).
  *
  * The Worker entry (apps/app.ts) passes every request's and cron tick's `env`
- * through `resolveEnv`. With `DB_DRIVER` unset or `d1` the env is returned
- * untouched. With `DB_DRIVER=turso`, `env.DB` is replaced by a D1-compatible
- * libSQL adapter, so all modules keep calling `env.DB.prepare(...)` unchanged.
+ * through `resolveEnv`. With `DB_DRIVER` unset, `d1` or `local` the env is
+ * returned untouched: `env.DB` is the D1 binding, which `wrangler dev` backs
+ * with the local SQLite copy in .wrangler/ and production with the real D1.
+ * `local` is an alias of `d1` that reads better in dev config. With
+ * `DB_DRIVER=turso`, `env.DB` is replaced by a D1-compatible libSQL adapter,
+ * so all modules keep calling `env.DB.prepare(...)` unchanged.
  */
 import { createClient } from '@libsql/client/web';
 import { LibsqlD1Database, asD1Database } from './libsql-d1';
 
-export type DbDriver = 'd1' | 'turso';
+export type DbDriver = 'd1' | 'local' | 'turso';
 
 // One adapter per (url, token) for the isolate's lifetime. The web client is
 // stateless HTTP (a fetch per query), so sharing it across requests is safe.
 const adapters = new Map<string, D1Database>();
 
-/** @description The configured driver; anything other than 'turso' means D1. */
+/**
+ * @description The configured driver. 'turso' and 'local' are taken as given;
+ * anything else (unset, 'd1', unknown) means D1.
+ */
 export function dbDriver(env: Pick<Env, 'DB_DRIVER'>): DbDriver {
-	return env.DB_DRIVER === 'turso' ? 'turso' : 'd1';
+	if (env.DB_DRIVER === 'turso') return 'turso';
+	if (env.DB_DRIVER === 'local') return 'local';
+	return 'd1';
 }
 
 function tursoDatabase(url: string, authToken: string): D1Database {

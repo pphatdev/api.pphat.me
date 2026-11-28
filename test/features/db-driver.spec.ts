@@ -105,6 +105,12 @@ describe("resolveEnv / DB_DRIVER", () => {
 		expect(resolveEnv(base)).toBe(base);
 	});
 
+	it("treats local as an alias of d1: env.DB untouched", () => {
+		const local = { ...base, DB_DRIVER: "local" } as Env;
+		expect(dbDriver(local)).toBe("local");
+		expect(resolveEnv(local)).toBe(local);
+	});
+
 	it("fails closed when turso is selected without credentials", () => {
 		expect(() => resolveEnv({ ...base, DB_DRIVER: "turso" } as Env)).toThrow(/TURSO_DATABASE_URL/);
 	});

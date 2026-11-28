@@ -30,10 +30,12 @@ interface __ExtraSecrets {
 	 */
 	ADMIN_PROXY_SECRET?: string;
 	/**
-	 * Database driver: `d1` (default) or `turso`. With `turso`, `env.DB` is
-	 * swapped for a D1-compatible libSQL adapter (apps/shared/db).
+	 * Database driver: `d1` (default), `local` or `turso`. `local` is an alias
+	 * of `d1` (the D1 binding; local SQLite under `wrangler dev`). With
+	 * `turso`, `env.DB` is swapped for a D1-compatible libSQL adapter
+	 * (apps/shared/db).
 	 */
-	DB_DRIVER?: 'd1' | 'turso' | (string & {});
+	DB_DRIVER?: 'd1' | 'local' | 'turso' | (string & {});
 	/** Turso database URL, e.g. `libsql://<db>-<org>.turso.io`. Secret. */
 	TURSO_DATABASE_URL?: string;
 	/** Turso auth token (`turso db tokens create <db>`). Secret. */
