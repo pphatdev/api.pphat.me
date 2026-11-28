@@ -4,22 +4,22 @@
     "private": true,
     "packageManager": "pnpm@12.4.1",
     "scripts": {
-        "dev": "wrangler dev",
+        "dev": "node scripts/dev.mjs",
         "build": "tsc",
-        "start": "wrangler dev",
+        "start": "node scripts/dev.mjs",
         "deploy": "wrangler deploy",
         "cf-typegen": "wrangler types",
         "migrate": "npx wrangler d1 migrations apply api --remote",
         "migrate:local": "npx wrangler d1 migrations apply api --local",
-        "db:setup": "npm run migrate:local && npm run dev",
-        "db:reset": "node -e \"require('fs').rmSync('.wrangler/state/v3/d1', { recursive: true, force: true })\" && npm run migrate:local",
+        "db:setup": "node scripts/dev.mjs local --setup-only",
+        "db:reset": "node -e \"require('fs').rmSync('.wrangler/state/v3/d1', { recursive: true, force: true })\" && node scripts/dev.mjs local --setup-only",
         "db:tables": "npx wrangler d1 execute api --local --command \"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name\"",
         "db:query": "npx wrangler d1 execute api --local --command",
         "db:studio": "node scripts/db-studio.js",
         "db:create-admin": "node scripts/create-admin.js",
         "db:seed": "node scripts/seed-data.js",
         "db:pull-remote": "node scripts/db-pull-remote.js",
-        "dev:turso": "wrangler dev --var DB_DRIVER:turso",
+        "dev:turso": "node scripts/dev.mjs turso",
         "db:turso:ping": "node scripts/turso/ping.mjs",
         "db:turso:migrate": "node scripts/turso/migrate.mjs",
         "db:turso:seed": "node scripts/turso/seed-from-backup.mjs",
@@ -45,7 +45,6 @@
         "hono": "^4.13.21",
         "nodemailer": "^10.6.1"
     },
-    "//overrides": "See SECURITY.md → Pinned Dependencies for the rationale. Do not remove entries without reading that section first.",
     "overrides": {
         "@esbuild-kit/core-utils": {
             "esbuild": "^0.25.12"

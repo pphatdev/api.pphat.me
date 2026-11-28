@@ -100,12 +100,18 @@ npm install
 ### Local Development
 
 ```bash
-npm run dev
-# or
-npx wrangler dev
+npm run dev          # local D1 (DB_DRIVER=local)
+npm run dev:turso    # Turso (needs TURSO_DATABASE_URL / TURSO_AUTH_TOKEN in .dev.vars)
 ```
 
 The API will be available at `http://localhost:8787`.
+
+With `DB_DRIVER=local` (the default; `d1` is an alias), `npm run dev` first prepares
+the local D1 in `.wrangler/`: it applies pending migrations, and on a fresh database
+loads `scripts/seed.sql` and creates the admin user from `ADMIN_EMAIL` /
+`ADMIN_PASSWORD`. Later runs skip the seed. `npm run db:setup` does the same without
+starting the server, `npm run db:reset` wipes the local DB and rebuilds it, and
+`npm run dev -- --no-setup` skips preparation.
 
 ### Generate TypeScript Types
 If you change your `wrangler.jsonc` bindings, you should regenerate the TypeScript types:
